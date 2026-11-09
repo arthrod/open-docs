@@ -14,6 +14,8 @@
  * `s.endsWith("/")` — passing anything else was the original crash).
  */
 import { waitFor } from "/lib/kit.ts";
+import { markdownToDocx } from "/lib/markdown.ts";
+import { docxToMarkdown } from "/lib/docx-markdown.ts";
 import { BUNDLE_URL, WASM_BASE } from "./assets.ts";
 
 type Ribbon = {
@@ -64,27 +66,19 @@ window.od.register({
   },
 
   async getMarkdown() {
+    // Docxodus's own markdown (convertWmlToMarkdown) is an anchor-annotated
+    // projection for patching; the assistant gets plain markdown read from the
+    // bytes Docxodus saves.
     const bytes = saveBytes();
-    if (!bytes?.length) return "";
-    const res = await fetch("/api/import", {
-      method: "POST",
-      headers: { "content-type": "application/octet-stream" },
-      body: bytes,
-    });
-    if (!res.ok) return "";
-    return ((await res.json()).markdown as string) ?? "";
+    return bytes?.length ? docxToMarkdown(bytes) : "";
   },
 
   async applyMarkdown(markdown) {
     if (!ribbon) throw new Error("Docxodus not mounted");
-    const res = await fetch("/api/export", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ markdown, title: "docxodus" }),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "export failed");
-    ribbon.open(window.od.base64ToBytes(json.base64), "document.docx");
+    // Docxodus has no markdown importer (only WmlToMarkdown export), so the
+    // markdown becomes a complete Word document (headings, marks, lists, quotes,
+    // links, code) that Docxodus opens through its own .docx reader.
+    ribbon.open(markdownToDocx(markdown), "document.docx");
   },
 
   async exportDocx() {

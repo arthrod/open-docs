@@ -1,17 +1,16 @@
 /**
- * docen — `<docen-document>`, a Fluent-UI web component that speaks DOCX and
- * Markdown natively (`openDOCX` / `saveDOCX` / `openMarkdown` / `saveMarkdown`).
+ * docen — `<docen-document>`, a Fluent-UI web component (title bar, ribbon,
+ * canvas pages) that speaks DOCX and Markdown natively
+ * (`openDOCX` / `saveDOCX` / `openMarkdown` / `saveMarkdown`).
  *
- * Two fixes over the first version:
- *  - Importing `docen/editor` does NOT define the element. Per the README you
- *    must call `registerComponents()` and `applyTheme("light")`. Without that
- *    the tag never upgrades and nothing renders.
- *  - Use the UNBUNDLED esm.sh build. `?bundle` returns a shim without
- *    `registerComponents`, and bundling would duplicate FAST element.
+ *  - Importing the module does NOT define the element: call
+ *    `registerComponents()` and `applyTheme("light")` (per its README).
+ *  - CDN wiring (icons, zlib, fast-element pin) lives in assets.ts.
  */
 import { waitFor } from "/lib/kit.ts";
-
-const CDN = "https://esm.sh/docen@0.7.0/editor?target=es2022";
+import { DOCEN } from "./assets.ts";
+import { markdownToDocx } from "/lib/markdown.ts";
+import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 type DocenEl = HTMLElement & {
   openDOCX(bytes: Uint8Array | ArrayBuffer): Promise<void>;
@@ -45,21 +44,15 @@ window.od.register({
 
   async mount() {
     const node = await waitFor<HTMLElement>("#docen");
-    window.od.status("Loading docen…");
-    const mod = await import(CDN);
+    window.od.progress("Loading docen (Fluent UI + canvas layout)…");
+    const mod = await import(DOCEN);
     if (typeof mod.registerComponents !== "function") {
       throw new Error("docen/editor has no registerComponents()");
     }
     mod.registerComponents();
     mod.applyTheme?.("light");
     el = await upgraded(node);
-    // The element starts on an empty document; open our blank to normalise
-    // page setup, but don't fail the mount if it refuses.
-    try {
-      await el.openDOCX(await window.od.blankDocx());
-    } catch (err) {
-      console.warn("[docen] blank open failed, keeping default", err);
-    }
+    // The element boots on its own empty document — that is our blank page.
   },
 
   async load(bytes: Uint8Array) {
@@ -68,12 +61,18 @@ window.od.register({
   },
 
   async getMarkdown() {
-    return el ? await el.saveMarkdown() : "";
+    // docen's saveMarkdown (@docen/docx@0.7.0) drops bold/italic/code, writes
+    // bullets as numbers and loses quotes; read its .docx export instead.
+    return el ? docxToMarkdown(await toBytes(await el.saveDOCX())) : "";
   },
 
   async applyMarkdown(markdown) {
     if (!el) throw new Error("docen not mounted");
-    await el.openMarkdown(markdown);
+    // NOT el.openMarkdown(): in @docen/docx@0.7.0 the Bold/Italic/Code marks
+    // have no markdown token handlers, so @tiptap/markdown drops bold, italic
+    // and the TEXT of inline code. docen's .docx reader is complete, so the
+    // markdown goes in as a Word document instead.
+    await el.openDOCX(markdownToDocx(markdown));
   },
 
   async exportDocx() {

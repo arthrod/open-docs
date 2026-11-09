@@ -30,6 +30,7 @@ const kit: KitGlobal = {
 
   register(adapter: EditorAdapter) {
     kit.adapter = adapter;
+    kit.registeredAt = performance.now();
     if (listeners.size === 0) {
       // Chrome not loaded yet — hold it.
       queue.push(adapter);
@@ -61,6 +62,10 @@ const kit: KitGlobal = {
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   },
   status: noop,
+  progress(detail: string) {
+    const el = document.getElementById("od-loading-detail");
+    if (el) el.textContent = detail;
+  },
   log: noop,
   bytesToBase64: b64encode,
   base64ToBytes: b64decode,

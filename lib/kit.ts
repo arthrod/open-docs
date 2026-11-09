@@ -11,8 +11,8 @@ export interface EditorAdapter {
   /** Human label for logs, e.g. "SuperDoc". */
   name: string;
   /**
-   * Mount the editor. Must call `load()` itself with whatever document the
-   * adapter wants to start from (normally `blankDocx()`).
+   * Mount the editor on a NEW BLANK document (the editor's own empty document,
+   * or `blankDocx()` when it has none). Import is `load()`, not mount.
    */
   mount(): Promise<void>;
   /** Load real .docx bytes. The chrome's Import button calls this. */
@@ -28,6 +28,11 @@ export interface EditorAdapter {
   exportDocx?(): Promise<Uint8Array>;
   /** Human note about how faithful `applyMarkdown` is. */
   mergeQuality?: "native" | "html-paste" | "rebuild";
+  /**
+   * URLs the editor loads where the page's Resource Timing can't see them
+   * (e.g. inside a Web Worker), so the "loaded" metric still counts them.
+   */
+  extraResources?: string[];
 }
 
 /** Exposed globals both the chrome and the adapters read. */
@@ -35,6 +40,10 @@ export interface KitGlobal {
   adapter?: EditorAdapter;
   /** Called by an adapter at module top level. */
   register(adapter: EditorAdapter): void;
+  /** performance.now() when the adapter registered (its module finished evaluating). */
+  registeredAt?: number;
+  /** Update the loading overlay's detail line while mount() runs. */
+  progress(detail: string): void;
   /** Called by the chrome once. Replays anything already registered. */
   onAdapter(fn: (adapter: EditorAdapter) => void): void;
   md: typeof import("./md.ts");

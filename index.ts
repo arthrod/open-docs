@@ -2,18 +2,21 @@
  * open-docs — a bench of open-source document editors you can run on Val Town.
  *
  * Each editor lives in its own folder under `editors/<slug>/` and gets a route
- * from `server/router.ts`. The landing page is intentionally the last thing we
- * build; for now `/` lists whatever is registered.
+ * from `server/router.ts`. `/` is the comparison page: every editor with its
+ * measured startup time, memory and download size.
  */
-import { Hono } from "npm:hono";
+import { Hono } from "npm:hono@4";
 import { parseVal, serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors } from "./server/registry.ts";
 import { mountShared, registerEditor } from "./server/router.ts";
+import { landingPage } from "./server/landing.ts";
 import { editorMounts } from "./editors/index.ts";
+import { ICONS_VERSION } from "./editors/docen/assets.ts";
+import { serveWordcraft, WORDCRAFT_BASE } from "./editors/wordcraft/assets.ts";
 
 const app = new Hono();
 
-// Shared API: sample docx, import, export, agent.
+// Shared API: sample docx, import, export, agent, metrics.
 mountShared(app);
 
 // Each editor folder registers its own shell + asset route. A folder that
@@ -27,28 +30,37 @@ for (const slug of editorMounts) {
   }
 }
 
+/**
+ * Fluent SVG icons as JS string modules — what Vite's `?raw` would produce.
+ * docen's import map points esm.sh's icon modules here (editors/docen/assets.ts).
+ */
+app.get("/api/svg-raw/:file", async (c) => {
+  const file = c.req.param("file");
+  if (!/^[a-z0-9_]+\.svg$/.test(file)) return c.text("bad icon name", 400);
+  const res = await fetch(`https://cdn.jsdelivr.net/npm/@fluentui/svg-icons@${ICONS_VERSION}/icons/${file}`);
+  if (!res.ok) return c.text(`icon ${file}: upstream ${res.status}`, 502);
+  return new Response(`export default ${JSON.stringify(await res.text())};\n`, {
+    headers: {
+      "content-type": "text/javascript; charset=utf-8",
+      "cache-control": "public, max-age=31536000, immutable",
+      "access-control-allow-origin": "*",
+    },
+  });
+});
+
+// WordCraft's wasm build, cached in blob storage (editors/wordcraft/assets.ts).
+app.get(`${WORDCRAFT_BASE}*`, (c) => serveWordcraft(c.req.path.slice(WORDCRAFT_BASE.length)));
+
 // Editor client modules and shared lib modules are served straight from the val.
 app.get("/editors/*", (c) => serveFile(c.req.path));
 app.get("/lib/*", (c) => serveFile(c.req.path));
 
-// TODO(landing): replace with the real comparison page once every editor works.
-app.get("/", (c) =>
-  c.html(`<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>open-docs</title>
-<style>body{font:14px/1.6 ui-sans-serif,system-ui;margin:40px auto;max-width:640px;color:#1f2430}
-a{color:#1f2937}li{margin:6px 0}code{font-size:12px;color:#6b7280}</style></head>
-<body>
-<h1>open-docs</h1>
-<p>Open-source document editors, each running entirely in the browser on Val Town, each with .docx import/export and an editing agent.</p>
-<ul>
-${editors.map((e) =>
-  `<li><a href="/e/${e.slug}">${e.name}</a> <code>${e.packages.join(", ")}</code></li>`
-).join("\n")}
-</ul>
-</body></html>`));
+app.get("/", (c) => c.html(landingPage(editors)));
 
-app.get("/source", (c) => c.redirect(parseVal().links.self.val));
+app.get("/source", () =>
+  new Response(null, { status: 302, headers: { Location: parseVal().links.self.val } }));
 
+// Unwrap Hono errors to see original error details.
 app.onError((err) => Promise.reject(err));
 
 export default app.fetch;

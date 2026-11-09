@@ -1,151 +1,173 @@
 /**
  * Shared routes every editor demo gets, so each `editors/<slug>/` folder only
- * has to supply its own shell + mount code and say how it imports/exports.
+ * has to supply its own shell + mount code.
  *
+ *   GET  /e/<slug>             the editor page (shared chrome + editor body)
  *   GET  /api/sample.docx      the shared fixture, byte-for-byte
- *   GET  /api/sample.txt       the same fixture as markdown
- *   POST /api/import           upload .docx → { title, markdown, base64 }
- *   POST /api/agent            { document, prompt } → { reply, edit? }
- *   GET  /api/agent/pending    reconnect path for a staged edit
+ *   GET  /api/blank.docx       a valid empty .docx
+ *   POST /api/import           .docx → { title, markdown }
+ *   POST /api/export           markdown → .docx (base64)
+ *   POST /api/agent            { document, prompt, history } → { reply, edit? }
+ *   POST /api/metrics          one page-load measurement (startup/memory/bytes)
+ *   GET  /api/metrics          per-editor medians, for the landing page
  */
-import type { Hono } from "npm:hono";
+import type { Hono } from "npm:hono@4";
 import { serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors } from "./registry.ts";
-import { sampleDocx, sampleText, paragraphsToText, textToParagraphs } from "./sample.docx.ts";
+import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
-import { runAgent } from "./agent.ts";
+import { markdownToDocx } from "../lib/markdown.ts";
+import { AGENT_MODEL, runAgent } from "./agent.ts";
+import { recordMetric, summarizeMetrics } from "./metrics.ts";
+import { SHELL_CSS } from "./styles.ts";
 
-const STYLES = `
-:root { color-scheme: light; }
-* { box-sizing: border-box; }
-body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2430; background: #f4f5f7; }
-.od-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #fff; border-bottom: 1px solid #dfe2e8; flex-wrap: wrap; }
-.od-bar h1 { font-size: 14px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
-.od-bar .ver { font-size: 11px; color: #6b7280; font-family: ui-monospace, monospace; }
-.od-bar a { color: #4b5563; }
-.od-btn { font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 7px; border: 1px solid #d3d7de; background: #fff; cursor: pointer; white-space: nowrap; }
-.od-btn:hover { background: #f3f4f6; border-color: #c3c8d1; }
-.od-btn[disabled] { opacity: .55; cursor: progress; }
-.od-btn.primary { background: #1f2937; border-color: #1f2937; color: #fff; }
-.od-btn.primary:hover { background: #111827; }
-.od-spacer { flex: 1; }
-.od-status { font-size: 12px; color: #6b7280; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.od-status.err { color: #b91c1c; }
-.od-status.ok { color: #047857; }
-html, body { height: 100%; }
-body { display: flex; flex-direction: column; overflow: hidden; }
-.od-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 10px; padding: 10px; }
-@media (max-width: 1000px) { .od-layout { grid-template-columns: minmax(0, 1fr); } .od-aside { display: none !important; } }
-/* Paged editors virtualise against their scroll container, so the stage needs a
-   DEFINITE height — min-height alone lets it grow forever and nothing scrolls. */
-.od-stage { height: 100%; min-height: 0; background: #fff; border: 1px solid #dfe2e8; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
-.od-stage > * { flex: 1 1 auto; min-height: 0; }
-.od-aside { min-height: 0; background: #fff; border: 1px solid #dfe2e8; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-.od-aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; margin: 0; }
-.od-aside .od-log { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px; min-height: 80px; }
-.od-msg { border-radius: 8px; padding: 7px 9px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
-.od-msg.user { background: #eef2ff; }
-.od-msg.bot { background: #f3f4f6; }
-.od-msg .who { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: #9ca3af; margin-bottom: 2px; }
-.od-pending { border: 1px solid #fcd34d; background: #fffbeb; border-radius: 8px; padding: 9px; font-size: 12.5px; display: flex; flex-direction: column; gap: 7px; }
-.od-pending .row { display: flex; gap: 6px; }
-.od-input { display: flex; gap: 6px; }
-.od-input textarea { flex: 1; resize: vertical; min-height: 40px; max-height: 120px; font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid #d3d7de; border-radius: 8px; }
-.od-suggestions { display: flex; flex-wrap: wrap; gap: 5px; }
-.od-suggestions button { font-size: 11.5px; padding: 3px 8px; border-radius: 999px; border: 1px solid #d3d7de; background: #fff; cursor: pointer; color: #4b5563; }
-.od-suggestions button:hover { background: #f3f4f6; }
-`;
+export interface EditorShell {
+  slug: string;
+  /** Path (relative to val root) of the browser adapter module. */
+  entry: string;
+  /** Extra <head> html for the editor (stylesheets, classic CDN scripts…). */
+  head?: string;
+  /** Body markup the adapter mounts into. */
+  body: string;
+  title: string;
+  /** Extra import-map entries (bare specifiers / URL remaps) for this editor. */
+  importMap?: Record<string, string>;
+}
 
-/**
- * Registers the shared API + a per-editor shell.
- *
- * @param app the val's Hono app
- * @param route the mount function for one editor folder
- */
-export function registerEditor(
-  app: Hono,
-  opts: {
-    slug: string;
-    /** Path (relative to val root) of the editor's folder entry, e.g. /editors/folio/boot.ts */
-    entry: string;
-    /** Extra <head> html for the editor (their stylesheet, cdn script, …) */
-    head?: string;
-    /** Extra body markup (containers the editor mounts into) */
-    body: string;
-    /** Title shown in the shared top bar */
-    title: string;
-  },
-) {
-  const meta = editors.find((e) => e.slug === opts.slug);
+/** React, resolved once, for every adapter that loads a React package with `?external=react,react-dom`. */
+export const REACT_IMPORTS: Record<string, string> = {
+  "react": "https://esm.sh/react@18.2.0",
+  "react/": "https://esm.sh/react@18.2.0/",
+  "react-dom": "https://esm.sh/react-dom@18.2.0",
+  "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+};
 
-  app.get(`/e/${opts.slug}`, (c) =>
-    c.html(shell({
-      slug: opts.slug,
-      title: opts.title,
-      entry: opts.entry,
-      head: opts.head ?? "",
-      body: opts.body,
-      source: meta?.repo ?? "",
-      packages: meta?.packages ?? [],
-      license: meta?.license ?? "",
-    })));
-
+export function registerEditor(app: Hono, opts: EditorShell) {
+  app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts)));
   // The editor folder's own client modules + assets.
   app.get(`/e/${opts.slug}/*`, (c) => serveFile(c.req.path));
 }
 
-function shell(o: {
-  slug: string;
-  title: string;
-  entry: string;
-  head: string;
-  body: string;
-  source: string;
-  packages: string[];
-  license: string;
-}): string {
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function shell(o: EditorShell): string {
+  const meta = editors.find((e) => e.slug === o.slug);
+  const packages = meta?.packages ?? [];
+  const importMap = o.importMap && Object.keys(o.importMap).length
+    ? `<script type="importmap">${JSON.stringify({ imports: o.importMap })}</script>`
+    : "";
+  const switcher = editors.map((e) =>
+    `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`
+  ).join("");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${o.title} · open-docs</title>
+<title>${esc(o.title)} · open-docs</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a8a'/><path d='M10 8h9l5 5v11H10z' fill='white'/><path d='M19 8v5h5' fill='%2393c5fd'/></svg>" />
+${importMap}
+<script>window.__OD_T0 = performance.now();</script>
 <!-- First thing on the page: reports browser errors to /api/log. -->
 <script src="/lib/report.ts"></script>
-${o.head}
-<style>${STYLES}</style>
+<link rel="preconnect" href="https://esm.sh" crossorigin />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+${o.head ?? ""}
+<style>${SHELL_CSS}</style>
 <!-- The kit must exist before any adapter module runs. -->
 <script type="module" src="/lib/boot.ts"></script>
 </head>
-<body data-slug="${o.slug}">
-  <div class="od-bar">
-    <h1>${o.title}</h1>
-    <span class="ver">${o.packages.join(" + ")}${o.license ? ` · ${o.license}` : ""}</span>
+<body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}">
+  <header class="od-bar">
+    <a class="od-brand" href="/" title="All editors">
+      <span class="od-logo" aria-hidden="true"></span><span>open-docs</span>
+    </a>
+    <span class="od-sep"></span>
+    <label class="od-switch" title="Switch editor">
+      <select id="od-switch" aria-label="Editor">${switcher}</select>
+    </label>
+    <input id="od-docname" class="od-docname" value="Untitled document" spellcheck="false" aria-label="Document name" />
     <span class="od-spacer"></span>
-    <button class="od-btn" id="od-new" title="Start an empty document">New</button>
-    <button class="od-btn" id="od-import">Import .docx</button>
-    <button class="od-btn" id="od-sample">Open sample</button>
-    <a class="od-btn" id="od-sample-dl" href="/api/sample.docx" download="open-docs-sample.docx" title="Download the sample .docx">Sample .docx ↓</a>
-    <button class="od-btn" id="od-reload">Reset</button>
-    <button class="od-btn primary" id="od-export">Export .docx</button>
-    <span class="od-status" id="od-status"></span>
-    <a class="od-btn" href="/">all editors</a>
-    <a class="od-btn" href="/source">source</a>
+    <div class="od-actions">
+      <button class="od-btn" id="od-new" title="New blank document (⌥N)">
+        <svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h6.5L16 7v10.5H5z M11.5 2.5V7H16" /></svg><span>New</span>
+      </button>
+      <button class="od-btn" id="od-import" title="Open a .docx from your computer (⌘O)">
+        <svg class="ic" viewBox="0 0 20 20"><path d="M10 13V3 M6 7l4-4 4 4 M3.5 12.5v4h13v-4" /></svg><span>Import .docx</span>
+      </button>
+      <button class="od-btn primary" id="od-export" title="Download as .docx (⌘S)">
+        <svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg><span>Export .docx</span>
+      </button>
+      <div class="od-menu-wrap">
+        <button class="od-btn icon" id="od-more" title="More" aria-haspopup="menu">
+          <svg class="ic" viewBox="0 0 20 20"><circle cx="4.5" cy="10" r="1.4"/><circle cx="10" cy="10" r="1.4"/><circle cx="15.5" cy="10" r="1.4"/></svg>
+        </button>
+        <div class="od-menu" id="od-menu" role="menu" hidden>
+          <button role="menuitem" id="od-sample">Load sample document</button>
+          <a role="menuitem" href="/api/sample.docx" download="open-docs-sample.docx">Download sample .docx</a>
+          <button role="menuitem" id="od-reload">Reload editor</button>
+          <hr />
+          <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub ↗</a>
+          <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo ↗</a>
+        </div>
+      </div>
+    </div>
+    <span class="od-sep"></span>
+    <button class="od-metrics" id="od-metrics" title="Measured on this page load — click for details" aria-haspopup="dialog">
+      <span class="m"><i class="dot"></i><b id="od-m-time">—</b><small>startup</small></span>
+      <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
+      <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
+    </button>
+    <button class="od-btn icon" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true">
+      <svg class="ic" viewBox="0 0 20 20"><path d="M10 2.5l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z M15.5 13l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
+    </button>
+  </header>
+  <div class="od-sub">
+    <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
+    ${meta?.license ? `<span class="od-lic">${esc(meta.license)}</span>` : ""}
+    <span class="od-blurb">${esc(meta?.blurb ?? "")}</span>
+    <span class="od-spacer"></span>
+    <span class="od-status" id="od-status" role="status" aria-live="polite"></span>
   </div>
-  <div class="od-layout">
-    <div class="od-stage" id="od-stage">${o.body}</div>
-    <aside class="od-aside">
-      <h2>Agent</h2>
+  <div class="od-layout" id="od-layout">
+    <main class="od-stage" id="od-stage">
+      ${o.body}
+      <div class="od-loading" id="od-loading">
+        <div class="spinner"></div>
+        <div><strong>Loading ${esc(meta?.name ?? o.title)}…</strong><span id="od-loading-detail">Fetching the editor from the CDN</span></div>
+      </div>
+    </main>
+    <aside class="od-aside" id="od-aside" aria-label="Assistant">
+      <div class="od-aside-head">
+        <div>
+          <h2>Assistant</h2>
+          <span class="od-model">${esc(AGENT_MODEL)} · via Val Town</span>
+        </div>
+        <label class="od-auto" title="Apply edits as soon as the assistant proposes them (you can still undo)">
+          <input type="checkbox" id="od-autoapply" checked /> Auto-apply
+        </label>
+      </div>
       <div class="od-log" id="od-log">
-        <div class="od-msg bot"><span class="who">agent</span>Ask me to rewrite a section, tighten the summary, or add a call to action. I'll propose the edit before touching the document.</div>
+        <div class="od-msg bot"><span class="who">Assistant</span>I can read and edit the document open in <b>${esc(meta?.name ?? o.title)}</b>. Ask me to draft, rewrite, restructure or summarise — every change can be undone.</div>
       </div>
       <div class="od-suggestions" id="od-suggestions"></div>
-      <div class="od-input">
-        <textarea id="od-prompt" rows="2" placeholder="e.g. Turn the risks into a short bulleted list"></textarea>
-        <button class="od-btn primary" id="od-send">Send</button>
-      </div>
+      <form class="od-input" id="od-form">
+        <textarea id="od-prompt" rows="2" placeholder="Ask the assistant to write or edit… (⌘↵ to send)"></textarea>
+        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)">
+          <svg class="ic" viewBox="0 0 20 20"><path d="M3 10l14-6-5 14-2.5-5.5z"/></svg>
+        </button>
+      </form>
     </aside>
   </div>
+  <dialog class="od-dialog" id="od-metrics-dialog">
+    <form method="dialog">
+      <header><h3>Performance of ${esc(meta?.name ?? o.title)}</h3><button class="od-btn icon" value="close" aria-label="Close">✕</button></header>
+      <div id="od-metrics-body"></div>
+      <footer><a href="/#metrics">Compare all editors →</a></footer>
+    </form>
+  </dialog>
   <input type="file" id="od-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden />
   <script src="https://esm.town/v/std/catch"></script>
   <!-- Adapter first (it registers synchronously), chrome second. -->
@@ -155,13 +177,14 @@ ${o.head}
 </html>`;
 }
 
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
 /** Mount every shared API route onto the app. */
 export function mountShared(app: Hono) {
   app.get("/api/sample.docx", () =>
     new Response(sampleDocx(), {
       headers: {
-        "content-type":
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-sample.docx"',
         "cache-control": "no-cache",
       },
@@ -170,34 +193,17 @@ export function mountShared(app: Hono) {
   app.get("/api/sample.txt", (c) =>
     c.json({ title: "Quarterly Report — Acme Robotics", markdown: sampleText }));
 
-  /**
-   * A valid, empty .docx (one empty paragraph).
-   *
-   * Built with the same `buildDocx` that produces the sample fixture, so it has
-   * the part ordering every consumer here already accepts —
-   * `word/_rels/document.xml.rels` before `word/document.xml`. Hand-zipping it
-   * in the browser tripped office-open with "invalid ZIP entry: _rels/.rels".
-   */
-  app.get("/api/blank.docx", () => {
-    const bytes = buildDocx([{ text: "" }], "Untitled document");
-    return new Response(bytes, {
-      headers: {
-        "content-type":
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "cache-control": "no-cache",
-      },
-    });
-  });
+  /** A valid, empty .docx (one empty paragraph), built by the same writer as the sample. */
+  app.get("/api/blank.docx", () =>
+    new Response(buildDocx([{ text: "" }], "Untitled document"), {
+      headers: { "content-type": DOCX_MIME, "cache-control": "no-cache" },
+    }));
 
   app.post("/api/import", async (c) => {
     const type = c.req.header("content-type") ?? "";
-    let bytes: Uint8Array;
-    if (type.includes("application/json")) {
-      const body = await c.req.json();
-      bytes = base64ToBytes(String(body.base64 ?? ""));
-    } else {
-      bytes = new Uint8Array(await c.req.arrayBuffer());
-    }
+    const bytes = type.includes("application/json")
+      ? base64ToBytes(String((await c.req.json()).base64 ?? ""))
+      : new Uint8Array(await c.req.arrayBuffer());
     if (!looksLikeZip(bytes)) {
       return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
     }
@@ -207,7 +213,6 @@ export function mountShared(app: Hono) {
         title: title || "Imported document",
         markdown: paragraphsToText(paragraphs),
         paragraphs,
-        base64: bytesToBase64(bytes),
         bytes: bytes.length,
       });
     } catch (err) {
@@ -216,9 +221,10 @@ export function mountShared(app: Hono) {
   });
 
   app.post("/api/export", async (c) => {
-    const { markdown, title } = await c.req.json();
+    const { markdown } = await c.req.json();
     if (typeof markdown !== "string") return c.json({ error: "markdown required" }, 400);
-    const bytes = buildDocx(textToParagraphs(markdown), title || "Document");
+    // Same converter the browser adapters use (lib/markdown.ts → lib/ooxml.ts).
+    const bytes = markdownToDocx(markdown);
     return c.json({ base64: bytesToBase64(bytes) });
   });
 
@@ -245,15 +251,22 @@ export function mountShared(app: Hono) {
       });
       return c.json(result);
     } catch (err) {
+      // The browser shows this text in the assistant panel, so return it as JSON.
       console.error("agent error", err);
-      return c.json({ error: (err as Error).message || "agent failed" }, 500);
+      return c.json({ error: (err as Error).message || "agent failed" }, 502);
     }
   });
 
-  app.get("/api/agent/pending", async (c) => {
-    const { takePending } = await import("./agent.ts");
-    return c.json({ edits: takePending(c.req.query("slug") ?? "") });
+  app.post("/api/metrics", async (c) => {
+    const body = await c.req.json().catch(() => null);
+    if (!body || !editors.some((e) => e.slug === body.slug)) {
+      return c.json({ error: "unknown editor" }, 400);
+    }
+    await recordMetric(body, c.req.header("user-agent") ?? "");
+    return c.body(null, 204);
   });
+
+  app.get("/api/metrics", async (c) => c.json(await summarizeMetrics()));
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {

@@ -42,7 +42,7 @@ const DOC_RELS = `${XML}
 const DOCUMENT = `${XML}
 <w:document xmlns:w="${W_NS}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <w:body>
-<w:p><w:pPr><w:pStyle w:val="Normal"/></w:pPr><w:r><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Normal"/></w:pPr></w:p>
 <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>
 </w:body></w:document>`;
 
@@ -84,7 +84,7 @@ export async function blankDocx(): Promise<Uint8Array> {
   zipping = (async () => {
     // Prefer the server's builder: it is the same code path that produces the
     // known-good sample fixture, including the part ordering that strict OOXML
-    // readers (office-open) require. Fall back to zipping locally if offline.
+    // readers require. Fall back to zipping locally if offline.
     try {
       const res = await fetch("/api/blank.docx", { cache: "no-store" });
       if (res.ok) {

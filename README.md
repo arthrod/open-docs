@@ -1,267 +1,251 @@
 # open-docs
 
-A bench of open-source document editors that run **entirely in the browser**, each
-loaded from npm/CDN with no build step, each with real `.docx` import/export and
-an editing agent.
+[![Live on Val Town](https://img.shields.io/badge/live-open--docs.val.run-2557d6)](https://open-docs.val.run)
+[![Val Town](https://img.shields.io/badge/runs%20on-Val%20Town-111)](https://www.val.town/x/arthrod/open-docs)
+[![Release](https://img.shields.io/github/v/tag/arthrod/open-docs?label=release)](https://github.com/arthrod/open-docs/tags)
+[![Editors](https://img.shields.io/badge/editors-8-informational)](#the-editors)
 
-Every editor gets the same treatment so the comparison is fair: the same fixture
-document, the same top bar, the same agent panel, the same export path. The
-differences you see are the libraries' differences, not the demo's.
+Eight open-source Word editors, running entirely in the browser with no build
+step. Each one opens on a **blank document**, imports and exports real
+**.docx** files, has an **AI assistant** that edits the open document, and is
+**measured on every visit**: startup time, JS memory and download size.
 
-| Editor | Package | Renders | DOCX import/export | Agent write path |
-| --- | --- | --- | --- | --- |
-| [canvas-editor](url:e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` | Canvas/SVG | **hand-written** (see below) | rebuild element list |
-| [Docxodus](url:e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | `session.replaceText(anchor, md)` |
-| [SuperDoc](url:e/superdoc) | `superdoc@2.29.0` | Vue | native | editor command API |
-| [Plate](url:e/plate) | `platejs@53.5.2` | Slate/DOM | via `@platejs/docx-io` | `tf.replaceNodes` |
-| [docen](url:e/docen) | `docen@0.7.0` | Canvas (Leafer) | native **and** markdown | `el.openMarkdown` |
-| [office-open](url:e/office-open) | `office-open@0.15.1` | none — JSON model | `parseDocument`/`generateDocument` | the model *is* the agent output |
-| [docx-editor.dev](url:e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React | native, lossless | regenerate + reopen |
-| [folio](url:e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror | native + markdown | `applyFolioAIEditOperations` |
+**Live:** <https://open-docs.val.run> · **Source:** <https://open-docs.val.run/source>
 
-## Quick start
+## The editors
 
-Open the [landing page](url:index.ts) and pick an editor, or jump straight to one:
+| Editor | Package | Renders | .docx in / out | Assistant writes through | Assistant reads |
+| --- | --- | --- | --- | --- | --- |
+| [canvas-editor](https://open-docs.val.run/e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` + `plugin-docx` | Canvas | vendor `plugin-docx` in, `lib/ooxml.ts` out | `executeSetValue` (element model) | element model → markdown |
+| [Docxodus](https://open-docs.val.run/e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | markdown → .docx → `ribbon.open` | its .docx → `lib/docx-markdown.ts` |
+| [SuperDoc](https://open-docs.val.run/e/superdoc) | `superdoc@2.29.0` | Vue + own layout engine | native | `doc.insert({type:"markdown"})` + Quote style via its document API (undoable) | its .docx → `lib/docx-markdown.ts` |
+| [Plate](https://open-docs.val.run/e/plate) | `platejs@53.5.2` + plugins | Slate / DOM | mammoth in, `lib/ooxml.ts` out | `@platejs/markdown` deserialize (undoable) | `@platejs/markdown` serialize |
+| [docen](https://open-docs.val.run/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | markdown → .docx → `openDOCX` | its .docx → `lib/docx-markdown.ts` |
+| [docx-editor.dev](https://open-docs.val.run/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → .docx → `ref.load` | its .docx → `lib/docx-markdown.ts` |
+| [folio](https://open-docs.val.run/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | `fromMarkdown` → `createDocx` | `toMarkdown` |
+| [WordCraft](https://open-docs.val.run/e/wordcraft) | `wordcraft-web` 0.16.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | native | its own `.md` reader, then Save As .docx | its .docx → `lib/docx-markdown.ts` |
 
-- [canvas-editor](url:e/canvas-editor) · [Docxodus](url:e/docxodus) ·
-  [SuperDoc](url:e/superdoc) · [Plate](url:e/plate) · [docen](url:e/docen) ·
-  [office-open](url:e/office-open) · [docx-editor.dev](url:e/eigenpal) ·
-  [folio](url:e/folio)
+Every editor shows its **own** toolbar: the vendor's ribbon where the library
+ships one (Docxodus, SuperDoc, docen, docx-editor.dev, folio, WordCraft), and a
+full toolbar over the library's command API where it ships none
+(canvas-editor: styles, fonts, sizes, marks, colours, lists, alignment,
+spacing, tables, images, links, rules, page breaks, find, zoom, print; Plate:
+styles H1–H6, fonts, sizes, colours, line height, marks, sub/superscript,
+highlight, lists with indent, quote, code block, rule, alignment, links).
 
-Each page has **Import .docx**, **Export .docx**, **Reset**, and an agent panel.
+## Using it
+
+Open <https://open-docs.val.run>, pick an editor. Every editor page has the same top bar:
+
+- **New** (⌥N): a fresh blank document. Pages also *open* blank.
+- **Import .docx** (⌘O) or drag a .docx onto the page.
+- **Export .docx** (⌘S): the editor's own bytes, named after the document title.
+- **⋯**: open the sample document, download the sample, reload, source links.
+- **Metrics chip**: startup / JS heap / loaded bytes for *this* page load. Click it
+  for the breakdown by file type and origin.
+- **Assistant** panel (toggle on the right): ask it to draft, rewrite, restructure
+  or summarise. With *Auto-apply* on, edits land immediately and each one has an
+  **Undo**; with it off, you review and click **Apply**.
+
+## The assistant
+
+[`server/agent.ts`](server/agent.ts) uses Val Town's OpenAI integration
+(`std/openai`, no key to configure) with **`gpt-5.6-luna`**. The model sees the
+open document as markdown plus the last 8 chat turns, and has one tool,
+`edit_document({markdown, summary})`, which returns the complete new document.
+It is a reasoning model and the proxy rejects function tools unless
+`reasoning_effort` is `"none"`, so `complete()` always sends that.
+
+The browser hands the markdown to the editor's `applyMarkdown`, and reads the
+document back with `getMarkdown` for the next turn. Both directions use one
+mapping, everywhere:
+
+| Markdown | Word |
+| --- | --- |
+| `#` … `######` | Heading 1 … Heading 6 (a .docx *Title* reads back as `#`) |
+| `**b**` `*i*` `~~s~~` | bold, italic, strikethrough |
+| `` `code` `` / fenced block | monospace run (Code Char) / Code paragraph |
+| `[text](url)` | `w:hyperlink` with an external relationship |
+| `-` / `1.` (nested) | bullet / decimal numbering, with levels |
+| `> quote` | Quote style |
+| `---` | bottom-bordered empty paragraph |
+
+### How fairness to each vendor is decided
+
+1. If the vendor has a markdown **importer** that maps every element, the
+   assistant writes through it (Plate, folio, WordCraft; SuperDoc after its
+   quote gap is filled with its own API).
+2. Otherwise the markdown becomes a complete Word document
+   ([`lib/markdown.ts`](lib/markdown.ts) → [`lib/ooxml.ts`](lib/ooxml.ts)) and
+   goes through the vendor's own **.docx importer**, its strongest path
+   (Docxodus, docen, docx-editor.dev).
+3. Reading back uses the vendor's markdown **exporter** when it is faithful
+   (Plate, folio); otherwise the vendor's own .docx export is read by
+   [`lib/docx-markdown.ts`](lib/docx-markdown.ts), the inverse of the writer.
+
+### Assessment (2026-11-09): harness or editor?
+
+The finding "only folio maps every markdown element to Word" was **mostly the
+harness**. What was ours, now fixed:
+
+- Most adapters sent markdown through a lossy path (a line-based converter that
+  knew headings and bullets only), so bold, italic, code, links, numbered lists
+  and quotes were dropped or left as literal `**`/`#` text.
+- `/api/import` mapped Heading 1 to `##` and Title to `#`. docx-editor.dev and
+  Docxodus read the document back through it, so **every assistant turn pushed
+  each heading one level down** and stripped all marks.
+- Headings used Title for `#`, which no other editor or Word itself does.
+- Plate rendered list numbers from CSS sibling counters (bullets made the next
+  numbered list start at 3); canvas-editor and Plate had partial toolbars.
+- SuperDoc's insert left an empty first paragraph.
+- WordCraft lost keyboard input when the assistant box had focus (egui only
+  reads keys while its canvas is focused); the adapter now focuses the canvas
+  while it drives it.
+
+What is the vendors' (written down, worked around fairly, reportable upstream):
+
+| Vendor | Limitation (version tested) | What the bench does |
+| --- | --- | --- |
+| docen | `@docen/docx@0.7.0` markdown import drops bold / italic / inline-code text; `saveMarkdown` drops marks, writes bullets as numbers, loses quotes; blank documents ignore `docDefaults` fonts (Calibri renders as a serif fallback) | .docx in, .docx read back |
+| SuperDoc | markdown and HTML importers map `>` quotes to plain paragraphs; `getMarkdown`/`projectMarkdown` write lists as raw HTML (`<ul data-superdoc-list-labels><li>•&#9;…`) and bold headings | Quote style applied with `styles.create` + `styles.paragraph.setStyle`; .docx read back |
+| canvas-editor | `plugin-markdown@0.0.1` merges consecutive headings and loses code; `plugin-docx@1.0.0` export writes lists as literal text and drops hyperlinks | element model both ways; `lib/ooxml.ts` export |
+| Docxodus | no markdown importer; `convertWmlToMarkdown` is an anchor-annotated projection for patching | .docx in, .docx read back |
+| docx-editor.dev | no markdown importer or exporter on the ref | .docx in, .docx read back |
+| WordCraft | the released web build (v0.16.0) has no scripting API (`window.wordcraft` is on `main`, unreleased); its markdown importer keeps links but doesn't style them; Save writes the opened file's format | Save As (F12) → .docx in host mode |
+
+Measured with [`lib/probes/md-mapping.js`](lib/probes/md-mapping.js): it applies
+a fixed markdown sample, exports the .docx, checks styles/marks/numbering/links
+in `document.xml`, and checks that the markdown read back keeps heading levels
+and marks. All eight editors pass all ten checks and the read-back check.
+Run it in any editor page's console:
+
+```js
+await eval(await (await fetch('/lib/probes/md-mapping.js', { cache: 'no-store' })).text())
+```
+
+## Measurements
+
+[`lib/metrics.ts`](lib/metrics.ts) runs in the visitor's browser once the editor
+is ready and posts to `/api/metrics` (sqlite table `od_metrics_1`):
+
+| Metric | Source |
+| --- | --- |
+| Startup | navigation start → adapter `mount()` resolved |
+| Mount | importing the library + first render |
+| JS heap | `performance.memory.usedJSHeapSize` (Chromium only), **only for the first editor opened in a tab**: later pages reuse the tab's renderer process and would inherit its heap |
+| Loaded | decoded bytes of every script, stylesheet, font and WASM file. Cross-origin files without `Timing-Allow-Origin` report 0 in Resource Timing, so those are re-measured with a `force-cache` fetch. |
+| Cold / warm | warm when the visible bytes mostly came from the HTTP cache (transfer < 20 % of decoded) |
+
+The landing page shows per-editor medians (`GET /api/metrics`). Set
+`localStorage["od:no-metrics"] = "1"` in a browser to keep its page loads out of
+the table (used for test runs). Development-run rows were archived in
+[`docs/metrics-archive/`](docs/metrics-archive/) and the table was cleared.
 
 ## How it fits together
 
-```mermaid
-graph TD
-  index["index.ts<br/>Hono app"] --> router["server/router.ts<br/>shared shell + API"]
-  router --> boot["lib/boot.ts<br/>window.od kit"]
-  router --> ui["lib/ui.ts<br/>top bar + agent panel"]
-  router --> adapters["editors/&lt;slug&gt;/main.ts<br/>one adapter per editor"]
-
-  adapters --> kit["lib/kit.ts<br/>EditorAdapter contract"]
-  adapters --> md["lib/md.ts<br/>markdown ⇄ blocks"]
-
-  router --> sample["/api/sample.docx<br/>the shared fixture"]
-  router --> import["/api/import<br/>docx → text"]
-  router --> export["/api/export<br/>markdown → docx"]
-  router --> agent["/api/agent<br/>OpenAI + tools"]
-
-  agent --> docx["server/docx.ts<br/>OOXML reader/writer"]
-  server_agent["server/agent.ts<br/>propose_edit tool"] --> agent
+```
+index.ts                  Hono app: editor routes, /editors/* /lib/* (served + transpiled),
+                          /api/svg-raw/*, /vendor/wordcraft/<v>/*
+server/router.ts          shared shell (top bar, stage, assistant) + /api/{sample,blank}.docx,
+                          import, export, agent, metrics, log
+server/agent.ts           the assistant (std/openai, gpt-5.6-luna)
+server/metrics.ts         sqlite storage + medians
+server/landing.ts         the comparison page
+lib/boot.ts, lib/ui.ts    window.od kit + all shell behaviour
+lib/metrics.ts            in-browser measurement
+lib/markdown.ts           markdown ⇄ blocks (marked), markdownToDocx
+lib/ooxml.ts              small Word-valid .docx writer (Heading 1–6, Quote, Code, lists, links)
+lib/docx-markdown.ts      .docx → markdown reader (inverse of the writer)
+lib/probes/md-mapping.js  the markdown → Word probe
+editors/<slug>/           shell.ts (server: markup, import map) + main.ts (browser: adapter)
 ```
 
-### The adapter contract
+Each adapter implements [`EditorAdapter`](lib/kit.ts): `mount()` (blank document),
+`load(bytes)`, `getMarkdown()`, `applyMarkdown(md)`, optional `exportDocx()`.
 
-Each editor folder only implements [the four methods in `lib/kit.ts`](url:lib/kit.ts):
+## What it took to make each editor run from a CDN
 
-```ts
-interface EditorAdapter {
-  name: string;
-  mount(): Promise<void>;                    // render the fixture
-  applyMarkdown(markdown: string): Promise<void>;  // the agent's write
-  getMarkdown(): Promise<string>;            // read it back
-  exportDocx?(): Promise<Uint8Array>;        // native bytes, if the lib has them
-  importDocx?(bytes: Uint8Array): Promise<void>;    // native open, if it has one
-}
-```
+Most of these packages publish to npm but do not run from a CDN as-is. The fixes
+are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
 
-Omit `exportDocx`/`importDocx` and the shared chrome falls back to the
-server-side OOXML path — which is exactly what makes the `docxRoundTrip`
-column above meaningful rather than decorative.
+- **SuperDoc**: `superdoc.min.js` loads its engine with a *bare*
+  `import("@superdoc/docx-engine")`; an import map entry resolves it. Do **not**
+  set `workerUrls.document`: the engine reuses it for its DOM-edit worker,
+  which then runs the wrong entry and hangs at "Preparing first pages… 14%".
+- **docen**: esm.sh doesn't implement Vite's `?raw`, so its Fluent icons rendered
+  as the text `data:image/svg+xml,`. The import map sends the icon modules to
+  `/api/svg-raw/*`, which serves each SVG as a string module. esm.sh's
+  `node:zlib` polyfill throws (`zlib.crc32 is not implemented yet`); the import
+  map swaps in an empty module so its zip code takes the pure-JS path.
+- **docx-editor.dev, Plate**: `?external=react,react-dom` + an import map pinning
+  React 18.2.0, so there is one React. Plate pins `platejs` in every plugin URL
+  (`deps=platejs@53.5.2`) so all plugins share one core.
+- **docx-editor.dev**: its font package resolves `.ttf` files relative to
+  `import.meta.url`, so it is loaded from jsDelivr (real files), which removes
+  the "fonts substituted" banner.
+- **folio**: `folio-vue.css` reads `--doc-*` theme variables it never defines, so
+  menus were transparent. The shell defines the theme. `--doc-canvas` is the
+  *paper* colour.
+- **canvas-editor**: the browser's default mousedown focus stole focus from the
+  hidden input, so typing went nowhere; the adapter cancels it. Its docx and
+  floating-toolbar plugins load with `external=@hufe921/canvas-editor`.
+- **Plate**: `@platejs/docx-io`'s exporter wrote `<w:sectPr>` first and dropped
+  heading styles (Word treats that as damaged), and its importer lost list
+  markers. Import walks mammoth's HTML; export uses `lib/ooxml.ts`.
+- **WordCraft**: val files are text-only and nothing mirrors release assets with
+  CORS, so `/vendor/wordcraft/0.16.0/*` installs itself on first request:
+  it downloads the pinned release zip from GitHub, checks its SHA-256, stores
+  the three runtime files gzipped in the val's blob storage, and from then on
+  streams them with `content-encoding: gzip` (22 MB on the wire for a 60 MB
+  wasm) and immutable caching. See [`editors/wordcraft/assets.ts`](editors/wordcraft/assets.ts).
 
-Adding an editor is three files:
+## Not in the bench, and why
 
-```
-editors/<slug>/shell.ts   # slug, title, body markup — runs on the server
-editors/<slug>/main.ts    # the adapter — runs in the browser
-editors/<slug>/…          # anything else the adapter needs
-```
-
-…plus one line in [`editors/index.ts`](url:editors/index.ts) and one entry in
-[`server/registry.ts`](url:server/registry.ts).
-
-## The interesting findings
-
-Four things came out of building this that weren't obvious up front.
-
-### 1. `@hufe921/canvas-editor` ships no DOCX converter
-
-Its README shows DOCX import, but that code lives in the repo's **demo app**, not
-the published package. `package.json` `files` is `dist`, and `dist/src/editor/index.d.ts`
-exports no DOCX helper. So [`editors/canvas-editor/main.ts`](url:editors/canvas-editor/main.ts)
-implements one — an OOXML reader and writer over `fflate` — and it is the only
-demo here that does its own DOCX round-trip. Worth knowing before you adopt it
-for a DOCX workflow.
-
-### 2. "Publishes to npm" ≠ "CDN-runnable"
-
-`superdoc`, `docxodus`, `@stll/folio-vue` and `@docx-editor.dev/react` all ship
-ESM, but each needed something specific:
-
-- **SuperDoc** needs its stylesheet (`dist/style.css`) loaded separately, and
-  pulls Vue + Konva + pdfjs-dist behind it.
-- **Docxodus** was the worst offender, and the only one where the naive approach
-  silently 404s. Its `.NET` runtime lives in `dist/wasm/` and is found through
-  `import.meta.url`, so the JS must be served from the same tree as the payload.
-  **esm.sh repackages the JS but not the WASM** — `…/es2022/wasm/_framework/dotnet.js`
-  is a 404, so the obvious `https://esm.sh/docxodus/embed` import loads a bundle
-  that can never boot. Its unbundled `dist/embed.js` is also not browser-ready: it
-  re-exports from the bare specifier `docxodus/embed`. The one that works is
-  `dist/embed.bundle.js` from jsDelivr — self-contained, 559 KB, and it exports
-  the engine API *and* `DocxEditor`. All of that is recorded in
-  [`editors/docxodus/assets.ts`](url:editors/docxodus/assets.ts).
-- **folio** declares eleven ProseMirror packages plus React, Vue and Yjs as peers.
-  `?bundle&external=…` needs the full list or you get two copies of ProseMirror
-  and a dead editor.
-- **docx-editor.dev** publishes its stylesheet at
-  `@docx-editor.dev/core/styles/editor.css`, not `<adapter>/styles.css`.
-
-### 3. DOCX fidelity is a spectrum, not a yes/no
-
-| Approach | Editor | What survives a round-trip |
-| --- | --- | --- |
-| OOXML session (WASM) | Docxodus | everything, byte-for-byte |
-| Canonical model | office-open, docen | what the model expresses |
-| Native engine | folio, docx-editor.dev, SuperDoc | everything it understands, rest preserved |
-| HTML bridge | Plate (`@platejs/docx-io`) | what mammoth + html-to-docx express |
-
-The last row is the one that bites. Plate's bridge is genuinely useful and
-genuinely lossy: fields, content controls, footnotes and comments do not make
-the trip, because they have no HTML representation that survives. If your
-documents are "text with headings and bullets", fine. If they're contracts with
-cross-references, it is not.
-
-### 4. office-open is not an editor — and that's the point
-
-Every other entry is a surface you type into. `office-open` has no surface at
-all: you hand it `DocumentOptions` JSON and it generates `.docx`. That makes it
-the cleanest agent target in the set (the model *is* the tool output, and the
-package ships Draft-07 JSON-Schemas shaped for LLM tool calling) and the worst
-choice if you need a human in the loop. Both are legitimate; pick deliberately.
-
-## The agent
-
-The same agent runs on every page — [`server/agent.ts`](url:server/agent.ts), the
-shape of Val Town's `roll-your-own-agent` template: a chat-completions loop whose
-only tool is `propose_edit`.
-
-```mermaid
-sequenceDiagram
-  participant U as You
-  participant C as lib/ui.ts
-  participant A as /api/agent
-  participant M as gpt-4o-mini
-  U->>C: "Turn the risks into bullets"
-  C->>A: { slug, document: markdown, prompt }
-  A->>M: chat(messages, tools=[propose_edit])
-  M-->>A: tool_call(propose_edit, { markdown, summary })
-  A-->>C: { reply, edit }
-  C->>U: confirm card (diff + preview)
-  U->>C: Apply
-  C->>C: adapter.applyMarkdown(edit)
-```
-
-`propose_edit` never touches the document. The model produces a full
-replacement, the browser shows it alongside a diff count, and nothing changes
-until you click **Apply**. Then the write goes through the editor's *own* model,
-so it lands in that editor's undo stack — with one exception noted below.
-
-Credentials come from Val Town itself (`std/openai` proxies through the val's
-token). There is nothing to configure.
-
-## Per-editor notes
-
-### canvas-editor
-
-The document is an `IElement[]` — a flat list of characters where `\n` is the
-only paragraph boundary. Headings are a `level` on every character of the line;
-bullets are a `listType` + `listId`. Import parses `word/document.xml` and
-converts paragraph styles; export reassembles paragraphs from the `\n` markers
-and emits OOXML. The agent's write rebuilds the element list via
-`command.executeSetValue`.
-
-### Docxodus
-
-The only editor where the agent's write is **surgical**: `listAnchors()` gives
-block anchors, `replaceText(anchor, markdown)` replaces one block and lets the
-engine renumber siblings. It also gives you track changes and redlines for free
-— the engine's model of edits *is* Word revisions. `initialise()` on first load
-compiles/starts the .NET runtime, so the first paint is the slowest of the set.
-
-### SuperDoc
-
-The heaviest by far (Vue + Konva + pdfjs-dist). Comments and track changes are
-first-class. Because it owns so much of its own shell, this demo keeps the shared
-top bar and lets SuperDoc render the page itself.
-
-### Plate
-
-A framework, not an editor: you assemble the plugin set. This demo uses the bare
-minimum so the DOCX bridge is visible rather than buried under toolbar plugins.
-`importDocx(editor, arrayBuffer)` converts with mammoth; `exportToDocx(nodes)`
-goes back out through html-to-docx.
-
-### docen
-
-A canvas document editor packaged as a `<docen-document>` web component, with
-`openDOCX` / `saveDOCX` / `openMarkdown` / `saveMarkdown` on the element. That
-markdown pair is the reason its agent write path is a one-liner — no conversion
-code at all.
-
-### office-open
-
-No surface. Left pane is the `DocumentOptions` JSON (editable), right pane is a
-live preview. The agent's rewrite becomes new `sections[].children[]`. Export is
-a regenerate, not a save.
-
-### docx-editor.dev
-
-The packaged `<DocxEditor>` is a whole application: `<DocxEditor document={bytes} mode="edit" />`
-plus `ref.save()`. Its headless core is a separate package
-(`@docx-editor.dev/core`), which is where the Office.js-shaped automation API
-lives — worth exploring if you want code to drive the document rather than a user.
-
-### folio
-
-The only entry with a *native* AI-edit API: `applyFolioAIEditOperations`,
-`createFolioAIEditSnapshot`, suggestions with accept/reject, plus `toMarkdown` /
-`fromMarkdown`. This demo prefers that path and only falls back to a DOCX
-regenerate when the block diff comes back empty.
+- **office-open** (`office-open@0.15.1`): a document model and generator with no
+  editing surface. Removed.
+- **docs.plus**: not Rust and not a library. It is a full collaborative app
+  (Next.js + Tiptap/Yjs, Supabase/Postgres, a Hocuspocus server, MIT) with no
+  .docx engine; it would need its own backend, which Val Town can't host.
+- **GenOffice** (genspark-ai/genoffice, Apache-2.0): mostly TypeScript with some
+  Rust, shipped as an Electron desktop app. Every package is `private: true`
+  (nothing on npm), and the Docs editor (`apps/docs`) is an Electron renderer
+  wired to its preload/IPC. Running it here would mean forking and rebuilding
+  its renderer without Electron; not deployable as published.
+- **WordCraft** *is* in the bench (above): its release ships a static web build.
 
 ## Known limitations
 
-These are honest gaps, not hidden:
+- **Fidelity varies by design.** Docxodus, SuperDoc, docx-editor.dev, folio,
+  docen and WordCraft keep the .docx model. canvas-editor and Plate round-trip
+  through their own models: headings, lists, marks, links, quotes and code
+  survive; tables become tab-separated rows, and fields, footnotes and comments
+  do not survive.
+- **Assistant writes replace the whole document.** Undo works through the
+  assistant card. SuperDoc and Plate also put the change in the editor's own
+  undo stack.
+- **JS heap** is Chromium-only; other browsers show "n/a".
+- **WordCraft** needs WebGPU or WebGL2 and is a 22 MB (compressed) download;
+  its UI follows the browser's language.
+- **Docxodus** edits one block at a time; typed text commits when the block
+  loses focus or on Enter.
 
-- **eigenpal's agent write loses undo.** The packaged editor exposes `save()`
-  but no text-mutation API, so `applyMarkdown` regenerates a `.docx` and reopens
-  it. The confirm card says so.
-- **The server-side importer is deliberately simple.** [`server/docx.ts`](url:server/docx.ts)
-  reads paragraph text, headings and bullets. No tables, fields or footnotes. It
-  is the fallback for editors with no native reader and the text source for the
-  agent — not a converter.
-- **Docxodus' WASM load is the long pole.** Several MB, cached after the first
-  visit, but the first one is slow.
-- **SuperDoc and folio peers are pinned via `?external=`.** If a peer version
-  bumps, the editor stops mounting rather than silently duplicating.
+## Development
 
-## Local development
-
-There is no build step and nothing to install. Edit a file, refresh the page.
+There's no build. Edit a file, `vt push`, refresh. The git repository is
+<https://github.com/arthrod/open-docs>; the val is the deployment.
 
 ```bash
-# the shared fixture, byte-for-byte
-curl -O https://arthrod--ab70101cdbc011f188ab1607ee4eb77e.web.val.run/api/sample.docx
+vt push                                         # deploy
+curl -s https://open-docs.val.run/api/metrics | jq                     # current medians
+curl -s -X POST https://open-docs.val.run/api/agent -H 'content-type: application/json' \
+  -d '{"slug":"folio","document":"","prompt":"Write a two-line memo","history":[]}'
 ```
 
-Diagnostics: client errors are piped into the val's logs by
-`https://esm.town/v/std/catch` in every shell, so `get_logs` shows browser
-failures alongside server ones.
+Append `?debug` to the SuperDoc page to log every worker message.
 
 ## Licenses
 
-Every editor ships under its own license — MIT for canvas-editor, Docxodus,
-Plate, docen and office-open; Apache-2.0 for folio and docx-editor.dev;
-**AGPL-3.0 for SuperDoc**. The SuperDoc demo is fine here because this val's
-source is public, but AGPL is a real constraint for a closed product. Check
-before you ship.
+Each editor keeps its own license: MIT for canvas-editor, Docxodus, Plate and
+docen; Apache-2.0 for folio and docx-editor.dev; Apache-2.0 / MIT for WordCraft;
+**AGPL-3.0 for SuperDoc**. AGPL is fine for this public val but is a real
+constraint for a closed product.

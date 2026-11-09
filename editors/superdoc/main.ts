@@ -1,148 +1,173 @@
 /**
- * SuperDoc — Vue + Konva + pdfjs behind one bundle (12 MB). AGPL-3.0.
+ * SuperDoc — Vue + its own DOCX engine (WASM-free, runs in a Web Worker). AGPL-3.0.
  *
- * DOCUMENT SWAPPING: don't try.
- *
- * SuperDoc's `replaceFile` delegates to `adapter?.replaceFile ?? adapter?.loadDocument
- * ?? adapter?.reload`, and that adapter is absent for a plain `new SuperDoc({...})`
- * mount — hence "SuperDoc: replaceFile is unavailable for the active editor".
- * So `load()` destroys the instance and constructs a new one with the new file.
- * Slower, but it is the only path that works for every entry point.
+ * Loaded from its CDN build (see assets.ts for why). Documents are swapped in
+ * place with `replaceDocument()`; the assistant writes through the editor's
+ * document API (`doc.insert({ type: "markdown" })`) so the change lands in
+ * SuperDoc's own undo history. Markdown read back comes from SuperDoc's .docx
+ * export (its markdown export writes lists as HTML).
  */
 import { waitFor } from "/lib/kit.ts";
+import { SUPERDOC_ENGINE } from "./assets.ts";
+import { markdownToBlocks } from "/lib/markdown.ts";
+import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-const CDN = "https://esm.sh/superdoc@2.29.0?bundle&target=es2022";
-// VERIFIED 200 / text/css / 106 KB.
-const CSS = "https://cdn.jsdelivr.net/npm/superdoc@2.29.0/dist/style.css";
+// `?debug` logs every worker message — SuperDoc's engine fails silently.
+if (location.search.includes("debug")) {
+  const Native = window.Worker;
+  (window as any).Worker = function (url: string | URL, opts?: WorkerOptions) {
+    const w = new Native(url, opts);
+    const name = opts?.name ?? String(url).slice(-48);
+    const tag = (d: any) => String(d?.type ?? d?.kind ?? "") + (d?.payload?.kind ? `/${d.payload.kind}` : "") + (d?.method ? `/${d.method}` : "");
+    console.debug("[sd-worker] new", name);
+    w.addEventListener("message", (m) => console.debug("[sd-worker]", name, "<-", tag(m.data), JSON.stringify(m.data)?.slice(0, 300)));
+    w.addEventListener("error", (e) => console.debug("[sd-worker]", name, "ERROR", e.message));
+    const post = w.postMessage.bind(w);
+    w.postMessage = ((d: any, t?: any) => (console.debug("[sd-worker]", name, "->", tag(d)), post(d, t))) as any;
+    return w;
+  };
+}
 
-const DOCX_MIME =
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-let mod: any;
 let instance: any;
-let host: HTMLElement | undefined;
 
-function ensureCss() {
-  if (document.querySelector("link[data-superdoc]")) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = CSS;
-  link.dataset.superdoc = "1";
-  document.head.append(link);
+async function exportBytes(): Promise<Uint8Array> {
+  if (!instance) throw new Error("SuperDoc not mounted");
+  const blob: Blob = await instance.export({ exportType: ["docx"], triggerDownload: false });
+  return new Uint8Array(await blob.arrayBuffer());
 }
 
-function toFile(bytes: Uint8Array): File {
-  return new File([bytes.slice(0) as Uint8Array], "document.docx", {
-    type: DOCX_MIME,
+/**
+ * What SuperDoc 2.29's markdown importer leaves undone, finished with its own
+ * document API (so it stays in the same undo history):
+ *  - block quotes arrive as plain paragraphs (the HTML importer does the same):
+ *    give them Word's Quote style, creating it if the document lacks one;
+ *  - the insert lands after the cleared document's empty paragraph: drop it.
+ */
+async function finishImport(ed: any, markdown: string) {
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+  const quotes = markdownToBlocks(markdown)
+    .filter((b) => b.kind === "quote")
+    .map((b) => norm(b.runs.map((r) => r.text).join("")))
+    .filter(Boolean);
+  let { blocks } = await ed.doc.blocks.list({});
+  const first = blocks[0];
+  if (first?.isEmpty && blocks.length > 1 && first.nodeType === "paragraph") {
+    await ed.doc.blocks.delete({ target: { kind: "block", nodeType: first.nodeType, nodeId: first.nodeId } });
+    blocks = blocks.slice(1);
+  }
+  if (!quotes.length) return;
+  // conflictPolicy "fail" leaves an existing Quote style alone.
+  await ed.doc.styles.create({
+    type: "paragraph", id: "Quote", name: "Quote", basedOn: "Normal", next: "Normal", qFormat: true, priority: 29,
+    conflictPolicy: "fail",
+    paragraph: { indent: { left: 864, right: 864 }, justification: "center" },
+    run: { italic: true, color: { val: "404040" } },
+  }).catch(() => undefined);
+  // Match quote paragraphs in document order (previews may be truncated).
+  let from = 0;
+  for (const q of quotes) {
+    const i = blocks.findIndex((b: any, k: number) =>
+      k >= from && b.nodeType === "paragraph" && b.textPreview && q.startsWith(norm(b.textPreview).replace(/…$/, ""))
+    );
+    if (i < 0) continue;
+    from = i + 1;
+    await ed.doc.styles.paragraph.setStyle({
+      target: { kind: "block", nodeType: blocks[i].nodeType, nodeId: blocks[i].nodeId },
+      styleId: "Quote",
+    });
+  }
+}
+
+function toFile(bytes: Uint8Array, name = "document.docx"): File {
+  return new File([bytes.slice(0)], name, { type: DOCX_MIME });
+}
+
+async function superdocGlobal(): Promise<any> {
+  // The classic <script defer> in <head> defines window.SuperDoc.
+  for (let i = 0; i < 400; i++) {
+    const g = (window as any).SuperDoc;
+    if (g) return g.SuperDoc ?? g;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  throw new Error("SuperDoc's CDN script did not define window.SuperDoc");
+}
+
+// Exposed for the test probes in /lib/probes (read-only use).
+(window as any).__superdoc = () => instance;
+
+function editor(): any {
+  return instance?.activeEditor;
+}
+
+/** Wait until SuperDoc says the document is open (or reports why not). */
+function create(SuperDoc: any, bytes: Uint8Array): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("SuperDoc did not become ready within 60s")), 60_000);
+    instance = new SuperDoc({
+      selector: "#sd-editor",
+      toolbar: "#sd-toolbar",
+      document: toFile(bytes, "Untitled.docx"),
+      documentMode: "editing",
+      rulers: true,
+      user: { name: "open-docs", email: "editor@open-docs.local" },
+      telemetry: { enabled: false },
+      onReady: () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      onException: ({ error }: { error: Error }) => {
+        console.error("[superdoc]", error);
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    });
   });
-}
-
-async function toBytes(out: any): Promise<Uint8Array> {
-  if (out instanceof Uint8Array) return out;
-  if (out instanceof ArrayBuffer) return new Uint8Array(out);
-  if (out?.blob instanceof Blob) return new Uint8Array(await out.blob.arrayBuffer());
-  if (out instanceof Blob) return new Uint8Array(await out.arrayBuffer());
-  if (out?.arrayBuffer) return new Uint8Array(await out.arrayBuffer());
-  throw new Error("SuperDoc export() returned no bytes");
-}
-
-function activeEditor(): any {
-  return instance?.activeEditor ?? instance?.editor ?? instance;
-}
-
-/** Tear down and mount a fresh SuperDoc around `bytes`. */
-async function mountWith(bytes: Uint8Array): Promise<void> {
-  if (!host) throw new Error("SuperDoc host missing");
-  if (!mod) mod = await import(CDN);
-  ensureCss();
-
-  try {
-    instance?.destroy?.();
-  } catch { /* ignore */ }
-  instance = undefined;
-
-  const mount = document.getElementById("sd-editor");
-  if (!mount) throw new Error("SuperDoc mount point missing (#sd-editor)");
-  mount.innerHTML = "";
-
-  instance = new mod.SuperDoc({
-    selector: "#sd-editor",
-    document: toFile(bytes),
-    documentMode: "editing",
-  });
-
-  // `new SuperDoc()` is synchronous but the document loads asynchronously;
-  // give it a beat so an immediate export() has something to read.
-  await new Promise((r) => setTimeout(r, 0));
 }
 
 window.od.register({
   name: "SuperDoc",
-  mergeQuality: "html-paste",
+  mergeQuality: "native",
+  extraResources: [SUPERDOC_ENGINE],
 
   async mount() {
-    host = await waitFor<HTMLDivElement>("#sd-host");
-    ensureCss();
-    host.innerHTML =
-      `<div id="sd-editor" style="height:100%;min-height:70vh"></div>` +
-      `<div id="sd-status" style="padding:8px 12px;color:#6b7280;font:12px ui-sans-serif">Loading SuperDoc (12 MB)…</div>`;
-
-    // Start blank with our own generated package — `BlankDOCX` is a re-export
-    // whose runtime shape isn't a Uint8Array, so we don't rely on it.
-    await mountWith(await window.od.blankDocx());
-    document.getElementById("sd-status")?.remove();
-    window.od.status("SuperDoc ready", "ok");
+    await waitFor("#sd-editor");
+    window.od.progress("Loading SuperDoc and its DOCX engine (~25 MB on first visit)…");
+    const SuperDoc = await superdocGlobal();
+    await create(SuperDoc, await window.od.blankDocx());
   },
 
   async load(bytes: Uint8Array) {
-    await mountWith(bytes);
+    if (!instance) throw new Error("SuperDoc not mounted");
+    const res = await instance.replaceDocument(toFile(bytes));
+    if (res && res.ok === false) throw new Error(`SuperDoc could not open the file (${res.reason ?? "unknown reason"})`);
   },
 
   async getMarkdown() {
-    const ed = activeEditor();
-    const html: string = ed?.getHTML?.() ?? "";
-    if (!html) return "";
-    return htmlToMarkdown(html);
+    // SuperDoc's markdown export (doc.getMarkdown / projectMarkdown) writes
+    // lists as raw HTML (<ul data-superdoc-list-labels><li>•&#9;…) and bolds
+    // headings, which the assistant would echo back; read its .docx instead.
+    if (!instance) return "";
+    return docxToMarkdown(await exportBytes());
   },
 
-  async applyMarkdown(markdown) {
-    const ed = activeEditor();
-    const html = window.od.md.mdToHtml(markdown);
-    if (ed?.commands?.setContent) {
-      ed.commands.setContent(html);
-      return;
+  async applyMarkdown(markdown: string) {
+    // activeEditor is briefly null right after a document (re)opens.
+    let ed = editor();
+    for (let i = 0; i < 200 && !ed?.doc?.insert; i++) {
+      await new Promise((r) => setTimeout(r, 25));
+      ed = editor();
     }
-    if (ed?.chain) {
-      ed.chain().focus().selectAll().insertContent(html).run();
-      return;
-    }
-    throw new Error("no write path on this SuperDoc build");
+    if (!ed?.doc?.clearContent || !ed?.doc?.insert) throw new Error("SuperDoc's document API is not ready");
+    // SuperDoc's own markdown importer (doc.insert type:"markdown") maps
+    // headings, marks, lists, links and code to Word structures, and every
+    // step lands in SuperDoc's undo history.
+    await ed.doc.clearContent();
+    const res = await ed.doc.insert({ value: markdown, type: "markdown" });
+    if (res && res.success === false) throw new Error(`SuperDoc rejected the markdown (${res.failure?.code ?? res.status ?? "unknown"})`);
+    await finishImport(ed, markdown);
   },
 
-  async exportDocx() {
-    if (!instance) throw new Error("SuperDoc not mounted");
-    const out = await instance.export({ exportType: "docx" });
-    return await toBytes(out);
-  },
+  exportDocx: () => exportBytes(),
 });
-
-/* --------------------------- HTML → markdown ----------------------------- */
-
-function htmlToMarkdown(html: string): string {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const out: string[] = [];
-  for (const el of Array.from(doc.body.querySelectorAll("*"))) {
-    const tag = el.tagName.toLowerCase();
-    if (!/^h[1-6]$|^p$|^li$/.test(tag)) continue;
-    if (tag === "p" && el.closest("li")) continue;
-    const text = (el.textContent ?? "").trim();
-    if (!text) continue;
-    if (tag === "li") out.push(`- ${text}`);
-    else if (tag === "h1") out.push(`# ${text}`);
-    else if (tag === "h2") out.push(`## ${text}`);
-    else if (tag === "h3") out.push(`### ${text}`);
-    else if (/^h[4-6]$/.test(tag)) out.push(`#### ${text}`);
-    else out.push(text);
-  }
-  return out.join("\n\n");
-}

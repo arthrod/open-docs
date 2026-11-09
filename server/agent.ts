@@ -1,90 +1,89 @@
 /**
- * The agent, server-side.
+ * The document agent, server-side.
  *
- * Deliberately the same shape as Val Town's "roll your own agent" template: a
- * while-loop over OpenAI chat completions with tool calls. The only tools are
- * document tools, so the model can only act on the document the user is
- * looking at — never anything else.
+ * Same shape as Val Town's "roll your own agent" template: a chat-completions
+ * loop with tool calls, through `std/openai` (Val Town's OpenAI proxy — the
+ * val's own token, nothing to configure). The only tool edits the document the
+ * user has open, so the model can act on that document and nothing else.
  *
- * `propose_edit` does not touch the document. It stages a replacement in a
- * pending-edit store keyed by editor slug; the browser polls for it and decides
- * how to apply it (one editor per demo, each applying through its own native
- * undo stack). That keeps writes auditable and undoable.
+ * The browser sends the document as markdown and applies the returned edit
+ * through the editor's own API (see lib/ui.ts → adapter.applyMarkdown).
  */
 import { OpenAI } from "https://esm.town/v/std/openai";
 
-export interface PendingEdit {
-  id: string;
-  slug: string;
-  /** Full replacement markdown for the document. */
-  markdown: string;
-  /** Short human summary of what changed. */
-  summary: string;
-  /** The user prompt that produced it. */
-  prompt: string;
-  createdAt: number;
-}
+/** What we ask the proxy for. It may route to a newer model; we report what answered. */
+export const AGENT_MODEL = "gpt-5.6-luna";
 
-const TTL_MS = 15 * 60 * 1000;
+const SYSTEM = `You are the writing assistant built into a word processor.
 
-// Per-isolate pending edits. Vals scale to fresh isolates, so a poll may land
-// elsewhere and see nothing; that's fine — the client falls back to a direct
-// `POST /api/agent` response, and this is just the reconnect path.
-const pending = new Map<string, PendingEdit[]>();
+The user has a Word (.docx) document open. You receive it as markdown inside
+<document> tags. You can talk with the user, and you can CHANGE the document by
+calling the edit_document tool.
 
-export function takePending(slug: string): PendingEdit[] {
-  const now = Date.now();
-  const all = (pending.get(slug) ?? []).filter((p) => now - p.createdAt < TTL_MS);
-  pending.set(slug, all);
-  return all;
-}
+When the user asks for any change — write, draft, rewrite, shorten, expand,
+translate, restructure, fix, format, add or remove content — call
+edit_document with the COMPLETE new document. It replaces the whole document,
+so include every part you are keeping, not just the changed part.
 
-export function pushPending(edit: PendingEdit) {
-  const all = takePending(edit.slug);
-  all.push(edit);
-  pending.set(edit.slug, all.slice(-5));
-}
+If the document is empty and the user asks you to write something, write it
+and call edit_document. If the user only asks a question about the document,
+answer in plain text and do not call the tool.
 
-const SYSTEM = `You are the editing agent inside a document editing demo.
+Markdown you may use (the editors understand exactly these):
+- "# " title, "## " heading, "### " sub-heading
+- "- " bullet items (indent two spaces per nesting level)
+- blank line between paragraphs
+- **bold** and *italic* inside a line
+Do not use tables, links, images, HTML, numbered lists or code fences.
 
-The user is looking at a Word (.docx) document in an editor. The document is
-provided to you as markdown. Answer questions about it, and when the user asks
-for a change, call the propose_edit tool with the COMPLETE new document
-markdown. Never return only a fragment — propose_edit replaces the document
-wholesale.
-
-Rules:
-- Preserve the document's existing structure and voice unless asked otherwise.
-- Keep markdown features simple: # / ## / ### headings, "- " bullets, plain
-  paragraphs, **bold**, *italic*. No tables, HTML, or code fences.
-- If the user only asks a question, answer in plain text without calling a tool.`;
+Keep the author's voice and existing structure unless asked otherwise. In the
+tool's summary, say in one short sentence what you changed.`;
 
 const TOOLS = [{
-  type: "function",
+  type: "function" as const,
   function: {
-    name: "propose_edit",
+    name: "edit_document",
     description:
-      "Propose the complete rewritten document. The user sees a diff and applies it to the editor.",
+      "Replace the open document with new content. Use for every requested change. The editor applies it immediately and the user can undo.",
     parameters: {
       type: "object",
       properties: {
         markdown: {
           type: "string",
-          description: "The full new document content in markdown.",
+          description: "The full new document, in the limited markdown described in the instructions.",
         },
         summary: {
           type: "string",
-          description: "One sentence describing what changed (e.g. 'Shortened the risks section').",
+          description: "One short sentence describing the change, e.g. 'Shortened the risks section to three bullets'.",
         },
       },
       required: ["markdown", "summary"],
+      additionalProperties: false,
     },
   },
 }];
 
 export interface AgentResult {
   reply: string;
+  model?: string;
   edit?: { markdown: string; summary: string };
+}
+
+type Msg = Record<string, unknown>;
+
+/**
+ * One completion. gpt-5.6-luna is a reasoning model, and Val Town's proxy
+ * rejects function tools unless reasoning is off ("Function tools with
+ * reasoning_effort are not supported…"), so ask for that up front.
+ */
+async function complete(openai: OpenAI, messages: Msg[]) {
+  return await openai.chat.completions.create({
+    model: AGENT_MODEL,
+    messages,
+    tools: TOOLS,
+    tool_choice: "auto",
+    reasoning_effort: "none",
+  } as any);
 }
 
 export async function runAgent(opts: {
@@ -92,61 +91,57 @@ export async function runAgent(opts: {
   document: string;
   prompt: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
-  signal?: AbortSignal;
 }): Promise<AgentResult> {
   const openai = new OpenAI();
-  const messages: any[] = [
+  const history = (opts.history ?? [])
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+    .slice(-8)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
+  const doc = opts.document.trim() ? opts.document.slice(0, 60_000) : "(the document is empty)";
+  const messages: Msg[] = [
     { role: "system", content: SYSTEM },
-    ...(opts.history ?? []).slice(-6),
+    ...history,
     {
       role: "user",
-      content:
-        `Current document:\n\n<document>\n${opts.document.slice(0, 60_000)}\n</document>\n\nRequest: ${opts.prompt}`,
+      content: `<document>\n${doc}\n</document>\n\n${opts.prompt}`,
     },
   ];
 
-  // A tool call means we want the edit, not a chat answer, so we allow at most
-  // two round trips: propose → confirm.
+  let model: string | undefined;
   for (let turn = 0; turn < 3; turn++) {
-    const res = await openai.chat.completions.create(
-      { model: "gpt-4o-mini", messages, tools: TOOLS, temperature: 0.3 },
-    );
-    const msg = res.choices[0].message;
+    const res = await complete(openai, messages);
+    model = (res as any).model ?? model;
+    const msg = res.choices[0].message as any;
     messages.push(msg);
 
-    const call = msg.tool_calls?.find((c) => c.function.name === "propose_edit");
-    if (!call) return { reply: msg.content ?? "(no response)" };
+    const call = msg.tool_calls?.find((c: any) => c.function?.name === "edit_document");
+    if (!call) return { reply: msg.content?.trim() || "(no response)", model };
 
-    let args: { markdown?: string; summary?: string };
+    let args: { markdown?: string; summary?: string } = {};
     try {
       args = JSON.parse(call.function.arguments);
     } catch {
       messages.push({
         role: "tool",
         tool_call_id: call.id,
-        content: "Invalid JSON arguments; call propose_edit again with valid JSON.",
+        content: "The arguments were not valid JSON. Call edit_document again with valid JSON.",
       });
       continue;
     }
-    if (!args.markdown) {
+    if (!args.markdown?.trim()) {
       messages.push({
         role: "tool",
         tool_call_id: call.id,
-        content: "Missing `markdown`; call propose_edit again with the full document.",
+        content: "`markdown` was empty. Call edit_document again with the complete document.",
       });
       continue;
     }
-
-    const edit = { markdown: args.markdown, summary: args.summary ?? "Updated the document" };
-    pushPending({
-      id: crypto.randomUUID(),
-      slug: opts.slug,
-      prompt: opts.prompt,
-      createdAt: Date.now(),
-      ...edit,
-    });
-    return { reply: edit.summary, edit };
+    const summary = args.summary?.trim() || "Updated the document";
+    return {
+      reply: [msg.content?.trim(), summary].filter(Boolean).join("\n\n"),
+      model,
+      edit: { markdown: args.markdown, summary },
+    };
   }
-
-  return { reply: "The agent could not produce a usable edit." };
+  return { reply: "I couldn't produce a usable edit — try rephrasing the request.", model };
 }

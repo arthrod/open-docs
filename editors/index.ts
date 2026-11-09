@@ -11,7 +11,7 @@ export const editorMounts: string[] = [
   "superdoc",
   "plate",
   "docen",
-  "office-open",
   "eigenpal",
   "folio",
+  "wordcraft",
 ];

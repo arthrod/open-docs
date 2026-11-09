@@ -1,95 +1,96 @@
 /** @jsxImportSource https://esm.sh/react@18.2.0 */
 /**
- * docx-editor.dev (eigenpal).
+ * docx-editor.dev (eigenpal) — a paginated React .docx editor with its own
+ * title bar, menus and toolbar.
  *
- * TWO VERIFIED FIXES over the first attempt:
- *  - `?bundle-deps&external=…` returns 404. `?external=react,react-dom` works.
- *  - The stylesheet is exported by the React package (`./styles.css` →
- *    `src/styles/editor.css`), NOT `@docx-editor.dev/core/styles/editor.css`.
+ * Verified against @docx-editor.dev/react@2.35.0's typings:
+ *   <DocxEditor document={"blank" | Uint8Array} mode="edit" ref={…} />
+ *   ref.load(bytes | "blank"), ref.save(): Promise<ArrayBuffer | null>
  *
- * The packaged `<DocxEditor>` takes `document={Uint8Array}` and exposes
- * `save()` on its ref. `document` is a controlled prop, so a "new document"
- * is just new bytes — no remount needed.
+ * React is resolved through the page's import map (server/router.ts →
+ * REACT_IMPORTS), so this module, the library and its Radix dependencies all
+ * share one React.
  */
-import React, { useRef, useState } from "https://esm.sh/react@18.2.0";
-import { createRoot } from "https://esm.sh/react-dom@18.2.0/client";
-import {
-  DocxEditor,
-} from "https://esm.sh/@docx-editor.dev/react@2.35.0?external=react,react-dom";
+import React, { useEffect, useRef } from "react";
+import { createRoot } from "react-dom/client";
+import { DocxEditor } from "https://esm.sh/@docx-editor.dev/react@2.35.0?external=react,react-dom";
 import { waitFor } from "/lib/kit.ts";
+// The vendor's open-licensed substitutes for Word's fonts (Carlito for Calibri,
+// Liberation for Arial/Times/Courier…). Loaded from jsDelivr, not esm.sh: the
+// package finds its .ttf files relative to import.meta.url.
+import { packagedFonts } from "https://cdn.jsdelivr.net/npm/@docx-editor.dev/fonts@2.35.0/dist/index.js";
+import { markdownToDocx } from "/lib/markdown.ts";
+import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-type EditorRef = { save(): Promise<ArrayBuffer | null> };
+type EditorRef = {
+  load(doc: Uint8Array | "blank"): void;
+  save(): Promise<ArrayBuffer | null>;
+  getEditor(): unknown;
+};
 
-let editorRef: EditorRef | null = null;
-let setBytes: ((b: Uint8Array) => void) | null = null;
+let ref: EditorRef | null = null;
+const FONTS = packagedFonts();
 
-function App({ initial }: { initial: Uint8Array }) {
-  const [bytes, setBytesState] = useState<Uint8Array>(initial);
-  const ref = useRef<EditorRef>(null);
-  setBytes = setBytesState;
-
+function App({ onReady }: { onReady: () => void }) {
+  const r = useRef<EditorRef | null>(null);
+  useEffect(() => {
+    // The ref is attached on commit; poll until the editor reports a document.
+    let alive = true;
+    const tick = async () => {
+      while (alive) {
+        if (r.current?.getEditor?.()) {
+          ref = r.current;
+          onReady();
+          return;
+        }
+        await new Promise((res) => setTimeout(res, 50));
+      }
+    };
+    void tick();
+    return () => {
+      alive = false;
+    };
+  }, []);
   return (
-    <div style={{ height: "100%", minHeight: 0 }}>
-      <DocxEditor
-        ref={(instance: EditorRef | null) => {
-          ref.current = instance;
-          editorRef = instance;
-        }}
-        document={bytes}
-        mode="edit"
-      />
+    <div style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <DocxEditor ref={r as any} document="blank" mode="edit" fonts={FONTS} />
     </div>
   );
 }
 
 window.od.register({
   name: "docx-editor.dev",
-  mergeQuality: "native",
+  mergeQuality: "rebuild",
 
   async mount() {
     const root = await waitFor<HTMLDivElement>("#ep-root");
-    // Start blank.
-    const blank = await window.od.blankDocx();
-    createRoot(root).render(<App initial={blank} />);
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("docx-editor.dev did not start within 45s")), 45_000);
+      createRoot(root).render(<App onReady={() => { clearTimeout(timer); resolve(); }} />);
+    });
   },
 
   async load(bytes: Uint8Array) {
-    if (!setBytes) throw new Error("docx-editor.dev not mounted");
-    // The prop is controlled: new bytes = new document.
-    setBytes(bytes.slice(0) as Uint8Array);
+    if (!ref) throw new Error("docx-editor.dev not mounted");
+    ref.load(bytes.slice(0));
   },
 
   async getMarkdown() {
-    // No text API on the open ref. Round-trip through the server extractor so
-    // the agent sees the real document, including anything you typed.
-    const buffer = await editorRef?.save?.();
-    if (!buffer) return "";
-    const res = await fetch("/api/import", {
-      method: "POST",
-      headers: { "content-type": "application/octet-stream" },
-      body: buffer,
-    });
-    if (!res.ok) return "";
-    const json = await res.json();
-    return (json.markdown as string) ?? "";
+    // No markdown export on the ref: read the bytes it saves.
+    const buffer = await ref?.save();
+    return buffer ? docxToMarkdown(new Uint8Array(buffer)) : "";
   },
 
-  async applyMarkdown(markdown) {
-    if (!setBytes) throw new Error("docx-editor.dev not mounted");
-    // No mutation API here, so build a real .docx from the markdown and reload.
-    const res = await fetch("/api/export", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ markdown, title: "eigenpal" }),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "export failed");
-    setBytes(window.od.base64ToBytes(json.base64));
+  async applyMarkdown(markdown: string) {
+    if (!ref) throw new Error("docx-editor.dev not mounted");
+    // docx-editor.dev imports only .docx (markdown is export-only), so the
+    // markdown becomes a complete Word document it opens with its own parser.
+    ref.load(markdownToDocx(markdown));
   },
 
   async exportDocx() {
-    const buffer = await editorRef?.save?.();
-    if (!buffer) throw new Error("editor has no document loaded");
+    const buffer = await ref?.save();
+    if (!buffer) throw new Error("docx-editor.dev has no document loaded");
     return new Uint8Array(buffer);
   },
 });

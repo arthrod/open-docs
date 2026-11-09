@@ -1,366 +1,355 @@
 /**
  * canvas-editor demo.
  *
- * @hufe921/canvas-editor draws the page (canvas/SVG) instead of using DOM, so
- * "the document" is an `IElement[]` (or a tree of them, via valueList). Its npm
- * package ships no DOCX converter — the upstream repo keeps that in its demo —
- * so this adapter does the conversion itself:
+ * @hufe921/canvas-editor draws the page on <canvas>; "the document" is an
+ * `IElement[]`. The vendor publishes plugins, used here as its README shows:
  *
- *   .docx  → parsed in the browser with fflate + a tiny OOXML reader
- *          → IElement list                              (import)
- *   IElement list → OOXML tables + zip               (export, real .docx)
+ *   @hufe921/canvas-editor-plugin-docx      .docx import (executeImportDocx)
+ *   @hufe921/canvas-editor-plugin-floating-toolbar  the selection bubble
  *
- * That makes this the one demo where DOCX import/export is written from
- * scratch rather than delegated to the library.
+ * Measured against lib/probes/md-mapping.js (2026-11-09), two vendor plugins
+ * lose content, so they are NOT used for those directions:
+ *   - plugin-markdown@0.0.1 import: consecutive headings merge into one line
+ *     (no "\n" between TITLE elements) and inline code loses its formatting.
+ *     Markdown goes through lib/markdown.ts → canvas-editor's own elements
+ *     instead (TITLE 1–6, LIST, HYPERLINK, SEPARATOR, monospace code).
+ *   - plugin-docx@1.0.0 export: lists come out as literal "• "/"1. " text, not
+ *     Word lists, and HYPERLINK elements are dropped with their text. Export
+ *     reads the element model into lib/ooxml.ts instead.
+ *
+ * The plugins import "@hufe921/canvas-editor"; the page import map (shell.ts)
+ * points that at the same build, so editor and plugins share one copy.
+ *
+ * canvas-editor ships no toolbar UI (its demo builds one in the repo, not the
+ * package), so shell.ts provides one wired to the editor's command API below.
  */
-import Editor, {
-  ElementType,
-  ListType,
-  RowFlex,
-  TitleLevel,
-} from "https://esm.sh/@hufe921/canvas-editor@1.1.0?bundle";
-import { unzipSync, strFromU8, strToU8, zipSync } from "https://esm.sh/fflate@0.8.2";
+import Editor, { ElementType, ListStyle, ListType, RowFlex, TitleLevel } from "@hufe921/canvas-editor";
+import docxPlugin from "@hufe921/canvas-editor-plugin-docx";
+import floatingToolbarPlugin from "@hufe921/canvas-editor-plugin-floating-toolbar";
 import { waitFor } from "/lib/kit.ts";
-import { mdToBlocks } from "/lib/md.ts";
+import { blocksToMarkdown, markdownToBlocks } from "/lib/markdown.ts";
+import { type Block, blocksToDocx, type Run } from "/lib/ooxml.ts";
 
-let editor: Editor | undefined;
+// deno-lint-ignore no-explicit-any
+let editor: any;
+// Exposed for the test probes in /lib/probes (read-only use).
+(window as any).__canvasEditor = () => editor;
 
-/* ---------------------------- blocks → elements ---------------------------- */
+const LEVELS = [TitleLevel.FIRST, TitleLevel.SECOND, TitleLevel.THIRD, TitleLevel.FOURTH, TitleLevel.FIFTH, TitleLevel.SIXTH];
+const MONO = "Courier New";
+const QUOTE_COLOR = "#404040";
+const ZWSP = /\u200B/g;
 
-const TITLE_LEVELS = [TitleLevel.FIRST, TitleLevel.SECOND, TitleLevel.THIRD];
-const BULLET_LIST = ListType.UL ?? ListType.OL;
+/* --------------------------- Block[] ⇄ IElement[] --------------------------- */
 
-/** One paragraph → one list of IElements (the last one carries `\n`). */
-function paragraphElements(
-  text: string,
-  opts: { bold?: boolean; title?: TitleLevel; list?: boolean; listId?: string },
-) {
-  const shared: Record<string, unknown> = {};
-  if (opts.title !== undefined) shared.level = opts.title;
-  if (opts.bold) shared.bold = true;
-  if (opts.list) {
-    shared.listType = BULLET_LIST;
-    shared.listId = opts.listId ?? crypto.randomUUID();
+// deno-lint-ignore no-explicit-any
+type El = any;
+
+const runEl = (r: Run, extra: Record<string, unknown> = {}): El => ({
+  value: r.text,
+  ...(r.bold ? { bold: true } : {}),
+  ...(r.italic ? { italic: true } : {}),
+  ...(r.underline ? { underline: true } : {}),
+  ...(r.strike ? { strikeout: true } : {}),
+  ...(r.code ? { font: MONO, highlight: "#eef0f3" } : {}),
+  ...extra,
+});
+
+/** Runs → elements; consecutive runs sharing an href become one HYPERLINK. */
+function runsToEls(runs: Run[], extra: Record<string, unknown> = {}): El[] {
+  const out: El[] = [];
+  for (let i = 0; i < runs.length;) {
+    const href = runs[i].href;
+    if (!href) {
+      out.push(runEl(runs[i++], extra));
+      continue;
+    }
+    const valueList: El[] = [];
+    while (i < runs.length && runs[i].href === href) valueList.push(runEl(runs[i++], extra));
+    out.push({ type: ElementType.HYPERLINK, value: "", url: href, valueList });
   }
-  const chars = [...text];
-  if (!chars.length) return [{ value: "\n", ...shared }];
-  return chars.map((value, i) => ({
-    value: i === chars.length - 1 ? `${value}\n` : value,
-    ...shared,
-  }));
+  return out;
 }
 
-/* -------------------------------- adapter -------------------------------- */
+function blocksToElements(blocks: Block[]): El[] {
+  const out: El[] = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    if (i > 0) out.push({ value: "\n" });
+    if (b.kind === "title" || b.kind === "heading") {
+      const level = LEVELS[Math.min(Math.max((b.kind === "title" ? 1 : b.level ?? 1) - 1, 0), 5)];
+      out.push({ type: ElementType.TITLE, value: "", level, valueList: runsToEls(b.runs) });
+    } else if (b.kind === "li") {
+      // Consecutive items of the same kind become one list; "\n" splits items.
+      const ordered = !!b.ordered;
+      const items: Block[] = [b];
+      while (blocks[i + 1]?.kind === "li" && !!blocks[i + 1].ordered === ordered) items.push(blocks[++i]);
+      const valueList: El[] = [];
+      items.forEach((it, k) => {
+        if (k > 0) valueList.push({ value: "\n" });
+        valueList.push(...runsToEls(it.runs));
+      });
+      out.push({
+        type: ElementType.LIST,
+        value: "",
+        listType: ordered ? ListType.OL : ListType.UL,
+        ...(ordered ? {} : { listStyle: ListStyle.DISC }),
+        valueList,
+      });
+    } else if (b.kind === "hr") {
+      out.push({ type: ElementType.SEPARATOR, value: "\n", dashArray: [] });
+    } else if (b.kind === "code") {
+      out.push(...runsToEls(b.runs.map((r) => ({ ...r, code: true }))));
+    } else if (b.kind === "quote") {
+      // No quote element in canvas-editor: an italic, grey paragraph.
+      out.push(...runsToEls(b.runs.map((r) => ({ ...r, italic: true })), { color: QUOTE_COLOR }));
+    } else {
+      out.push(...runsToEls(b.runs));
+    }
+  }
+  return out.length ? out : [{ value: "\n" }];
+}
+
+type QRun = Run & { quote?: boolean };
+
+function elToRun(el: El, text: string, href?: string): QRun {
+  return {
+    ...(el.italic && String(el.color ?? "").toLowerCase() === QUOTE_COLOR ? { quote: true } : {}),
+    text,
+    bold: !!el.bold,
+    italic: !!el.italic,
+    underline: !!el.underline,
+    strike: !!el.strikeout,
+    ...(el.font && /courier|mono|consol/i.test(el.font) ? { code: true } : {}),
+    ...(href ? { href } : {}),
+  };
+}
+
+function elementsToBlocks(list: El[]): Block[] {
+  const blocks: Block[] = [];
+  let cur: Block = { kind: "p", runs: [] };
+  const flush = () => {
+    blocks.push(cur);
+    cur = { kind: "p", runs: [] };
+  };
+  const push = (el: El, b: Partial<Block>, href?: string) => {
+    const parts = String(el.value ?? "").replace(ZWSP, "").split("\n");
+    parts.forEach((part, k) => {
+      if (k > 0) flush();
+      Object.assign(cur, b);
+      if (part) cur.runs.push(elToRun(el, part, href));
+    });
+  };
+  const pushInline = (el: El, b: Partial<Block>) => {
+    if (el.type === ElementType.HYPERLINK) for (const c of el.valueList ?? []) push(c, b, el.url);
+    else push(el, b);
+  };
+  for (const el of list) {
+    if (el.type === ElementType.TITLE) {
+      if (cur.runs.length) flush();
+      const level = Math.max(0, LEVELS.indexOf(el.level)) + 1;
+      for (const c of el.valueList ?? []) pushInline(c, { kind: "heading", level });
+      flush();
+    } else if (el.type === ElementType.LIST) {
+      if (cur.runs.length) flush();
+      const ordered = el.listType === ListType.OL;
+      for (const c of el.valueList ?? []) pushInline(c, { kind: "li", ordered });
+      flush();
+    } else if (el.type === ElementType.SEPARATOR) {
+      if (cur.runs.length) flush();
+      blocks.push({ kind: "hr", runs: [] });
+    } else if (el.type === ElementType.TABLE) {
+      if (cur.runs.length) flush();
+      for (const tr of el.trList ?? []) {
+        const cells = (tr.tdList ?? []).map((td: El) =>
+          (td.value ?? []).map((v: El) => String(v.value ?? "")).join("").replace(ZWSP, "").replace(/\n/g, " ").trim()
+        );
+        blocks.push({ kind: "p", runs: [{ text: cells.join("\t") }] });
+      }
+    } else if (!el.type || el.type === ElementType.TEXT || el.type === ElementType.HYPERLINK) {
+      pushInline(el, {});
+    }
+  }
+  if (cur.runs.length) flush();
+  // Title/list flushes leave empty paragraphs behind the "\n" separators.
+  return blocks
+    .filter((b) => b.kind === "hr" || b.runs.some((r) => r.text.trim()))
+    .map((b) => {
+      // A paragraph that is entirely monospace is a code block.
+      if (b.kind === "p" && b.runs.every((r) => r.code)) return { kind: "code", runs: b.runs.map((r) => ({ text: r.text })) };
+      // …and one that is entirely our italic grey is a quote.
+      if (b.kind === "p" && b.runs.every((r: QRun) => r.quote)) {
+        return { kind: "quote", runs: b.runs.map(({ quote: _q, italic: _i, ...r }: QRun) => r) };
+      }
+      return { ...b, runs: b.runs.map(({ quote: _q, ...r }: QRun) => r) };
+    });
+}
+
+function currentBlocks(): Block[] {
+  const { data } = editor.command.getValue();
+  return elementsToBlocks(Array.isArray(data) ? data : data.main);
+}
+
+const TITLES: Record<string, TitleLevel | null> = {
+  p: null,
+  h1: TitleLevel.FIRST,
+  h2: TitleLevel.SECOND,
+  h3: TitleLevel.THIRD,
+  h4: TitleLevel.FOURTH,
+  h5: TitleLevel.FIFTH,
+  h6: TitleLevel.SIXTH,
+};
 
 window.od.register({
   name: "canvas-editor",
-  mergeQuality: "rebuild",
+  mergeQuality: "native",
 
   async mount() {
-    const host = await waitFor<HTMLDivElement>("#ce-host");
-    const docx = await window.od.sampleDocx();
-    const data = await docxToElements(docx);
+    const host = await waitFor<HTMLDivElement>("#ce-page");
+    window.od.progress("Loading canvas-editor…");
     host.innerHTML = "";
-    const inner = document.createElement("div");
-    inner.style.margin = "0 auto";
-    host.append(inner);
-    editor = new Editor(inner, { main: data }, {
+    editor = new Editor(host, { main: [{ value: "\n" }] }, {
       width: 794,
       height: 1123,
-      margins: [60, 60, 60, 60],
+      margins: [96, 96, 96, 96],
       defaultFont: "Calibri",
+      defaultSize: 15,
+      pageGap: 24,
     });
+    editor.use(docxPlugin);
+    editor.use(floatingToolbarPlugin);
+    // canvas-editor focuses its hidden <textarea> inside its mousedown
+    // handler; the browser's default action for that same mousedown then moves
+    // focus to <body> (a canvas isn't focusable), so typing went nowhere.
+    host.addEventListener("mousedown", (e) => e.preventDefault());
+    wireToolbar();
+  },
+
+  async load(bytes) {
+    if (!editor) throw new Error("editor not ready");
+    await editor.command.executeImportDocx({ arrayBuffer: bytes.slice().buffer });
   },
 
   async applyMarkdown(markdown) {
-    if (!editor) return;
-    editor.command.executeSetValue({ main: markdownToElements(markdown) });
+    if (!editor) throw new Error("editor not ready");
+    editor.command.executeSetValue({ main: blocksToElements(markdownToBlocks(markdown)) });
   },
 
   async getMarkdown() {
-    if (!editor) return await window.od.sampleMarkdown();
-    const { data } = await editor.command.getValueAsync();
-    const list = Array.isArray(data) ? data : data.main;
-    return elementsToMarkdown(list);
+    return editor ? blocksToMarkdown(currentBlocks()) : "";
   },
 
   async exportDocx() {
     if (!editor) throw new Error("editor not ready");
-    const { data } = await editor.command.getValueAsync();
-    const list = Array.isArray(data) ? data : data.main;
-    return elementsToDocx(list);
-  },
-
-  async importDocx(bytes) {
-    if (!editor) throw new Error("editor not ready");
-    editor.command.executeSetValue({ main: await docxToElements(bytes) });
+    return blocksToDocx(currentBlocks());
   },
 });
 
-/* ------------------------------ markdown I/O ------------------------------ */
+/* -------------------------------- toolbar -------------------------------- */
 
-function markdownToElements(md: string): any[] {
-  const out: any[] = [];
-  for (const b of mdToBlocks(md)) {
-    if (b.type === "title") {
-      out.push(...paragraphElements(b.text, { title: TITLE_LEVELS[0], bold: true }));
-    } else if (b.type === "h1") {
-      out.push(...paragraphElements(b.text, { title: TITLE_LEVELS[1], bold: true }));
-    } else if (b.type === "h2" || b.type === "h3") {
-      out.push(...paragraphElements(b.text, { title: TITLE_LEVELS[2], bold: true }));
-    } else if (b.type === "li") {
-      out.push(...paragraphElements(b.text, { list: true, listId: "bench-list" }));
-    } else {
-      out.push(...paragraphElements(b.text, {}));
-    }
-  }
-  return out;
-}
+/** Every control maps to one canvas-editor command; `data-cmd` names it. */
+function wireToolbar() {
+  const bar = document.getElementById("ce-toolbar");
+  if (!bar || !editor) return;
+  const c = editor.command;
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
 
-/**
- * canvas-editor flattens paragraphs into a character list; `\n` is the only
- * paragraph boundary (list items keep their `listId`/`listType` attrs). We
- * therefore rebuild paragraphs by splitting on `\n`.
- */
-function elementsToMarkdown(list: any[]): string {
-  const lines: string[] = [];
-  let current: any[] = [];
-  const flush = () => {
-    if (!current.length) return;
-    const text = current.map((e) => String(e.value ?? "")).join("").trim();
-    if (!text) {
-      current = [];
-      return;
-    }
-    const meta = current[0];
-    const isRemoved = current.some((e) => e.rowFlex === RowFlex.NONE);
-    if (isRemoved) {
-      // deleted text still exists in the element list
-    } else if (meta.level === TitleLevel.FIRST) lines.push(`# ${text}`);
-    else if (meta.level === TitleLevel.SECOND) lines.push(`## ${text}`);
-    else if (meta.level === TitleLevel.THIRD) lines.push(`### ${text}`);
-    else if (meta.listType) lines.push(`- ${text}`);
-    else lines.push(text);
-    current = [];
+  const actions: Record<string, () => void> = {
+    undo: () => c.executeUndo(),
+    redo: () => c.executeRedo(),
+    painter: () => c.executePainter({ isDblclick: false }),
+    clear: () => c.executeFormat(),
+    bold: () => c.executeBold(),
+    italic: () => c.executeItalic(),
+    underline: () => c.executeUnderline(),
+    strike: () => c.executeStrikeout(),
+    sup: () => c.executeSuperscript(),
+    sub: () => c.executeSubscript(),
+    sizeUp: () => c.executeSizeAdd(),
+    sizeDown: () => c.executeSizeMinus(),
+    ul: () => c.executeList(ListType.UL, ListStyle.DISC),
+    ol: () => c.executeList(ListType.OL),
+    left: () => c.executeRowFlex(RowFlex.LEFT),
+    center: () => c.executeRowFlex(RowFlex.CENTER),
+    right: () => c.executeRowFlex(RowFlex.RIGHT),
+    justify: () => c.executeRowFlex(RowFlex.ALIGNMENT),
+    table: () => c.executeInsertTable(3, 3),
+    image: () => $<HTMLInputElement>("ce-image-file")?.click(),
+    hr: () => c.executeSeparator([0, 0]),
+    pageBreak: () => c.executePageBreak(),
+    link: () => {
+      const input = $<HTMLInputElement>("ce-link-url");
+      const url = input?.value.trim();
+      if (!url) {
+        input?.focus();
+        return;
+      }
+      const text = String(c.getRangeText?.() ?? "") || url;
+      c.executeHyperlink({
+        type: ElementType.HYPERLINK,
+        url,
+        valueList: [...text].map((ch) => ({ value: ch })),
+      });
+      input!.value = "";
+    },
+    zoomIn: () => c.executePageScaleAdd(),
+    zoomOut: () => c.executePageScaleMinus(),
+    print: () => void c.executePrint(),
   };
-  for (const el of list) {
-    if (el.value === "\n") {
-      flush();
-      continue;
-    }
-    if (el.type && el.type !== ElementType.TEXT) {
-      // Tables, separators, images… aren't representable in markdown; note them.
-      if (el.type === ElementType.TABLE) lines.push("_[table]_");
-      continue;
-    }
-    current.push(el);
-  }
-  flush();
-  return lines.join("\n\n");
-}
 
-/* -------------------------------- DOCX in -------------------------------- */
+  bar.addEventListener("mousedown", (e) => {
+    // Keep the canvas selection: act on mousedown and cancel the focus change.
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-cmd]");
+    if (!btn) return;
+    e.preventDefault();
+    actions[btn.dataset.cmd!]?.();
+  });
 
-const W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-
-function decodeXml(s: string): string {
-  return s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
-}
-
-/**
- * A deliberately small OOXML reader: paragraphs, run text/breaks, paragraph
- * styles (Title/Heading n), numbering (as bullets), bold/italic.
- */
-async function docxToElements(bytes: Uint8Array): Promise<any[]> {
-  const files = unzipSync(bytes);
-  const docFile = files["word/document.xml"];
-  if (!docFile) throw new Error("not a .docx (no word/document.xml)");
-  const xml = strFromU8(docFile);
-  const body = /<w:body[^>]*>([\s\S]*)<\/w:body>/.exec(xml)?.[1] ?? xml;
-
-  const out: any[] = [];
-  const pRe = /<w:p(\s[^>]*)?>([\s\S]*?)<\/w:p>|<w:p(\s[^>]*)?\/>/g;
-  let m: RegExpExecArray | null;
-  let any = false;
-
-  while ((m = pRe.exec(body))) {
-    any = true;
-    const inner = m[2] ?? "";
-
-    const pStyle = /<w:pStyle\s+w:val="([^"]+)"/.exec(inner)?.[1];
-    const isBullet = /<w:numPr>/.test(inner);
-    const levelMatch = /<w:outlineLvl\s+w:val="(\d+)"/.exec(inner);
-    const headingLevel = pStyle?.match(/^Heading(\d)$/i)?.[1] ??
-      levelMatch?.[1];
-
-    let title: TitleLevel | undefined;
-    if (/^title$/i.test(pStyle ?? "")) title = TITLE_LEVELS[0];
-    else if (headingLevel) {
-      const n = Number(headingLevel);
-      title = n <= 1 ? TITLE_LEVELS[1] : TITLE_LEVELS[2];
-    }
-
-    // Runs, preserving order of text / tab / break.
-    const runs: Array<{ value: string; bold?: boolean; italic?: boolean }> = [];
-    const rRe = /<w:r(\s[^>]*)?>([\s\S]*?)<\/w:r>/g;
-    let r: RegExpExecArray | null;
-    while ((r = rRe.exec(inner))) {
-      const rXml = r[2];
-      const bold = /<w:b(?:\s+w:val="(?:1|true)")?\s*\/>/.test(rXml);
-      const italic = /<w:i(?:\s+w:val="(?:1|true)")?\s*\/>/.test(rXml);
-      const tRe = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:br\s*\/>|<w:tab\s*\/>/g;
-      let t: RegExpExecArray | null;
-      while ((t = tRe.exec(rXml))) {
-        if (t[1] !== undefined) {
-          runs.push({ value: decodeXml(t[1]), bold, italic });
-        } else if (t[0].startsWith("<w:br")) {
-          runs.push({ value: "\n", bold, italic });
-        } else {
-          runs.push({ value: "\t", bold, italic });
-        }
-      }
-    }
-
-    const text = runs.map((x) => x.value).join("");
-    const style = {
-      ...(title !== undefined ? { level: title } : {}),
-      ...(isBullet
-        ? { listType: BULLET_LIST, listId: "imported-list" }
-        : {}),
-    };
-
-    if (!text.replace(/\n/g, "").length && !title) {
-      out.push({ value: "\n", ...style });
-      continue;
-    }
-
-    // Split on explicit breaks so each visual line stays a paragraph.
-    const segments = text.split("\n");
-    segments.forEach((seg, idx) => {
-      const chars = [...seg];
-      if (!chars.length) {
-        out.push({ value: "\n", ...style });
-      } else {
-        // canvas-editor styles per character, so the run's bold/italic is
-        // carried onto every character of that run.
-        const runAttrs = runs.find((x) => x.value.startsWith(chars[0])) ?? {};
-        chars.forEach((value, i) => {
-          out.push({
-            value: idx === segments.length - 1 && i === chars.length - 1
-              ? `${value}\n`
-              : value,
-            ...style,
-            ...(runAttrs.bold ? { bold: true } : {}),
-            ...(runAttrs.italic ? { italic: true } : {}),
-          });
-        });
-      }
+  const onChange = (id: string, fn: (v: string) => void, reset = false) => {
+    const el = $<HTMLInputElement | HTMLSelectElement>(id);
+    el?.addEventListener("change", () => {
+      if (el.value) fn(el.value);
+      if (reset) el.value = "";
     });
-  }
-
-  if (!any) throw new Error("no paragraphs found in document.xml");
-  return out;
-}
-
-/* ------------------------------- DOCX out ------------------------------- */
-
-const XML_DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/** Group the flat element list back into paragraphs, then emit OOXML. */
-function elementsToDocx(list: any[]): Uint8Array {
-  const paragraphs: any[][] = [];
-  let current: any[] = [];
-  for (const el of list) {
-    current.push(el);
-    if (el.value === "\n" || (el.value ?? "").endsWith("\n")) {
-      paragraphs.push(current);
-      current = [];
+  };
+  onChange("ce-style", (v) => c.executeTitle(TITLES[v] ?? null), true);
+  onChange("ce-font", (v) => c.executeFont(v), true);
+  onChange("ce-size", (v) => c.executeSize(Number(v)), true);
+  onChange("ce-spacing", (v) => c.executeRowMargin(Number(v)), true);
+  onChange("ce-color", (v) => c.executeColor(v));
+  onChange("ce-highlight", (v) => c.executeHighlight(v));
+  $<HTMLInputElement>("ce-link-url")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      actions.link();
     }
-  }
-  if (current.length) paragraphs.push(current);
+  });
 
-  const paraXml = paragraphs.map((para) => {
-    const meta = para[0] ?? {};
-    const text = para.map((e) => String(e.value ?? "")).join("").replace(/\n/g, "");
-    const style =
-      meta.level === TitleLevel.FIRST
-        ? "Title"
-        : meta.level === TitleLevel.SECOND
-        ? "Heading1"
-        : meta.level === TitleLevel.THIRD
-        ? "Heading2"
-        : undefined;
-    const pPr = [
-      style ? `<w:pStyle w:val="${style}"/>` : "",
-      meta.listType
-        ? '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>'
-        : "",
-    ].join("");
-    const rPr = meta.bold ? "<w:rPr><w:b/></w:rPr>" : "";
-    return `<w:p>${pPr ? `<w:pPr>${pPr}</w:pPr>` : ""}<w:r>${
-      rPr
-    }<w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
-  }).join("\n");
+  const search = $<HTMLInputElement>("ce-search");
+  search?.addEventListener("input", () => c.executeSearch(search.value || null));
+  search?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      c.executeSearchNavigateNext();
+    }
+  });
 
-  const documentXml = `${XML_DECL}
-<w:document xmlns:w="${W_NS}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<w:body>${paraXml}
-<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
-</w:body></w:document>`;
-
-  const stylesXml = `${XML_DECL}
-<w:styles xmlns:w="${W_NS}">
-<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults>
-<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
-<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:rPr><w:b/><w:sz w:val="56"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:rPr><w:b/><w:sz w:val="36"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:rPr><w:b/><w:sz w:val="30"/></w:rPr></w:style>
-</w:styles>`;
-
-  const numberingXml = `${XML_DECL}
-<w:numbering xmlns:w="${W_NS}">
-<w:abstractNum w:abstractNumId="0"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl></w:abstractNum>
-<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`;
-
-  const contentTypes = `${XML_DECL}
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Default Extension="xml" ContentType="application/xml"/>
-<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
-</Types>`;
-
-  const rels = `${XML_DECL}
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`;
-
-  const docRels = `${XML_DECL}
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
-</Relationships>`;
-
-  return zipSync({
-    "[Content_Types].xml": strToU8(contentTypes),
-    "_rels/.rels": strToU8(rels),
-    "word/document.xml": strToU8(documentXml),
-    "word/styles.xml": strToU8(stylesXml),
-    "word/numbering.xml": strToU8(numberingXml),
-    "word/_rels/document.xml.rels": strToU8(docRels),
+  // Images: read the file, measure it, insert scaled to the text width.
+  const file = $<HTMLInputElement>("ce-image-file");
+  file?.addEventListener("change", () => {
+    const f = file.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 794 - 192;
+        const scale = Math.min(1, max / img.naturalWidth);
+        c.executeImage({ value: String(reader.result), width: img.naturalWidth * scale, height: img.naturalHeight * scale });
+        file.value = "";
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(f);
   });
 }

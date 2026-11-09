@@ -43,7 +43,9 @@ function paragraphXml(p: DocxParagraph): string {
       : "",
   ].join("");
   const pPrXml = pPr ? `<w:pPr>${pPr}</w:pPr>` : "";
-  const runs = p.text.split("\n").map((line, i, arr) =>
+  // An empty paragraph has NO run: `<w:r><w:t></w:t></w:r>` is legal OOXML but
+  // ProseMirror-based editors (docen) reject the empty text node it maps to.
+  const runs = !p.text ? "" : p.text.split("\n").map((line, i, arr) =>
     `<w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ""}<w:t xml:space="preserve">${
       escapeXml(line)
     }</w:t></w:r>${i < arr.length - 1 ? "<w:r><w:br/></w:r>" : ""}`
@@ -226,10 +228,10 @@ export function paragraphsToText(paragraphs: DocxParagraph[]): string {
   return paragraphs
     .filter((p) => p.text.trim() || p.style)
     .map((p) => {
-      // Heading1 → "# ", Heading2 → "## " — offsets line up with mdToBlocks,
-      // where one "#" is the document title.
+      // Title and Heading 1 → "# ", Heading N → N × "#": the same mapping as
+      // lib/markdown.ts, so text read here round-trips to the same styles.
       const prefix = p.style === "Title" ? "# " : p.style?.startsWith("Heading")
-        ? "#".repeat((Number(p.style.slice(-1)) || 1) + 1) + " "
+        ? "#".repeat(Number(p.style.slice(-1)) || 1) + " "
         : p.bullet
         ? "  ".repeat(p.bullet - 1) + "- "
         : "";

@@ -63,12 +63,12 @@ export const editors: EditorMeta[] = [
   {
     slug: "plate",
     name: "Plate",
-    packages: ["platejs", "@platejs/docx-io"],
+    packages: ["platejs", "@platejs/basic-nodes", "@platejs/list", "mammoth"],
     delivery: "esm-sh",
     license: "MIT",
     repo: "https://github.com/udecode/plate",
     blurb:
-      "Slate-based plugin framework. DOCX round-trips through an import/export bridge, not a native engine.",
+      "Slate-based plugin framework. DOCX comes in through mammoth and goes out through a small OOXML writer, not a native engine.",
     docxRoundTrip: true,
     agent: true,
   },
@@ -81,18 +81,6 @@ export const editors: EditorMeta[] = [
     repo: "https://github.com/DemoMacro/docen",
     blurb:
       "Canvas web-component editor with a headless Markdown/DOCX conversion API in the same package.",
-    docxRoundTrip: true,
-    agent: true,
-  },
-  {
-    slug: "office-open",
-    name: "office-open",
-    packages: ["office-open"],
-    delivery: "esm-sh",
-    license: "MIT",
-    repo: "https://github.com/DemoMacro/office-open",
-    blurb:
-      "Model-first: generate/parse/patch DOCX from JSON with JSON-Schemas built for LLM tool calls.",
     docxRoundTrip: true,
     agent: true,
   },
@@ -116,6 +104,18 @@ export const editors: EditorMeta[] = [
     repo: "https://github.com/stella/folio",
     blurb:
       "ProseMirror + paginated layout DOCX editor with first-class AI edit/suggestion primitives.",
+    docxRoundTrip: true,
+    agent: true,
+  },
+  {
+    slug: "wordcraft",
+    name: "WordCraft",
+    packages: ["wordcraft-web (GitHub release)"],
+    delivery: "wasm",
+    license: "Apache-2.0 / MIT",
+    repo: "https://github.com/storytold/wordcraft",
+    blurb:
+      "A clean-room Word in pure Rust: its own layout engine and egui UI drawn into one canvas via WebGPU/WebGL2.",
     docxRoundTrip: true,
     agent: true,
   },
