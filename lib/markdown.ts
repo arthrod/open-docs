@@ -61,15 +61,25 @@ function inline(tokens: Tok[] | undefined, marks: Marks = {}): Run[] {
       case "escape":
         out.push({ ...marks, text: t.text });
         break;
+      case "html":
+        // <br> is how a GFM table cell holds a line break.
+        if (/^<br\s*\/?>$/i.test(String(t.text).trim())) {
+          out.push({ ...marks, text: "\n" });
+          break;
+        }
+        if (t.text) out.push({ ...marks, text: decode(String(t.text).replace(/<[^>]+>/g, "")) });
+        break;
       default:
-        // html, unknown inline tokens: keep their visible text.
+        // unknown inline tokens: keep their visible text.
         if (t.text) out.push({ ...marks, text: decode(String(t.text).replace(/<[^>]+>/g, "")) });
     }
   }
   return out.filter((r) => r.text);
 }
 
-function blocks(tokens: Tok[], ctx: { level: number; quote: boolean }, out: Block[]) {
+type Ctx = { level: number; quote: boolean; tables: boolean };
+
+function blocks(tokens: Tok[], ctx: Ctx, out: Block[]) {
   for (const t of tokens) {
     switch (t.type) {
       case "heading":
@@ -107,10 +117,15 @@ function blocks(tokens: Tok[], ctx: { level: number; quote: boolean }, out: Bloc
         out.push({ kind: "hr", runs: [] });
         break;
       case "table": {
-        // No table model in the shared blocks: one paragraph per row, cells
-        // separated by tabs, header row bold.
-        const row = (cells: Tok[], bold: boolean): Run[] =>
-          cells.flatMap((c, i) => [...(i ? [{ text: "\t" }] : []), ...inline(c.tokens, bold ? { bold } : {})]);
+        const cells = (row: Tok[]) => row.map((c) => inline(c.tokens));
+        if (ctx.tables) {
+          out.push({ kind: "table", runs: [], rows: [cells(t.header), ...t.rows.map(cells)] });
+          break;
+        }
+        // Without tables (editors whose block model has none): one paragraph
+        // per row, cells separated by tabs, header row bold.
+        const row = (r: Tok[], bold: boolean): Run[] =>
+          cells(r).flatMap((c, i) => [...(i ? [{ text: "\t" }] : []), ...c.map((x) => (bold ? { ...x, bold } : x))]);
         out.push({ kind: "p", runs: row(t.header, true) });
         for (const r of t.rows) out.push({ kind: "p", runs: row(r, false) });
         break;
@@ -124,21 +139,60 @@ function blocks(tokens: Tok[], ctx: { level: number; quote: boolean }, out: Bloc
   }
 }
 
-export function markdownToBlocks(markdown: string): Block[] {
+/**
+ * `tables`: emit GFM tables as `table` blocks (lib/ooxml.ts writes them as
+ * Word tables); otherwise, for block models without tables, as tab-separated
+ * rows.
+ */
+export function markdownToBlocks(markdown: string, opts: { tables?: boolean } = {}): Block[] {
   const out: Block[] = [];
-  blocks(new Lexer({ gfm: true }).lex(markdown ?? ""), { level: 0, quote: false }, out);
+  blocks(new Lexer({ gfm: true }).lex(markdown ?? ""), { level: 0, quote: false, tables: !!opts.tables }, out);
   return out;
 }
 
 /** Markdown straight to a Word-valid .docx (lib/ooxml.ts). */
 export function markdownToDocx(markdown: string): Uint8Array {
-  return blocksToDocx(markdownToBlocks(markdown));
+  return blocksToDocx(markdownToBlocks(markdown, { tables: true }));
 }
 
 /* ------------------------------ blocks → md ------------------------------ */
 
 function escapeText(s: string): string {
-  return s.replace(/([\\`*_\[\]])/g, "\\$1");
+  return s.replace(/([\\`*_\[\]~])/g, "\\$1");
+}
+
+/** A code span whose delimiter is longer than any backtick run inside it. */
+function codeSpan(text: string): string {
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((m) => m.length));
+  const fence = "`".repeat(longest + 1);
+  // Markdown strips one space from each side when both sides have one, and
+  // a backtick at either end would merge with the delimiter: pad both cases.
+  const pad = /^`|`$/.test(text) || (/^ [^]* $/.test(text) && /\S/.test(text)) ? " " : "";
+  return fence + pad + text + pad + fence;
+}
+
+/**
+ * A fence longer than any backtick run that could close it: one at the start
+ * of a line, after up to three spaces of indentation.
+ */
+function codeFence(code: string): string {
+  const longest = Math.max(0, ...(code.match(/^ {0,3}`+/gm) ?? []).map((m) => m.trimStart().length));
+  return "`".repeat(Math.max(3, longest + 1));
+}
+
+/**
+ * Plain text that would read back as structure (`# x`, `1. x`, `> x`, `- x`,
+ * `+ x`, a rule) gets its marker escaped — on every line, since a heading,
+ * quote or list can also start after a hard line break.
+ */
+function escapeLineStart(text: string): string {
+  return text.split("\n").map((line) => {
+    const [, indent, rest] = /^( {0,3})([^]*)$/.exec(line)!;
+    const ordered = /^(\d{1,9})([.)])(\s|$)/.exec(rest);
+    if (ordered) return indent + ordered[1] + "\\" + rest.slice(ordered[1].length);
+    if (/^(#{1,6}(\s|$)|>|[-+](\s|$)|-{3,}\s*$|={3,}\s*$)/.test(rest)) return indent + "\\" + rest;
+    return line;
+  }).join("\n");
 }
 
 export function runsToMarkdown(runs: Run[]): string {
@@ -149,7 +203,7 @@ export function runsToMarkdown(runs: Run[]): string {
       s += "  \n";
       continue;
     }
-    let t = r.code ? "`" + r.text.replace(/`/g, "ˋ") + "`" : escapeText(r.text);
+    let t = r.code ? codeSpan(r.text) : escapeText(r.text);
     // Markers can't wrap leading/trailing spaces in CommonMark: move them out.
     const lead = /^\s*/.exec(t)![0], trail = /\s*$/.exec(t)![0];
     t = t.trim();
@@ -166,13 +220,32 @@ export function runsToMarkdown(runs: Run[]): string {
   return s;
 }
 
+/**
+ * A GFM table from rows of cells of runs. A header row that is bold
+ * throughout is bold because it is the header: no `**` for that.
+ */
+export function tableToMarkdown(rows: Run[][][]): string {
+  if (!rows.length) return "";
+  const head = rows[0].flat().filter((r) => r.text.trim());
+  const plainHead = head.length > 0 && head.every((r) => r.bold);
+  const cell = (runs: Run[], ri: number) =>
+    runsToMarkdown(ri === 0 && plainHead ? runs.map((r) => ({ ...r, bold: false })) : runs)
+      // A line break inside a cell would end the table row.
+      .replace(/ {2}\n/g, "<br>").replace(/\n/g, " ").replace(/\|/g, "\\|");
+  const width = Math.max(...rows.map((r) => r.length));
+  const line = (cells: string[]) => `| ${Array.from({ length: width }, (_, i) => cells[i] ?? "").join(" | ")} |`;
+  const md = rows.map((r, ri) => r.map((c) => cell(c, ri)));
+  return [line(md[0]), `|${" --- |".repeat(width)}`, ...md.slice(1).map(line)].join("\n");
+}
+
 export function blocksToMarkdown(blocks: Block[]): string {
   const out: string[] = [];
   let counters: number[] = [];
   blocks.forEach((b, i) => {
     const prev = blocks[i - 1];
     // Headings are bold by style; echoing that as **…** adds noise.
-    const text = runsToMarkdown(b.kind === "title" || b.kind === "heading" ? b.runs.map((r) => ({ ...r, bold: false })) : b.runs);
+    const raw = runsToMarkdown(b.kind === "title" || b.kind === "heading" ? b.runs.map((r) => ({ ...r, bold: false })) : b.runs);
+    const text = b.kind === "title" || b.kind === "heading" ? raw : escapeLineStart(raw);
     if (b.kind !== "li") counters = [];
     // A top-level switch between bullets and numbers starts a new list.
     const newList = b.kind === "li" && prev?.kind === "li" && (b.level ?? 0) === 0 &&
@@ -198,11 +271,17 @@ export function blocksToMarkdown(blocks: Block[]): string {
       case "quote":
         out.push(`> ${text}`);
         break;
-      case "code":
-        out.push("```", b.runs.map((r) => r.text).join(""), "```");
+      case "code": {
+        const code = b.runs.map((r) => r.text).join("");
+        const fence = codeFence(code);
+        out.push(fence, code, fence);
         break;
+      }
       case "hr":
         out.push("---");
+        break;
+      case "table":
+        out.push(tableToMarkdown(b.rows ?? []));
         break;
       default:
         out.push(text);

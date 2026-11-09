@@ -6,10 +6,18 @@
  *   createEmptyDocument(), fromMarkdown(md) → Document, toMarkdown(Document)
  *   createDocx(Document) → ArrayBuffer
  *
- * So everything — the blank start, the assistant's markdown, and reading the
- * document back — goes through folio's own model and serializer.
+ * Its markdown pair is not complete (measured 2026-11-09 with
+ * lib/probes/md-edge.js): `fromMarkdown` turns a fenced code block into
+ * unstyled Courier paragraphs, one per line, and `toMarkdown` writes those —
+ * and inline code in an opened .docx — without backticks, and escapes `<br>`
+ * in table cells. So, like the other .docx-native editors, the assistant's
+ * markdown becomes a Word document (lib/markdown.ts) opened by folio's own
+ * .docx importer, and is read back from folio's own .docx export
+ * (lib/docx-markdown.ts). Both keep every element.
  */
 import { waitFor } from "/lib/kit.ts";
+import { markdownToDocx } from "/lib/markdown.ts";
+import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 // DO NOT pass ?external=: esm.sh leaves every external as a bare import the
 // browser can't resolve. `?bundle&target=es2022` inlines Vue + ProseMirror and
@@ -57,6 +65,13 @@ async function blank(): Promise<ArrayBuffer> {
   return (await window.od.blankDocx()).slice().buffer;
 }
 
+async function exportBytes(): Promise<Uint8Array> {
+  if (!handle) throw new Error("folio not mounted");
+  const blob = await handle.save();
+  if (!blob) throw new Error("folio returned no document");
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
 window.od.register({
   name: "folio",
   mergeQuality: "native",
@@ -72,22 +87,12 @@ window.od.register({
   },
 
   async getMarkdown() {
-    const f = await folio();
-    const doc = handle?.getDocument?.();
-    return doc ? String(f.toMarkdown(doc) ?? "") : "";
+    return handle ? docxToMarkdown(await exportBytes()) : "";
   },
 
   async applyMarkdown(markdown: string) {
-    const f = await folio();
-    // folio's own markdown → model → .docx, so headings, lists and inline
-    // bold/italic come through its serializer, not ours.
-    await open(await f.createDocx(f.fromMarkdown(markdown)));
+    await open(markdownToDocx(markdown));
   },
 
-  async exportDocx() {
-    if (!handle) throw new Error("folio not mounted");
-    const blob = await handle.save();
-    if (!blob) throw new Error("folio returned no document");
-    return new Uint8Array(await blob.arrayBuffer());
-  },
+  exportDocx: () => exportBytes(),
 });

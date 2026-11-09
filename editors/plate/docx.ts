@@ -143,7 +143,15 @@ export function nodesToDocx(value: Descendant[]): Uint8Array {
       const text = (n.children ?? []).map((l: any) => runs(l).map((r) => r.text).join("")).join("\n");
       blocks.push({ kind: "code", runs: [{ text }] });
     } else if (n.type === "hr") blocks.push({ kind: "hr", runs: [] });
-    else blocks.push({ kind: "p", align, runs: runs(n) });
+    else if (n.type === "table") {
+      // table → tr → td/th → paragraphs; paragraphs in a cell become line breaks.
+      const rows = (n.children ?? []).map((tr: any) =>
+        (tr.children ?? []).map((td: any) =>
+          (td.children ?? []).flatMap((p: any, i: number): Run[] => [...(i ? [{ text: "\n" }] : []), ...runs(p)])
+        )
+      );
+      blocks.push({ kind: "table", runs: [], rows });
+    } else blocks.push({ kind: "p", align, runs: runs(n) });
   }
   return blocksToDocx(blocks);
 }

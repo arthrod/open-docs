@@ -37,6 +37,11 @@ let editor: any;
 
 const LEVELS = [TitleLevel.FIRST, TitleLevel.SECOND, TitleLevel.THIRD, TitleLevel.FOURTH, TitleLevel.FIFTH, TitleLevel.SIXTH];
 const MONO = "Courier New";
+/** Inline code and code blocks are both monospace; their shading tells them apart. */
+const CODE_BG = "#eef0f3";
+const CODE_BLOCK_BG = "#f2f3f5";
+/** Text width of the page set up in mount(): 794 − 2 × 96 px. */
+const TEXT_WIDTH = 602;
 const QUOTE_COLOR = "#404040";
 const ZWSP = /\u200B/g;
 
@@ -51,7 +56,7 @@ const runEl = (r: Run, extra: Record<string, unknown> = {}): El => ({
   ...(r.italic ? { italic: true } : {}),
   ...(r.underline ? { underline: true } : {}),
   ...(r.strike ? { strikeout: true } : {}),
-  ...(r.code ? { font: MONO, highlight: "#eef0f3" } : {}),
+  ...(r.code ? { font: MONO, highlight: CODE_BG } : {}),
   ...extra,
 });
 
@@ -99,7 +104,24 @@ function blocksToElements(blocks: Block[]): El[] {
     } else if (b.kind === "hr") {
       out.push({ type: ElementType.SEPARATOR, value: "\n", dashArray: [] });
     } else if (b.kind === "code") {
-      out.push(...runsToEls(b.runs.map((r) => ({ ...r, code: true }))));
+      out.push(...runsToEls(b.runs.map((r) => ({ ...r, code: true })), { highlight: CODE_BLOCK_BG }));
+    } else if (b.kind === "table") {
+      // canvas-editor's own table: header row bold, columns share the width.
+      const rows = (b.rows ?? []).filter((r) => r.length);
+      const cols = Math.max(1, ...rows.map((r) => r.length));
+      const width = Math.floor(TEXT_WIDTH / cols);
+      out.push({
+        type: ElementType.TABLE,
+        value: "",
+        colgroup: Array.from({ length: cols }, () => ({ width })),
+        trList: rows.map((cells, ri) => ({
+          height: 42,
+          tdList: Array.from({ length: cols }, (_, ci) => {
+            const runs = (cells[ci] ?? []).map((r) => (ri === 0 ? { ...r, bold: true } : r));
+            return { colspan: 1, rowspan: 1, value: runs.length ? runsToEls(runs) : [{ value: "" }] };
+          }),
+        })),
+      });
     } else if (b.kind === "quote") {
       // No quote element in canvas-editor: an italic, grey paragraph.
       out.push(...runsToEls(b.runs.map((r) => ({ ...r, italic: true })), { color: QUOTE_COLOR }));
@@ -110,7 +132,7 @@ function blocksToElements(blocks: Block[]): El[] {
   return out.length ? out : [{ value: "\n" }];
 }
 
-type QRun = Run & { quote?: boolean };
+type QRun = Run & { quote?: boolean; block?: boolean };
 
 function elToRun(el: El, text: string, href?: string): QRun {
   return {
@@ -121,9 +143,12 @@ function elToRun(el: El, text: string, href?: string): QRun {
     underline: !!el.underline,
     strike: !!el.strikeout,
     ...(el.font && /courier|mono|consol/i.test(el.font) ? { code: true } : {}),
+    ...(String(el.highlight ?? "").toLowerCase() === CODE_BLOCK_BG ? { block: true } : {}),
     ...(href ? { href } : {}),
   };
 }
+
+const stripFlags = ({ quote: _q, block: _b, ...r }: QRun): Run => r;
 
 function elementsToBlocks(list: El[]): Block[] {
   const blocks: Block[] = [];
@@ -160,12 +185,25 @@ function elementsToBlocks(list: El[]): Block[] {
       blocks.push({ kind: "hr", runs: [] });
     } else if (el.type === ElementType.TABLE) {
       if (cur.runs.length) flush();
-      for (const tr of el.trList ?? []) {
-        const cells = (tr.tdList ?? []).map((td: El) =>
-          (td.value ?? []).map((v: El) => String(v.value ?? "")).join("").replace(ZWSP, "").replace(/\n/g, " ").trim()
-        );
-        blocks.push({ kind: "p", runs: [{ text: cells.join("\t") }] });
-      }
+      const rows = (el.trList ?? []).map((tr: El) =>
+        (tr.tdList ?? []).map((td: El) => {
+          const runs: Run[] = [];
+          const add = (v: El, href?: string) => {
+            const text = String(v.value ?? "").replace(ZWSP, "");
+            // A "\n" inside a cell is a line break within it.
+            text.split(/(\n)/).forEach((t) => t && runs.push(stripFlags(elToRun(v, t, href))));
+          };
+          for (const v of td.value ?? []) {
+            if (v.type === ElementType.HYPERLINK) for (const c of v.valueList ?? []) add(c, v.url);
+            else add(v);
+          }
+          // Cells start on a line of their own: drop leading/trailing breaks.
+          while (runs[0]?.text === "\n") runs.shift();
+          while (runs.at(-1)?.text === "\n") runs.pop();
+          return runs;
+        })
+      );
+      blocks.push({ kind: "table", runs: [], rows });
     } else if (!el.type || el.type === ElementType.TEXT || el.type === ElementType.HYPERLINK) {
       pushInline(el, {});
     }
@@ -173,15 +211,16 @@ function elementsToBlocks(list: El[]): Block[] {
   if (cur.runs.length) flush();
   // Title/list flushes leave empty paragraphs behind the "\n" separators.
   return blocks
-    .filter((b) => b.kind === "hr" || b.runs.some((r) => r.text.trim()))
+    .filter((b) => b.kind === "hr" || b.kind === "table" || b.runs.some((r) => r.text.trim()))
     .map((b) => {
-      // A paragraph that is entirely monospace is a code block.
-      if (b.kind === "p" && b.runs.every((r) => r.code)) return { kind: "code", runs: b.runs.map((r) => ({ text: r.text })) };
+      // A paragraph in code-block shading is a code block (inline code alone
+      // in a paragraph stays inline code).
+      if (b.kind === "p" && b.runs.every((r: QRun) => r.block)) return { kind: "code", runs: b.runs.map((r) => ({ text: r.text })) };
       // …and one that is entirely our italic grey is a quote.
       if (b.kind === "p" && b.runs.every((r: QRun) => r.quote)) {
         return { kind: "quote", runs: b.runs.map(({ quote: _q, italic: _i, ...r }: QRun) => r) };
       }
-      return { ...b, runs: b.runs.map(({ quote: _q, ...r }: QRun) => r) };
+      return { ...b, runs: b.runs.map(stripFlags) };
     });
 }
 
@@ -232,7 +271,7 @@ window.od.register({
 
   async applyMarkdown(markdown) {
     if (!editor) throw new Error("editor not ready");
-    editor.command.executeSetValue({ main: blocksToElements(markdownToBlocks(markdown)) });
+    editor.command.executeSetValue({ main: blocksToElements(markdownToBlocks(markdown, { tables: true })) });
   },
 
   async getMarkdown() {

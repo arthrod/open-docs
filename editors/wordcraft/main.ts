@@ -42,16 +42,25 @@ const frame = () => new Promise((r) => requestAnimationFrame(() => r(undefined))
  * egui only takes input while its canvas has focus, so while the adapter
  * drives WordCraft (the user may be typing in the assistant box) the canvas
  * holds focus, which goes back where it was afterwards.
+ *
+ * Operations also run one at a time: WordCraft's save events carry no request
+ * id, so two overlapping saves could each take the other's bytes.
  */
-async function driving<T>(fn: () => Promise<T>): Promise<T> {
-  const prev = document.activeElement as HTMLElement | null;
-  canvas.focus({ preventScroll: true });
-  await frame();
-  try {
-    return await fn();
-  } finally {
-    if (prev && prev !== canvas && prev !== document.body) prev.focus({ preventScroll: true });
-  }
+let queue: Promise<unknown> = Promise.resolve();
+
+function driving<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queue.then(async () => {
+    const prev = document.activeElement as HTMLElement | null;
+    canvas.focus({ preventScroll: true });
+    await frame();
+    try {
+      return await fn();
+    } finally {
+      if (prev && prev !== canvas && prev !== document.body) prev.focus({ preventScroll: true });
+    }
+  });
+  queue = run.catch(() => undefined);
+  return run;
 }
 
 /** Open bytes in WordCraft as if the user picked `name` in File › Open. */

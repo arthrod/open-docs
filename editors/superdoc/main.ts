@@ -38,44 +38,66 @@ async function exportBytes(): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
+/** Word's own styles for what SuperDoc's markdown importer leaves unstyled. */
+const STYLES = {
+  quote: {
+    type: "paragraph", id: "Quote", name: "Quote", basedOn: "Normal", next: "Normal", qFormat: true, priority: 29,
+    paragraph: { indent: { left: 864, right: 864 }, justification: "center" },
+    run: { italic: true, color: { val: "404040" } },
+  },
+  code: {
+    type: "paragraph", id: "Code", name: "Code", basedOn: "Normal", next: "Normal", qFormat: true, priority: 39,
+    paragraph: { spacing: { before: 0, after: 0 } },
+    run: { fontFamily: { ascii: "Courier New", hAnsi: "Courier New", cs: "Courier New" }, fontSize: 20 },
+  },
+} as const;
+
 /**
  * What SuperDoc 2.29's markdown importer leaves undone, finished with its own
  * document API (so it stays in the same undo history):
- *  - block quotes arrive as plain paragraphs (the HTML importer does the same):
- *    give them Word's Quote style, creating it if the document lacks one;
+ *  - block quotes arrive as plain paragraphs (the HTML importer does the same),
+ *    and fenced code as a plain paragraph of monospace runs: give them Word's
+ *    Quote / Code style, creating it if the document lacks one;
  *  - the insert lands after the cleared document's empty paragraph: drop it.
  */
 async function finishImport(ed: any, markdown: string) {
-  const norm = (s: string) => s.replace(/\s+/g, " ").trim();
-  const quotes = markdownToBlocks(markdown)
-    .filter((b) => b.kind === "quote")
-    .map((b) => norm(b.runs.map((r) => r.text).join("")))
-    .filter(Boolean);
   let { blocks } = await ed.doc.blocks.list({});
   const first = blocks[0];
   if (first?.isEmpty && blocks.length > 1 && first.nodeType === "paragraph") {
     await ed.doc.blocks.delete({ target: { kind: "block", nodeType: first.nodeType, nodeId: first.nodeId } });
     blocks = blocks.slice(1);
   }
-  if (!quotes.length) return;
-  // conflictPolicy "fail" leaves an existing Quote style alone.
-  await ed.doc.styles.create({
-    type: "paragraph", id: "Quote", name: "Quote", basedOn: "Normal", next: "Normal", qFormat: true, priority: 29,
-    conflictPolicy: "fail",
-    paragraph: { indent: { left: 864, right: 864 }, justification: "center" },
-    run: { italic: true, color: { val: "404040" } },
-  }).catch(() => undefined);
-  // Match quote paragraphs in document order (previews may be truncated).
-  let from = 0;
-  for (const q of quotes) {
-    const i = blocks.findIndex((b: any, k: number) =>
-      k >= from && b.nodeType === "paragraph" && b.textPreview && q.startsWith(norm(b.textPreview).replace(/…$/, ""))
-    );
+  const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+  const source = markdownToBlocks(markdown).map((b) => ({ kind: b.kind, text: norm(b.runs.map((r) => r.text).join("")) }));
+  const kinds = new Set(source.filter((b) => (b.kind === "quote" || b.kind === "code") && b.text).map((b) => b.kind));
+  if (!kinds.size) return;
+  // conflictPolicy "fail" leaves a style the document already has alone.
+  for (const kind of kinds as Set<keyof typeof STYLES>) {
+    await ed.doc.styles.create({ ...STYLES[kind], conflictPolicy: "fail" }).catch(() => undefined);
+  }
+  // textPreview is cut at about 80 characters (ending "…"): a cut preview
+  // matches by prefix, a whole one only exactly.
+  const matches = (b: any, text: string) => {
+    if (b.nodeType !== "paragraph" || !b.textPreview) return false;
+    const p = norm(b.textPreview);
+    return p.endsWith("…") ? text.startsWith(p.slice(0, -1).trimEnd()) : p === text;
+  };
+  // Walk source blocks and document paragraphs together, in order: each
+  // source block takes the next paragraph that matches it, so an ordinary
+  // paragraph with the same (or same-prefix) text keeps its own and the quote
+  // gets the one after it. Blocks with no paragraph of their own (tables,
+  // list items SuperDoc lists under another node type) match nothing and
+  // leave the position where it was.
+  let at = 0;
+  for (const src of source) {
+    if (!src.text) continue;
+    const i = blocks.findIndex((b: any, k: number) => k >= at && matches(b, src.text));
     if (i < 0) continue;
-    from = i + 1;
+    at = i + 1;
+    if (src.kind !== "quote" && src.kind !== "code") continue;
     await ed.doc.styles.paragraph.setStyle({
       target: { kind: "block", nodeType: blocks[i].nodeType, nodeId: blocks[i].nodeId },
-      styleId: "Quote",
+      styleId: STYLES[src.kind].id,
     });
   }
 }

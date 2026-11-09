@@ -33,13 +33,16 @@ export type Run = {
  * `title`: the Title style. `heading` level: 1–6 = Heading 1–6.
  * `li` level: 0-based nesting depth. `code`: a code block (Code style).
  * `hr`: a thematic break (empty paragraph with a bottom border).
+ * `table`: `rows` of cells of runs; the first row is the header (bold,
+ * repeated on each page); `runs` is unused.
  */
 export type Block = {
-  kind: "p" | "title" | "heading" | "li" | "quote" | "code" | "hr";
+  kind: "p" | "title" | "heading" | "li" | "quote" | "code" | "hr" | "table";
   level?: number;
   ordered?: boolean;
   align?: "left" | "center" | "right" | "justify";
   runs: Run[];
+  rows?: Run[][][];
 };
 
 const hex = (c?: string) => {
@@ -116,6 +119,29 @@ function paragraphXml(b: Block, numId: number, links: Links): string {
     body += `<w:hyperlink r:id="${linkId(links, href)}" w:history="1">${inner}</w:hyperlink>`;
   }
   return `<w:p>${pPr ? `<w:pPr>${pPr}</w:pPr>` : ""}${body}</w:p>`;
+}
+
+/** Text width of the page below (12240 − 2 × 1440 twips). */
+const TEXT_WIDTH = 9360;
+
+function tableXml(b: Block, links: Links): string {
+  const rows = (b.rows ?? []).filter((r) => r.length);
+  const cols = Math.max(1, ...rows.map((r) => r.length));
+  const w = Math.floor(TEXT_WIDTH / cols);
+  const border = (side: string) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="A0A0A0"/>`;
+  const tblPr = `<w:tblPr><w:tblW w:w="${w * cols}" w:type="dxa"/><w:tblBorders>${
+    ["top", "left", "bottom", "right", "insideH", "insideV"].map(border).join("")
+  }</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>`;
+  const grid = `<w:tblGrid>${`<w:gridCol w:w="${w}"/>`.repeat(cols)}</w:tblGrid>`;
+  const trs = rows.map((cells, ri) => {
+    const tcs = Array.from({ length: cols }, (_, ci) => {
+      const runs = (cells[ci] ?? []).map((r) => (ri === 0 ? { ...r, bold: true } : r));
+      // Every cell needs a paragraph, even an empty one.
+      return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/></w:tcPr>${paragraphXml({ kind: "p", runs }, 1, links)}</w:tc>`;
+    }).join("");
+    return `<w:tr>${ri === 0 ? "<w:trPr><w:tblHeader/></w:trPr>" : ""}${tcs}</w:tr>`;
+  }).join("");
+  return `<w:tbl>${tblPr}${grid}${trs}</w:tbl>`;
 }
 
 function levels(ordered: boolean): string {
@@ -211,6 +237,12 @@ export function blocksToDocx(blocks: Block[]): Uint8Array {
       const continues = prev?.kind === "li" && (prev.ordered || (prev.level ?? 0) > (b.level ?? 0));
       if (!continues || orderedLists === 0) orderedLists++;
       numId = orderedLists + 1;
+    }
+    if (b.kind === "table") {
+      // Two adjacent tables would merge into one, and Word wants a paragraph
+      // after a table that ends the body.
+      const next = blocks[i + 1];
+      return tableXml(b, links) + (!next || next.kind === "table" ? "<w:p/>" : "");
     }
     return paragraphXml(b, numId, links);
   }).join("\n") || "<w:p/>";

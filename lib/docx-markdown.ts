@@ -15,7 +15,7 @@
  */
 import { strFromU8, unzipSync } from "https://esm.sh/fflate@0.8.2?target=es2022";
 import type { Block, Run } from "./ooxml.ts";
-import { blocksToMarkdown, runsToMarkdown } from "./markdown.ts";
+import { blocksToMarkdown, tableToMarkdown } from "./markdown.ts";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -92,7 +92,13 @@ function readNumbering(doc: Document | undefined): Map<string, Map<number, boole
     abstract.set(wAttr(a, "abstractNumId") ?? "", lvls);
   }
   for (const n of kids(doc.documentElement, "num")) {
-    out.set(wAttr(n, "numId") ?? "", abstract.get(wAttr(kid(n, "abstractNumId"), "val") ?? "") ?? new Map());
+    const lvls = new Map(abstract.get(wAttr(kid(n, "abstractNumId"), "val") ?? "") ?? []);
+    // <w:lvlOverride><w:lvl> replaces a level's format for this list only.
+    for (const o of kids(n, "lvlOverride")) {
+      const fmt = wAttr(kid(kid(o, "lvl"), "numFmt"), "val");
+      if (fmt) lvls.set(Number(wAttr(o, "ilvl") ?? 0), fmt === "bullet");
+    }
+    out.set(wAttr(n, "numId") ?? "", lvls);
   }
   return out;
 }
@@ -235,25 +241,29 @@ function paragraphBlock(p: Element, ctx: Ctx): Block {
     const bullet = ctx.numbering.get(numId)?.get(ilvl) ?? true;
     return { kind: "li", level: ilvl, ordered: !bullet, runs };
   }
-  // Quote styles are italic; echoing that as *…* adds noise (as bold in headings).
-  if (names.some((n) => /quote/.test(n))) return { kind: "quote", runs: runs.map((r) => ({ ...r, italic: false })) };
-  const codeStyle = names.some((n) => /^(code|html preformatted|source code|verbatim)/.test(n));
-  if (codeStyle || (text.trim() && runs.every((r) => !r.text.trim() || r.code))) {
+  if (names.some((n) => /quote/.test(n))) {
+    // Quote styles are italic; a quote whose every run is italic is that
+    // style echoed as direct formatting (docen does this), not emphasis.
+    const allItalic = runs.every((r) => !r.text.trim() || r.italic);
+    return { kind: "quote", runs: allItalic ? runs.map((r) => ({ ...r, italic: false })) : runs };
+  }
+  // Code blocks come from a paragraph style only: a paragraph that is one
+  // inline code span (monospace runs) stays a paragraph.
+  if (names.some((n) => /^(code|html preformatted|source code|verbatim)/.test(n))) {
     return { kind: "code", runs: runs.map((r) => ({ ...r, code: false })) };
   }
   return { kind: "p", align: align as Block["align"], runs };
 }
 
 function tableMarkdown(tbl: Element, ctx: Ctx): string {
+  // Paragraphs within a cell are joined by a line break.
   const rows = kids(tbl, "tr").map((tr) =>
     kids(tr, "tc").map((tc) =>
-      kids(tc, "p").map((p) => runsToMarkdown(paragraphRuns(p, ctx))).filter(Boolean).join("<br>").replace(/\|/g, "\\|")
+      kids(tc, "p").map((p) => paragraphRuns(p, ctx)).filter((r) => r.length)
+        .flatMap((runs, i) => (i ? [{ text: "\n" } as Run, ...runs] : runs))
     )
   );
-  if (!rows.length) return "";
-  const width = Math.max(...rows.map((r) => r.length));
-  const line = (cells: string[]) => `| ${Array.from({ length: width }, (_, i) => cells[i] ?? "").join(" | ")} |`;
-  return [line(rows[0]), `|${" --- |".repeat(width)}`, ...rows.slice(1).map(line)].join("\n");
+  return tableToMarkdown(rows);
 }
 
 /** Read a .docx and return its body as markdown. */
