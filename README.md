@@ -158,7 +158,10 @@ is ready and posts to `/api/metrics` (sqlite table `od_metrics_1`):
 The landing page shows per-editor medians (`GET /api/metrics`). Set
 `localStorage["od:no-metrics"] = "1"` in a browser to keep its page loads out of
 the table (used for test runs). Development-run rows were archived in
-[`docs/metrics-archive/`](docs/metrics-archive/) and the table was cleared.
+[`docs/metrics-archive/`](docs/metrics-archive/) and the table was cleared; a
+fresh baseline (3 loads per editor, one per new tab, one at a time) is in
+[`docs/metrics-archive/2026-11-09-baseline.md`](docs/metrics-archive/2026-11-09-baseline.md).
+JS heap leaves out WebAssembly memory, so WordCraft and Docxodus read low.
 
 ## How it fits together
 
