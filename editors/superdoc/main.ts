@@ -133,6 +133,9 @@ function create(SuperDoc: any, bytes: Uint8Array): Promise<void> {
       document: toFile(bytes, "Untitled.docx"),
       documentMode: "editing",
       rulers: true,
+      // SuperDoc's own fit-width zoom: the page shrinks with the window (never
+      // past 100%), so a phone shows the whole page width.
+      zoom: { mode: "fit-width", fitWidth: { min: 25, max: 100, padding: 16 } },
       user: { name: "open-docs", email: "editor@open-docs.local" },
       telemetry: { enabled: false },
       onReady: () => {

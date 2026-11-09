@@ -92,9 +92,17 @@ export async function importDocxToNodes(_editor: any, bytes: Uint8Array): Promis
       });
     }
     else if (t === "TABLE") {
-      el.querySelectorAll("tr").forEach((tr) =>
-        nodes.push({ type: "p", children: [{ text: Array.from(tr.children).map((c) => c.textContent?.trim()).join(" | ") }] })
-      );
+      // Plate's table model: table → tr → td/th → paragraphs.
+      const cell = (c: Element) => {
+        const ps = Array.from(c.querySelectorAll(":scope > p"));
+        const children = ps.length ? ps.map((p) => ({ type: "p", children: kids(p) })) : [{ type: "p", children: kids(c) }];
+        const span = Number(c.getAttribute("colspan")) || 1;
+        return { type: c.tagName === "TH" ? "th" : "td", ...(span > 1 ? { colSpan: span } : {}), children };
+      };
+      nodes.push({
+        type: "table",
+        children: Array.from(el.querySelectorAll("tr")).map((tr) => ({ type: "tr", children: Array.from(tr.children).map(cell) })),
+      });
     } else nodes.push({ type: "p", children: kids(el) });
   }
   return nodes.length ? nodes : emptyValue();

@@ -36,6 +36,17 @@ export default {
   .pl-content mark { background: #fff59d; }
   .pl-li { margin: 0 0 4pt; } .pl-li ol, .pl-li ul { padding-left: 0 !important; }
   .pl-indent-1 { margin-left: 22pt; } .pl-indent-2 { margin-left: 44pt; } .pl-indent-3 { margin-left: 66pt; } .pl-indent-4 { margin-left: 88pt; }
+  /* Phones: the page keeps Word's proportions but not its 1-inch margins, and
+     the tools sit in one scrolling row. */
+  @media (max-width: 700px) {
+    .pl-toolbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; } .pl-toolbar > * { flex: none; }
+    .pl-scroll { padding: 10px 8px 32px; } .pl-page { padding: 28px 22px; min-height: 0; }
+    .pl-content { min-height: 60dvh !important; }
+  }
+  .pl-content table.pl-table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; table-layout: fixed; }
+  .pl-content .pl-table td, .pl-content .pl-table th { border: 1px solid #a0a0a0; padding: 3pt 6pt; vertical-align: top; }
+  .pl-content .pl-table th { background: #f3f5f8; text-align: left; }
+  .pl-content .pl-table p { margin: 0; }
   .pl-content blockquote { margin: 8pt 0; padding-left: 12pt; border-left: 3px solid #c9ced8; color: #475467; }
 </style>`,
   body: `<div id="plate-root"></div>`,

@@ -196,10 +196,35 @@ async function start(adapter: EditorAdapter) {
       `${adapter.name} mounted in ${Math.round(mountEnd - mountStart)}ms (startup ${Math.round(mountEnd)}ms)`,
     );
     void recordMetrics(adapter, mountStart, mountEnd);
+    watchFit(adapter);
   } catch (err) {
     paintChip(undefined, "err");
     fail(`${adapter.name} failed to start`, err);
   }
+}
+
+/**
+ * Keep the page fitted to the editor area: the editor's own zoom, told the
+ * width every time the stage changes size (window, rotation, assistant panel).
+ */
+let fitNow = () => {};
+function watchFit(adapter: EditorAdapter) {
+  const stage = $("od-stage");
+  if (!stage || !adapter.fit) return;
+  let timer = 0;
+  fitNow = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const { width, height } = stage.getBoundingClientRect();
+      try {
+        adapter.fit?.(width, height);
+      } catch (err) {
+        console.warn("[open-docs] fit", err);
+      }
+    }, 80);
+  };
+  new ResizeObserver(fitNow).observe(stage);
+  fitNow();
 }
 
 /* ------------------------------- documents ------------------------------- */
@@ -235,11 +260,23 @@ const newDoc = () =>
     setStatus("New blank document", "ok");
   });
 
+const openShowcase = () =>
+  withAdapter("Load the rich sample", async (a) => {
+    const res = await fetch("/api/showcase.docx");
+    if (!res.ok) throw new Error(`showcase.docx → HTTP ${res.status}`);
+    await a.load(new Uint8Array(await res.arrayBuffer()));
+    newDocument();
+    setDocName("Coastal Wind Farm — Spring Field Report");
+    fitNow();
+    setStatus("Loaded the rich sample .docx", "ok");
+  });
+
 const openSample = () =>
   withAdapter("Load sample", async (a) => {
     await a.load(await window.od.sampleDocx());
     newDocument();
     setDocName("Quarterly Report — Acme Robotics");
+    fitNow();
     setStatus("Loaded the sample .docx", "ok");
   });
 
@@ -252,6 +289,7 @@ async function importFile(file: File) {
     await a.load(new Uint8Array(await file.arrayBuffer()));
     newDocument();
     setDocName(file.name);
+    fitNow();
     setStatus(`Imported ${file.name}`, "ok");
   });
 }
@@ -488,7 +526,8 @@ function wire() {
   }
 
   $("od-new")?.addEventListener("click", () => void newDoc());
-  $("od-sample")?.addEventListener("click", () => { closeMenu(); void openSample(); });
+  $("od-showcase")?.addEventListener("click", () => void openShowcase());
+  $("od-sample")?.addEventListener("click", () => void openSample());
   $("od-reload")?.addEventListener("click", () => location.reload());
   $("od-import")?.addEventListener("click", () => $("od-file")?.click());
   $("od-file")?.addEventListener("change", (e) => {
@@ -514,21 +553,34 @@ function wire() {
     location.href = `/e/${(e.target as HTMLSelectElement).value}`;
   });
 
-  // "More" menu.
+  // The Menu (right of the bar): every document action lives here.
   const menu = $("od-menu");
   $("od-more")?.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (menu) menu.hidden = !menu.hidden;
+    if (menu?.hidden) openMenu();
+    else closeMenu();
   });
   document.addEventListener("click", (e) => {
     if (menu && !menu.hidden && !menu.contains(e.target as Node)) closeMenu();
   });
+  // Picking an item closes the menu (the item's own handler still runs).
+  menu?.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).closest("button, a")) closeMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && menu && !menu.hidden) {
+      closeMenu();
+      $("od-more")?.focus();
+    }
+  });
 
-  // Metrics dialog.
-  $("od-metrics")?.addEventListener("click", () => {
+  // Metrics dialog (the chip, or the menu item on phones where the chip is hidden).
+  const showMetrics = () => {
     renderMetricsDialog();
     ($("od-metrics-dialog") as HTMLDialogElement)?.showModal();
-  });
+  };
+  $("od-metrics")?.addEventListener("click", showMetrics);
+  $("od-metrics-item")?.addEventListener("click", showMetrics);
 
   // Assistant panel toggle (remembered).
   const layout = $("od-layout");
@@ -538,12 +590,18 @@ function wire() {
     toggle?.setAttribute("aria-pressed", String(open));
     window.dispatchEvent(new Event("resize"));
   };
-  applyAgentPref(localStorage.getItem("od-agent") !== "closed");
+  // On a phone the assistant is a sheet over the editor: start it closed there.
+  const narrow = matchMedia("(max-width: 900px)");
+  applyAgentPref(!narrow.matches && localStorage.getItem("od-agent") !== "closed");
   toggle?.addEventListener("click", () => {
     const open = layout?.classList.contains("no-agent") ?? false;
-    localStorage.setItem("od-agent", open ? "open" : "closed");
+    if (!narrow.matches) localStorage.setItem("od-agent", open ? "open" : "closed");
     applyAgentPref(open);
+    if (open && narrow.matches) $("od-prompt")?.focus();
   });
+  $("od-aside-close")?.addEventListener("click", () => applyAgentPref(false));
+  narrow.addEventListener("change", () =>
+    applyAgentPref(!narrow.matches && localStorage.getItem("od-agent") !== "closed"));
 
   // Keyboard shortcuts that don't fight the editors: ⌘O import, ⌘⇧S / ⌘S export.
   document.addEventListener("keydown", (e) => {
@@ -573,9 +631,18 @@ function wire() {
   });
 }
 
+function openMenu() {
+  const menu = $("od-menu");
+  if (!menu) return;
+  menu.hidden = false;
+  $("od-more")?.setAttribute("aria-expanded", "true");
+  (menu.querySelector("button, a") as HTMLElement | null)?.focus({ preventScroll: true });
+}
+
 function closeMenu() {
   const menu = $("od-menu");
   if (menu) menu.hidden = true;
+  $("od-more")?.setAttribute("aria-expanded", "false");
 }
 
 wire();

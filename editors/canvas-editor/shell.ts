@@ -41,7 +41,10 @@ export default {
   #ce-link-url { width: 150px; }
   #ce-search { width: 120px; }
   #ce-scroll { flex: 1; min-height: 0; overflow: auto; padding: 24px 0 48px; }
-  #ce-page { width: 794px; margin: 0 auto; }
+  /* Phones: one scrolling row of tools instead of five wrapped rows. */
+  @media (max-width: 700px) { #ce-toolbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; } #ce-toolbar > * { flex: none; }
+    #ce-scroll { padding: 12px 0 32px; } }
+  #ce-page { width: fit-content; margin: 0 auto; }
   #ce-page canvas { box-shadow: 0 1px 3px rgba(16,24,40,.12), 0 8px 24px rgba(16,24,40,.06); }
 </style>`,
   body: `<div id="ce-host">

@@ -14,6 +14,7 @@ export const LINK = `https://esm.sh/@platejs/link@53.3.5/react${Q}`;
 export const LINK_CORE = `https://esm.sh/@platejs/link@53.3.5${Q}`;
 export const CODE_BLOCK = `https://esm.sh/@platejs/code-block@53.0.0/react${Q}`;
 export const CODE_BLOCK_CORE = `https://esm.sh/@platejs/code-block@53.0.0${Q}`;
+export const TABLE = `https://esm.sh/@platejs/table@53.0.9/react${Q}`;
 export const LIST = `https://esm.sh/@platejs/list@53.3.13/react${Q}`;
 /** Plate's own markdown ⇄ nodes (remark under the hood). */
 export const MARKDOWN = `https://esm.sh/@platejs/markdown@53.5.3${Q}`;

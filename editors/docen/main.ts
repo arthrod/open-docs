@@ -17,6 +17,8 @@ type DocenEl = HTMLElement & {
   saveDOCX(): Promise<Uint8Array | ArrayBuffer | Blob>;
   openMarkdown(md: string): Promise<void>;
   saveMarkdown(): Promise<string> | string;
+  setZoom?(pct: number): void;
+  getZoom?(): number;
 };
 
 let el: DocenEl | undefined;
@@ -41,6 +43,13 @@ async function toBytes(out: Uint8Array | ArrayBuffer | Blob): Promise<Uint8Array
 window.od.register({
   name: "docen",
   mergeQuality: "native",
+
+  // A Letter page is 816 px; on a narrower stage docen's own zoom (the one its
+  // status bar drives) shrinks the page to fit, never above 100%.
+  fit(width: number) {
+    const pct = Math.max(25, Math.min(100, Math.floor(((width - 56) / 816) * 100)));
+    if (el?.setZoom && el.getZoom?.() !== pct) el.setZoom(pct);
+  },
 
   async mount() {
     const node = await waitFor<HTMLElement>("#docen");

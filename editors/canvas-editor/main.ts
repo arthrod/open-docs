@@ -278,6 +278,13 @@ window.od.register({
     return editor ? blocksToMarkdown(currentBlocks()) : "";
   },
 
+  // The page is 794 px wide; on a narrower stage, canvas-editor's own page
+  // scale shrinks it to fit (never above 100%).
+  fit(width: number) {
+    const scale = Math.max(0.3, Math.min(1, (width - 24) / 794));
+    if (editor && Math.abs(editor.command.getOptions().scale - scale) > 0.01) editor.command.executePageScale(scale);
+  },
+
   async exportDocx() {
     if (!editor) throw new Error("editor not ready");
     return blocksToDocx(currentBlocks());

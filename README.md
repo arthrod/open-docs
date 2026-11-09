@@ -31,21 +31,41 @@ full toolbar over the library's command API where it ships none
 (canvas-editor: styles, fonts, sizes, marks, colours, lists, alignment,
 spacing, tables, images, links, rules, page breaks, find, zoom, print; Plate:
 styles H1–H6, fonts, sizes, colours, line height, marks, sub/superscript,
-highlight, lists with indent, quote, code block, rule, alignment, links).
+highlight, lists with indent, quote, code block, rule, alignment, links, and
+tables through `@platejs/table`).
 
 ## Using it
 
-Open <https://open-docs.val.run>, pick an editor. Every editor page has the same top bar:
+Open <https://open-docs.val.run>, pick an editor. Every editor page has the same
+compact top bar — editor, document name, metrics chip, assistant toggle — and a
+**Menu** on the right with every document action:
 
-- **New** (⌥N): a fresh blank document. Pages also *open* blank.
-- **Import .docx** (⌘O) or drag a .docx onto the page.
-- **Export .docx** (⌘S): the editor's own bytes, named after the document title.
-- **⋯**: open the sample document, download the sample, reload, source links.
-- **Metrics chip**: startup / JS heap / loaded bytes for *this* page load. Click it
-  for the breakdown by file type and origin.
-- **Assistant** panel (toggle on the right): ask it to draft, rewrite, restructure
-  or summarise. With *Auto-apply* on, edits land immediately and each one has an
-  **Undo**; with it off, you review and click **Apply**.
+- **New blank document** (⌥N). Pages also *open* blank.
+- **Open .docx from your computer…** (⌘O), or drag a .docx onto the page.
+- **Export this document as .docx** (⌘S): the document you are editing, in the
+  editor's own bytes, named after the document name.
+- **Load the rich sample**: a Word-valid showcase (title/subtitle, three heading
+  levels, every common run format, nested bullets and numbers, a table with a
+  shaded header and a merged cell, a quote, a code block, a hyperlink, a chart
+  image, alignments, a page break, header/footer with page numbers). Built by
+  [`scripts/make_showcase.py`](scripts/make_showcase.py); also downloadable.
+  **Load the short sample** is the original four-section report.
+- **Performance of this load**, **Reload editor**, source links.
+
+The **metrics chip** shows startup / JS heap / loaded bytes for *this* page
+load; click it for the breakdown by file type and origin. The **Assistant**
+panel drafts, rewrites, restructures or summarises; with *Auto-apply* on, edits
+land immediately and each has an **Undo**.
+
+**Phones and narrow windows.** The layout follows the window: the bar drops
+labels, the Menu becomes a full-width sheet, the assistant becomes a sheet over
+the editor (✕ to close), and toolbars we built become one scrolling row. The
+page is fitted to the width with each editor's *own* zoom, re-fitted on every
+resize: SuperDoc `zoom.mode: "fit-width"`, docx-editor.dev
+`zoomMode: {type: "fit"}` (floor lowered from 50% to 25% so a phone fits),
+folio `setZoom`, docen `setZoom`, canvas-editor `executePageScale`; Plate's page
+is CSS. Docxodus already follows its container. WordCraft draws its own UI and
+has no zoom API in the released build, so on a phone its page scrolls sideways.
 
 ## The assistant
 
@@ -135,11 +155,20 @@ and marks. All eight editors pass all ten checks and the read-back check.
 (escaped `#`/`1.` text, inline code alone in a paragraph, a code block, backticks
 in code, a quote whose text also appears as a plain paragraph, a table with a
 cell line break and a link): all eight pass, except SuperDoc's cell line break.
-Run either in any editor page's console:
+[`lib/probes/ai-export.js`](lib/probes/ai-export.js) is the end-to-end check:
+it loads the rich sample, sends the assistant a prompt through the real chat
+box, waits for the edit to apply, reads the document back, then clicks
+**Export** and looks for the edit inside the exported `word/document.xml`. All
+eight editors pass (2026-11-09, gpt-5.6-luna): edit applied, read back, present
+in the export, table kept.
+
+Run any of them in an editor page's console (ai-export runs in the background
+and leaves its result in `window.__ai`):
 
 ```js
 await eval(await (await fetch('/lib/probes/md-mapping.js', { cache: 'no-store' })).text())
 await eval(await (await fetch('/lib/probes/md-edge.js', { cache: 'no-store' })).text())
+eval(await (await fetch('/lib/probes/ai-export.js', { cache: 'no-store' })).text()) // then read window.__ai
 ```
 
 ## Measurements
@@ -241,6 +270,11 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   docen and WordCraft keep the .docx model. canvas-editor and Plate round-trip
   through their own models: headings, lists, marks, links, quotes, code and
   simple tables survive; merged cells, fields, footnotes and comments do not.
+- **Assistant edits go through markdown**, so what markdown can't say is lost
+  when the assistant rewrites a document: merged cells, colours, headers and
+  footers (except in SuperDoc, which edits in place and keeps the header),
+  images. Plate carries underline, sub/superscript, colours and highlight as
+  inline HTML through its own `remarkMdx`, so those survive there.
 - **List numbering restarts and start numbers** (`3.` as the first item) are
   not carried through markdown: every numbered list starts at 1.
 - **Assistant writes replace the whole document.** Undo works through the

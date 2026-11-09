@@ -9,6 +9,7 @@
  *   @platejs/list          indent lists (bullets / numbers, nesting)
  *   @platejs/link          links
  *   @platejs/code-block    code blocks
+ *   @platejs/table         tables (rows, cells, header cells)
  *   @platejs/markdown      markdown ⇄ nodes (remark + GFM) — the assistant path
  *
  * Plate's polished UI kit is shadcn source copied into apps, not an npm
@@ -29,9 +30,10 @@ import {
   MARKDOWN,
   PLATE_REACT,
   REMARK_GFM,
+  TABLE,
 } from "./deps.ts";
 
-const [P, B, S, SCore, CB, CBCore, Lk, LkCore, L, Md, gfm] = await Promise.all([
+const [P, B, S, SCore, CB, CBCore, Lk, LkCore, L, Md, gfm, T] = await Promise.all([
   import(PLATE_REACT),
   import(BASIC_NODES),
   import(BASIC_STYLES),
@@ -43,6 +45,7 @@ const [P, B, S, SCore, CB, CBCore, Lk, LkCore, L, Md, gfm] = await Promise.all([
   import(LIST),
   import(MARKDOWN),
   import(REMARK_GFM),
+  import(TABLE),
 ]);
 const { Plate, PlateContent, PlateElement, ParagraphPlugin, usePlateEditor } = P;
 
@@ -85,6 +88,20 @@ function Link(props: any) {
   );
 }
 
+/** Tables render as real <table>/<tr>/<td> (Plate's default element is a div). */
+function Table(props: any) {
+  return (
+    <PlateElement {...props} as="table" className="pl-table">
+      <tbody>{props.children}</tbody>
+    </PlateElement>
+  );
+}
+const Row = (props: any) => <PlateElement {...props} as="tr">{props.children}</PlateElement>;
+// A merged cell keeps Plate's own `colSpan` on the node.
+const spanned = (props: any) => ({ ...props.attributes, colSpan: props.element.colSpan, rowSpan: props.element.rowSpan });
+const Cell = (props: any) => <PlateElement {...props} as="td" attributes={spanned(props)}>{props.children}</PlateElement>;
+const HeaderCell = (props: any) => <PlateElement {...props} as="th" attributes={spanned(props)}>{props.children}</PlateElement>;
+
 const STYLE_TARGETS = { inject: { targetPlugins: ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"] } };
 
 const PLUGINS = [
@@ -115,7 +132,15 @@ const PLUGINS = [
   Lk.LinkPlugin.withComponent(Link),
   CB.CodeBlockPlugin,
   CB.CodeLinePlugin,
-  Md.MarkdownPlugin.configure({ options: { remarkPlugins: [gfm.default ?? gfm] } }),
+  T.TablePlugin.withComponent(Table),
+  T.TableRowPlugin.withComponent(Row),
+  T.TableCellPlugin.withComponent(Cell),
+  T.TableCellHeaderPlugin.withComponent(HeaderCell),
+  // Plate's documented setup: GFM plus its own remarkMdx, which is how Plate
+  // writes the marks markdown has no syntax for (underline, sub/superscript,
+  // colours, highlight) — as <u>, <sub>, <mark>… Without it, serializing such
+  // a document throws "Cannot handle unknown node mdxJsxTextElement".
+  Md.MarkdownPlugin.configure({ options: { remarkPlugins: [gfm.default ?? gfm, Md.remarkMdx] } }),
 ].filter(Boolean);
 
 type Btn = { label: string; title: string; cls?: string; run: (e: any) => void };
@@ -278,7 +303,15 @@ function Editor({ initialValue, onReady }: { initialValue: any[]; onReady: (h: P
         getValue: () => editor.children,
         // One transform → one undo step.
         setValue: (value) => editor.tf.replaceNodes(value, { at: [], children: true }),
-        fromMarkdown: (md) => editor.api.markdown.deserialize(md),
+        // MDX is strict ("{" opens an expression, a stray "<" a tag): when the
+        // model's markdown isn't valid MDX, read it as plain GFM instead.
+        fromMarkdown: (md) => {
+          try {
+            return editor.api.markdown.deserialize(md);
+          } catch {
+            return editor.api.markdown.deserialize(md, { withoutMdx: true });
+          }
+        },
         toMarkdown: () => editor.api.markdown.serialize(),
         editor,
       })

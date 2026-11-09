@@ -4,6 +4,7 @@
  *
  *   GET  /e/<slug>             the editor page (shared chrome + editor body)
  *   GET  /api/sample.docx      the shared fixture, byte-for-byte
+ *   GET  /api/showcase.docx    the rich sample (scripts/make_showcase.py)
  *   GET  /api/blank.docx       a valid empty .docx
  *   POST /api/import           .docx → { title, markdown }
  *   POST /api/export           markdown → .docx (base64)
@@ -15,6 +16,7 @@ import type { Hono } from "npm:hono@4";
 import { serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
+import { showcaseDocx } from "./showcase.docx.ts";
 import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
 import { markdownToDocx } from "../lib/markdown.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
@@ -90,39 +92,38 @@ ${o.head ?? ""}
     </label>
     <input id="od-docname" class="od-docname" value="Untitled document" spellcheck="false" aria-label="Document name" />
     <span class="od-spacer"></span>
-    <div class="od-actions">
-      <button class="od-btn" id="od-new" title="New blank document (⌥N)">
-        <svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h6.5L16 7v10.5H5z M11.5 2.5V7H16" /></svg><span>New</span>
-      </button>
-      <button class="od-btn" id="od-import" title="Open a .docx from your computer (⌘O)">
-        <svg class="ic" viewBox="0 0 20 20"><path d="M10 13V3 M6 7l4-4 4 4 M3.5 12.5v4h13v-4" /></svg><span>Import .docx</span>
-      </button>
-      <button class="od-btn primary" id="od-export" title="Download as .docx (⌘S)">
-        <svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg><span>Export .docx</span>
-      </button>
-      <div class="od-menu-wrap">
-        <button class="od-btn icon" id="od-more" title="More" aria-haspopup="menu">
-          <svg class="ic" viewBox="0 0 20 20"><circle cx="4.5" cy="10" r="1.4"/><circle cx="10" cy="10" r="1.4"/><circle cx="15.5" cy="10" r="1.4"/></svg>
-        </button>
-        <div class="od-menu" id="od-menu" role="menu" hidden>
-          <button role="menuitem" id="od-sample">Load sample document</button>
-          <a role="menuitem" href="/api/sample.docx" download="open-docs-sample.docx">Download sample .docx</a>
-          <button role="menuitem" id="od-reload">Reload editor</button>
-          <hr />
-          <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub ↗</a>
-          <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo ↗</a>
-        </div>
-      </div>
-    </div>
-    <span class="od-sep"></span>
     <button class="od-metrics" id="od-metrics" title="Measured on this page load — click for details" aria-haspopup="dialog">
       <span class="m"><i class="dot"></i><b id="od-m-time">—</b><small>startup</small></span>
       <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
       <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
     </button>
-    <button class="od-btn icon" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true">
+    <button class="od-btn icon" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">
       <svg class="ic" viewBox="0 0 20 20"><path d="M10 2.5l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z M15.5 13l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
     </button>
+    <div class="od-menu-wrap">
+      <button class="od-btn od-menu-btn" id="od-more" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
+        <svg class="ic" viewBox="0 0 20 20"><path d="M3.5 5.5h13 M3.5 10h13 M3.5 14.5h13"/></svg><span>Menu</span>
+      </button>
+      <div class="od-menu" id="od-menu" role="menu" hidden>
+        <div class="od-menu-label">Document</div>
+        <button role="menuitem" id="od-new"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h6.5L16 7v10.5H5z M11.5 2.5V7H16" /></svg>New blank document<kbd>⌥N</kbd></button>
+        <button role="menuitem" id="od-import"><svg class="ic" viewBox="0 0 20 20"><path d="M10 13V3 M6 7l4-4 4 4 M3.5 12.5v4h13v-4" /></svg>Open .docx from your computer…<kbd>⌘O</kbd></button>
+        <button role="menuitem" id="od-export"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Export this document as .docx<kbd>⌘S</kbd></button>
+        <hr />
+        <div class="od-menu-label">Samples</div>
+        <button role="menuitem" id="od-showcase"><svg class="ic" viewBox="0 0 20 20"><path d="M3 4.5h14v11H3z M3 12l4-3.5 3 2.5 3-3 4 3.5"/></svg>Load the rich sample<small>tables, lists, image, styles</small></button>
+        <button role="menuitem" id="od-sample"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h10v15H5z M8 6.5h4 M8 9.5h4 M8 12.5h2"/></svg>Load the short sample</button>
+        <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Download the rich sample</a>
+        <hr />
+        <div class="od-menu-label">View</div>
+        <button role="menuitem" id="od-metrics-item"><svg class="ic" viewBox="0 0 20 20"><path d="M3.5 16.5v-5 M8 16.5v-9 M12.5 16.5v-6 M17 16.5V3.5"/></svg>Performance of this load</button>
+        <button role="menuitem" id="od-reload"><svg class="ic" viewBox="0 0 20 20"><path d="M16 10a6 6 0 1 1-1.8-4.3 M16 3.5v3.5h-3.5"/></svg>Reload editor</button>
+        <hr />
+        <a role="menuitem" href="/">All editors &amp; measurements</a>
+        <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub ↗</a>
+        <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo ↗</a>
+      </div>
+    </div>
   </header>
   <div class="od-sub">
     <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
@@ -148,6 +149,7 @@ ${o.head ?? ""}
         <label class="od-auto" title="Apply edits as soon as the assistant proposes them (you can still undo)">
           <input type="checkbox" id="od-autoapply" checked /> Auto-apply
         </label>
+        <button class="od-btn icon od-aside-close" id="od-aside-close" type="button" aria-label="Close the assistant">✕</button>
       </div>
       <div class="od-log" id="od-log">
         <div class="od-msg bot"><span class="who">Assistant</span>I can read and edit the document open in <b>${esc(meta?.name ?? o.title)}</b>. Ask me to draft, rewrite, restructure or summarise — every change can be undone.</div>
@@ -187,6 +189,15 @@ export function mountShared(app: Hono) {
         "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-sample.docx"',
         "cache-control": "no-cache",
+      },
+    }));
+
+  app.get("/api/showcase.docx", () =>
+    new Response(showcaseDocx(), {
+      headers: {
+        "content-type": DOCX_MIME,
+        "content-disposition": 'attachment; filename="open-docs-showcase.docx"',
+        "cache-control": "public, max-age=300",
       },
     }));
 

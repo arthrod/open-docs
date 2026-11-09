@@ -28,11 +28,14 @@ type Handle = {
   save(): Promise<Blob | null>;
   getDocument(): unknown;
   destroy?(): void;
+  setZoom?(zoom: number): void;
   focus?(): void;
 };
 
 let api: any;
 let handle: Handle | undefined;
+/** The zoom that fits the page to the stage (folio's own zoom; 1 = 100%). */
+let fitZoom = 1;
 let host: HTMLElement | undefined;
 
 async function folio() {
@@ -52,6 +55,7 @@ async function open(input: Uint8Array | ArrayBuffer): Promise<void> {
     showToolbar: true,
     showZoomControl: true,
     showRuler: true,
+    initialZoom: fitZoom,
     author: "open-docs",
     colorMode: "light",
   }) as Handle;
@@ -80,6 +84,15 @@ window.od.register({
     host = await waitFor<HTMLDivElement>("#folio-root");
     window.od.progress("Loading folio (Vue + ProseMirror, ~4 MB)…");
     await open(await blank());
+  },
+
+  // A Letter page is 816 px plus folio's vertical ruler and margins: on a
+  // narrower stage, folio's own zoom shrinks the page to fit (never above 100%).
+  fit(width: number) {
+    const z = Math.max(0.3, Math.min(1, Math.floor(((width - 72) / 816) * 100) / 100));
+    if (Math.abs(z - fitZoom) < 0.01) return;
+    fitZoom = z;
+    handle?.setZoom?.(z);
   },
 
   async load(bytes: Uint8Array) {

@@ -33,6 +33,12 @@ export interface EditorAdapter {
    * (e.g. inside a Web Worker), so the "loaded" metric still counts them.
    */
   extraResources?: string[];
+  /**
+   * The editor area changed size (window resize, phone rotation, assistant
+   * opened or closed): fit the page to `width` CSS pixels with the editor's
+   * own zoom. Omit when the editor already follows its container.
+   */
+  fit?(width: number, height: number): void;
 }
 
 /** Exposed globals both the chrome and the adapters read. */

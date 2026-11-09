@@ -53,7 +53,10 @@ function App({ onReady }: { onReady: () => void }) {
   }, []);
   return (
     <div style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
-      <DocxEditor ref={r as any} document="blank" mode="edit" fonts={FONTS} />
+      {/* The library's default fit stops at 50%, which still overflows a phone;
+          same fit, lower floor. */}
+      <DocxEditor ref={r as any} document="blank" mode="edit" fonts={FONTS}
+        zoomMode={{ type: "fit", fit: "pageWidth", minZoom: 0.25, maxZoom: 1 }} />
     </div>
   );
 }

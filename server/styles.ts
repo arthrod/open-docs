@@ -12,13 +12,14 @@ export const SHELL_CSS = `
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+body { height: 100dvh; }
 body { margin: 0; font: 13px/1.45 var(--font); color: var(--text); background: var(--bg);
   display: flex; flex-direction: column; overflow: hidden; -webkit-font-smoothing: antialiased; }
 svg.ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 svg.ic circle { fill: currentColor; stroke: none; }
 
 /* ------------------------------ top bar ------------------------------ */
-.od-bar { position: relative; z-index: 30; display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 12px;
+.od-bar { position: relative; z-index: 30; display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 12px; min-width: 0;
   background: var(--surface); border-bottom: 1px solid var(--line); }
 .od-brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: -.01em; color: var(--text); text-decoration: none; font-size: 14px; }
 .od-logo { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, #1e3a8a, #2557d6);
@@ -33,7 +34,8 @@ svg.ic circle { fill: currentColor; stroke: none; }
   appearance: none; cursor: pointer; color: var(--text); }
 .od-switch select:hover { border-color: var(--line-2); }
 .od-docname { font: inherit; font-size: 13.5px; color: var(--text); border: 1px solid transparent; background: transparent;
-  border-radius: 7px; padding: 5px 8px; width: 220px; text-overflow: ellipsis; }
+  border-radius: 7px; padding: 5px 8px; flex: 0 1 260px; width: 260px; min-width: 70px; text-overflow: ellipsis; }
+.od-switch { flex: none; min-width: 0; }
 .od-docname:hover { border-color: var(--line); }
 .od-docname:focus { outline: none; border-color: var(--accent); background: #fff; }
 .od-actions { display: flex; align-items: center; gap: 6px; }
@@ -48,11 +50,16 @@ svg.ic circle { fill: currentColor; stroke: none; }
 .od-btn.icon { width: 32px; padding: 0; justify-content: center; }
 .od-btn.icon[aria-pressed="true"] { background: var(--accent-soft); border-color: #c7d5f7; color: var(--accent); }
 .od-menu-wrap { position: relative; }
-.od-menu { position: absolute; right: 0; top: 38px; min-width: 230px; background: #fff; border: 1px solid var(--line);
+.od-menu { position: absolute; right: 0; top: 38px; min-width: 290px; max-height: calc(100dvh - 64px); overflow: auto; background: #fff; border: 1px solid var(--line);
   border-radius: 10px; box-shadow: 0 12px 32px rgba(16,24,40,.16); padding: 5px; display: flex; flex-direction: column; z-index: 50; }
 .od-menu[hidden] { display: none; }
 .od-menu > button, .od-menu > a { font: inherit; text-align: left; padding: 8px 10px; border: 0; background: none; border-radius: 6px;
-  color: var(--text); text-decoration: none; cursor: pointer; }
+  color: var(--text); text-decoration: none; cursor: pointer; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.od-menu > button svg.ic, .od-menu > a svg.ic { color: var(--muted); }
+.od-menu kbd { margin-left: auto; font: 11px var(--mono); color: var(--subtle); }
+.od-menu small { flex-basis: 100%; padding-left: 25px; margin-top: -3px; font-size: 11px; color: var(--subtle); }
+.od-menu-label { padding: 6px 10px 2px; font-size: 10.5px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; color: var(--subtle); }
+.od-menu-btn[aria-expanded="true"] { background: var(--accent-soft); border-color: #c7d5f7; color: var(--accent); }
 .od-menu > button:hover, .od-menu > a:hover { background: var(--surface-2); }
 .od-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
 
@@ -81,9 +88,28 @@ svg.ic circle { fill: currentColor; stroke: none; }
 .od-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; padding: 12px; }
 .od-layout.no-agent { grid-template-columns: minmax(0, 1fr); }
 .od-layout.no-agent .od-aside { display: none; }
-@media (max-width: 1100px) { .od-blurb { display: none; } .od-docname { width: 150px; } }
-@media (max-width: 900px) { .od-layout { grid-template-columns: minmax(0, 1fr); } .od-aside { display: none !important; }
-  .od-actions .od-btn span { display: none; } .od-actions .od-btn { width: 32px; padding: 0; justify-content: center; } }
+.od-aside-close { display: none; }
+@media (max-width: 1100px) { .od-blurb { display: none; } }
+/* Narrow screens: one column, and the assistant becomes a sheet over the editor. */
+@media (max-width: 900px) {
+  .od-layout, .od-layout.no-agent { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 6px; }
+  .od-aside { position: fixed; z-index: 60; left: 6px; right: 6px; bottom: 6px; height: min(78dvh, 600px);
+    box-shadow: 0 -8px 40px rgba(16,24,40,.28); border-color: var(--line-2); }
+  .od-layout.no-agent .od-aside { display: none; }
+  .od-aside-close { display: inline-flex; height: 28px; width: 28px; }
+  .od-pkg { display: none; }
+}
+@media (max-width: 760px) { .od-metrics { display: none; } .od-sep { display: none; } }
+@media (max-width: 640px) {
+  .od-bar { gap: 6px; padding: 0 8px; }
+  .od-brand span:not(.od-logo) { display: none; }
+  .od-menu-btn span { display: none; } .od-menu-btn { width: 32px; padding: 0; justify-content: center; }
+  .od-switch select { max-width: 130px; padding-right: 24px; text-overflow: ellipsis; }
+  .od-docname { flex: 1 1 auto; width: auto; }
+  .od-menu { position: fixed; left: 8px; right: 8px; top: 52px; min-width: 0; }
+  .od-sub { padding: 4px 10px; min-height: 0; }
+  .od-sub .od-lic { display: none; }
+}
 /* Paged editors virtualise against their scroll container, so the stage needs a
    DEFINITE height — min-height alone lets it grow forever and nothing scrolls. */
 .od-stage { position: relative; height: 100%; min-height: 0; background: var(--surface); border: 1px solid var(--line);
