@@ -45,20 +45,57 @@ function fitWidth() {
   if (instance.UI.getZoomLevel?.() > 1) instance.UI.setZoomLevel(1);
 }
 
-/** Load a document and resolve once WebViewer says it has rendered. */
+let gen = 0;
+let cancelPrevious: (() => void) | undefined;
+
+/**
+ * Load a document and resolve once WebViewer says it has rendered. Every exit
+ * (rendered, load error, timeout, superseded by a newer open) removes this
+ * open's listeners, so a later document can't fire an old open's callbacks.
+ */
 function open(doc: string | Blob, filename: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    const mine = ++gen;
     const dv = instance.Core.documentViewer;
-    const timer = setTimeout(() => reject(new Error("Apryse did not render the document within 90s")), 90_000);
-    const done = () => {
+    const finish = (err?: Error) => {
       clearTimeout(timer);
-      dv.removeEventListener("documentLoaded", done);
-      fitWidth();
-      resolve();
+      dv.removeEventListener("documentLoaded", onLoaded);
+      instance.UI.removeEventListener("loaderror", onError);
+      if (cancelPrevious === cancel) cancelPrevious = undefined;
+      err ? reject(err) : resolve();
     };
-    dv.addEventListener("documentLoaded", done);
+    const onLoaded = () => {
+      if (mine !== gen) return;
+      fitWidth();
+      finish();
+    };
+    const onError = (e: unknown) => {
+      if (mine !== gen) return;
+      const detail = (e as { detail?: unknown })?.detail;
+      finish(new Error(`Apryse could not open the document (${String(detail ?? e)})`));
+    };
+    // Superseded: the newer document is what the user asked for; end quietly.
+    const cancel = () => finish();
+    const timer = setTimeout(() => finish(new Error("Apryse did not render the document within 90s")), 90_000);
+    cancelPrevious?.();
+    cancelPrevious = cancel;
+    dv.addEventListener("documentLoaded", onLoaded);
+    instance.UI.addEventListener("loaderror", onError);
     instance.UI.loadDocument(doc, { extension: "docx", filename });
   });
+}
+
+/**
+ * View-only for real, not just in our chrome: WebViewer's read-only mode (no
+ * annotation edits) and only its View ribbon — the Annotate / Shapes / Insert
+ * / Edit / Fill and Sign / Forms ribbons go.
+ */
+function makeReadOnly() {
+  instance.Core.annotationManager.enableReadOnlyMode?.();
+  const F = instance.UI.Feature ?? {};
+  const features = ["Annotations", "Ribbons", "Forms", "ContentEdit", "MultiTab", "NotesPanel", "FilePicker", "Print", "Download"]
+    .map((k) => F[k]).filter(Boolean);
+  if (features.length) instance.UI.disableFeatures(features);
 }
 
 window.od.register({
@@ -72,6 +109,7 @@ window.od.register({
     await script(`${BASE}/webviewer.min.js`);
     // deno-lint-ignore no-explicit-any
     instance = await (window as any).WebViewer({ path: `${BASE}/public` }, host);
+    makeReadOnly();
     await open(`${location.origin}/api/showcase.docx`, "showcase.docx");
   },
 

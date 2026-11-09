@@ -114,14 +114,42 @@ function script(src: string): Promise<void> {
   });
 }
 
-async function open(bytes: Uint8Array) {
-  if (instance) NV.unload(host);
-  instance = await NV.load({
-    container: host,
-    document: bytes.slice().buffer,
-    baseUrl: BASE,
-    initialViewState: new NV.ViewState({ zoom: NV.ZoomMode.FIT_TO_WIDTH }),
+/**
+ * View-only for real: Nutrient's read-only view state (no annotation or form
+ * edits) and a toolbar of navigation tools only — no annotate, ink, sign,
+ * document editor, or export.
+ */
+const VIEW_TOOLS = new Set(["sidebar-thumbnails", "sidebar-document-outline", "pager", "pan", "zoom-out", "zoom-in", "zoom-mode", "spacer", "search"]);
+
+// Opens run one at a time, and only the latest request is shown: a slow
+// earlier fetch can't replace the document the user picked after it.
+let gen = 0;
+let queue: Promise<unknown> = Promise.resolve();
+
+function open(getBytes: () => Promise<Uint8Array>): Promise<void> {
+  const mine = ++gen;
+  const run = queue.then(async () => {
+    if (mine !== gen) return;
+    const bytes = await getBytes();
+    if (mine !== gen) return;
+    if (instance) NV.unload(host);
+    instance = undefined;
+    instance = await NV.load({
+      container: host,
+      document: bytes.slice().buffer,
+      baseUrl: BASE,
+      toolbarItems: NV.defaultToolbarItems.filter((i: { type: string }) => VIEW_TOOLS.has(i.type)),
+      initialViewState: new NV.ViewState({ zoom: NV.ZoomMode.FIT_TO_WIDTH, readOnly: true }),
+    });
+    capZoom();
   });
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+/** Fit to width, but never past 100% — the same rule as the editors. */
+function capZoom() {
+  if (instance?.currentZoomLevel > 1) instance.setViewState((v: any) => v.set("zoom", 1));
 }
 
 async function fetchBytes(path: string): Promise<Uint8Array> {
@@ -141,11 +169,17 @@ window.od.register({
     await script(`${BASE}nutrient-viewer.js`);
     // deno-lint-ignore no-explicit-any
     NV = (window as any).NutrientViewer;
-    await open(await fetchBytes("/api/showcase.docx"));
+    await open(() => fetchBytes("/api/showcase.docx"));
   },
 
-  load: (bytes) => open(bytes),
-  loadUrl: async (path) => open(await fetchBytes(path)),
+  load: (bytes) => open(() => Promise.resolve(bytes)),
+  loadUrl: (path) => open(() => fetchBytes(path)),
+
+  fit() {
+    if (!instance) return;
+    instance.setViewState((v: any) => v.set("zoom", NV.ZoomMode.FIT_TO_WIDTH));
+    capZoom();
+  },
 
   getMarkdown: () => Promise.reject(new Error("Nutrient Web SDK is view-only here")),
   applyMarkdown: () => Promise.reject(new Error("Nutrient Web SDK is view-only here")),
