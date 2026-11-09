@@ -5,3 +5,4 @@
 node_modules
 vendor
 .gitignore
+tools/wordcraft-render/dist/*.gz
