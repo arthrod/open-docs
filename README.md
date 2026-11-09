@@ -34,6 +34,46 @@ styles H1–H6, fonts, sizes, colours, line height, marks, sub/superscript,
 highlight, lists with indent, quote, code block, rule, alignment, links, and
 tables through `@platejs/table`).
 
+## Proprietary viewers (view-only, for comparison)
+
+Four commercial renderers sit next to the editors so you can compare how they
+draw the same rich sample. **They are viewers, not editors**: no assistant, no
+New, no Export. The page says so in the top bar, and the switcher lists them
+in a separate group.
+
+| Viewer | How it runs | Key | Opens your file? | Measured (2026-11-09, desktop Chrome) |
+| --- | --- | --- | --- | --- |
+| [Microsoft Word viewer](https://open-docs.val.run/e/word-online) | `view.officeapps.live.com/op/embed.aspx`, rendered on Microsoft's servers | none | no: it fetches a public URL, so only this site's samples | ~1.2 s to the frame's load event |
+| [Google Docs viewer](https://open-docs.val.run/e/google-viewer) | `docs.google.com/gview?embedded=true`, rendered on Google's servers | none | no: same reason | ~1.9 s; occasionally never answers, so it retries once after 20 s |
+| [Apryse WebViewer](https://open-docs.val.run/e/apryse) | `@pdftron/webviewer@12.2.1` from jsDelivr; WASM office engine in a worker | none: **demo mode**, watermarked | yes, in the browser | 3.7–5.6 s warm, 48 MB heap, 13.6 MB loaded |
+| [Nutrient Web SDK](https://open-docs.val.run/e/nutrient) | `nutrient-viewer` 1.25.0 from Nutrient's CDN; .NET (GdPicture) WASM turns the .docx into a PDF, then shows the PDF | none: **trial mode**, "For Evaluation Purposes Only" watermark | yes, in the browser | 15–28 s, 111 MB heap, 105 MB loaded (a 68 MB `dotnet.native.wasm`) |
+
+What the numbers can and can't say:
+
+- Microsoft and Google render in a cross-origin frame. The page sees only that
+  frame's load event: not when their server finished drawing, nor their
+  memory or downloads. Their 3 MB heap and 73 KB are **this page's** heap and
+  downloads.
+- Apryse and Nutrient fetch their engines from workers, which Resource Timing
+  doesn't report. Their adapters list those files (`extraResources`), recorded
+  from a real load, so the Loaded column includes them.
+- Tabs loaded in the background are throttled by Chrome and come out slower
+  (Apryse logged 24.5 s that way). The medians include every run.
+
+Rendering differences seen on the rich sample:
+
+- Apryse prints the footer's `NUMPAGES` field as "Page 1 of 1" on a
+  three-page document.
+- Nutrient substitutes fonts: inline code isn't monospace, and the title
+  wraps.
+- Microsoft's render is the reference: it is Word's own engine.
+
+**Licensing, read before keeping these public.** Apryse's no-key demo mode
+and Nutrient's trial are *evaluation* licenses. Nutrient's package says
+`SEE LICENSE IN` its evaluation subscription agreement. Hosting them on a
+public site may fall outside those terms. Check the terms, or remove
+`apryse` and `nutrient` from `server/registry.ts` and `editors/index.ts`.
+
 ## Using it
 
 Open <https://open-docs.val.run>, pick an editor. Every editor page has the same
@@ -305,4 +345,6 @@ Append `?debug` to the SuperDoc page to log every worker message.
 Each editor keeps its own license: MIT for canvas-editor, Docxodus, Plate and
 docen; Apache-2.0 for folio and docx-editor.dev; Apache-2.0 / MIT for WordCraft;
 **AGPL-3.0 for SuperDoc**. AGPL is fine for this public val but is a real
-constraint for a closed product.
+constraint for a closed product. The four viewers are proprietary. Microsoft's
+and Google's are free hosted services. Apryse and Nutrient run unlicensed in
+their evaluation modes (see above).

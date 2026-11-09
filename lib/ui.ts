@@ -190,6 +190,8 @@ async function start(adapter: EditorAdapter) {
     const mountEnd = performance.now();
     mounted = true;
     setLoading(false);
+    // Viewers open on the rich sample (a blank page shows nothing about them).
+    if (adapter.viewOnly) setDocName("Coastal Wind Farm — Spring Field Report");
     setStatus(`${adapter.name} ready`, "ok");
     (window as unknown as { __odlog?: (k: string, m: string) => void }).__odlog?.(
       "ready",
@@ -254,6 +256,7 @@ async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void
 
 const newDoc = () =>
   withAdapter("New document", async (a) => {
+    if (a.viewOnly) return setStatus(`${a.name} is a view-only viewer`, "err");
     await a.load(await window.od.blankDocx());
     newDocument();
     setDocName("Untitled document");
@@ -262,9 +265,12 @@ const newDoc = () =>
 
 const openShowcase = () =>
   withAdapter("Load the rich sample", async (a) => {
-    const res = await fetch("/api/showcase.docx");
-    if (!res.ok) throw new Error(`showcase.docx → HTTP ${res.status}`);
-    await a.load(new Uint8Array(await res.arrayBuffer()));
+    if (a.loadUrl) await a.loadUrl("/api/showcase.docx");
+    else {
+      const res = await fetch("/api/showcase.docx");
+      if (!res.ok) throw new Error(`showcase.docx → HTTP ${res.status}`);
+      await a.load(new Uint8Array(await res.arrayBuffer()));
+    }
     newDocument();
     setDocName("Coastal Wind Farm — Spring Field Report");
     fitNow();
@@ -273,7 +279,8 @@ const openShowcase = () =>
 
 const openSample = () =>
   withAdapter("Load sample", async (a) => {
-    await a.load(await window.od.sampleDocx());
+    if (a.loadUrl) await a.loadUrl("/api/sample.docx");
+    else await a.load(await window.od.sampleDocx());
     newDocument();
     setDocName("Quarterly Report — Acme Robotics");
     fitNow();
@@ -283,6 +290,10 @@ const openSample = () =>
 async function importFile(file: File) {
   if (!/\.docx$/i.test(file.name)) {
     setStatus(`${file.name} is not a .docx file`, "err");
+    return;
+  }
+  if (current?.acceptsFiles === false) {
+    setStatus(`${editorName} only opens documents from a public link — it shows this site's samples`, "err");
     return;
   }
   await withAdapter(`Import ${file.name}`, async (a) => {
@@ -312,6 +323,7 @@ async function currentDocx(a: EditorAdapter): Promise<Uint8Array> {
 
 const exportDocx = () =>
   withAdapter("Export .docx", async (a) => {
+    if (a.viewOnly) return setStatus(`${a.name} is a view-only viewer: nothing to export`, "err");
     const bytes = await currentDocx(a);
     window.od.download(bytes, `${docName()}.docx`);
     setStatus(`Exported ${docName()}.docx (${fmtBytes(bytes.length)})`, "ok");
@@ -585,8 +597,10 @@ function wire() {
   // Assistant panel toggle (remembered).
   const layout = $("od-layout");
   const toggle = $("od-toggle-agent");
+  // Viewers have no assistant (the server renders no aside): keep it closed.
+  const hasAgent = !!$("od-aside");
   const applyAgentPref = (open: boolean) => {
-    layout?.classList.toggle("no-agent", !open);
+    layout?.classList.toggle("no-agent", !open || !hasAgent);
     toggle?.setAttribute("aria-pressed", String(open));
     window.dispatchEvent(new Event("resize"));
   };

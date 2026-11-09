@@ -21,6 +21,15 @@ export interface EditorMeta {
   docxRoundTrip: boolean;
   /** Does this demo wire an LLM agent to the document? */
   agent: boolean;
+  /**
+   * "viewer": a proprietary, view-only renderer shown for comparison. It is
+   * not an editor: no typing, no assistant, no export.
+   */
+  kind?: "editor" | "viewer";
+  /** What the measurements can and can't see for this entry (viewers). */
+  metricsNote?: string;
+  /** false: the viewer fetches documents by public URL, so it can't open the user's own file. */
+  opensFiles?: boolean;
 }
 
 export const editors: EditorMeta[] = [
@@ -119,8 +128,71 @@ export const editors: EditorMeta[] = [
     docxRoundTrip: true,
     agent: true,
   },
+  // ---- Proprietary, view-only viewers (kind: "viewer") ----
+  {
+    slug: "word-online",
+    name: "Microsoft Word viewer",
+    packages: ["view.officeapps.live.com (Office Online)"],
+    delivery: "cdn-script",
+    license: "Proprietary · free, no key",
+    repo: "https://learn.microsoft.com/en-us/office/client-developer/online/office-online-viewer",
+    blurb:
+      "Word's own renderer, served by Microsoft. It fetches the .docx from a public link, so it only shows this site's samples.",
+    docxRoundTrip: false,
+    agent: false,
+    kind: "viewer",
+    opensFiles: false,
+    metricsNote:
+      "Rendered on Microsoft's servers inside a cross-origin frame: startup is the frame's load event, and the frame's bytes and memory are invisible to this page.",
+  },
+  {
+    slug: "google-viewer",
+    name: "Google Docs viewer",
+    packages: ["docs.google.com/gview"],
+    delivery: "cdn-script",
+    license: "Proprietary · free, no key",
+    repo: "https://docs.google.com/viewer",
+    blurb:
+      "Google's embeddable document viewer. It fetches the .docx from a public link, so it only shows this site's samples.",
+    docxRoundTrip: false,
+    agent: false,
+    kind: "viewer",
+    opensFiles: false,
+    metricsNote:
+      "Rendered on Google's servers inside a cross-origin frame: startup is the frame's load event, and the frame's bytes and memory are invisible to this page.",
+  },
+  {
+    slug: "apryse",
+    name: "Apryse WebViewer",
+    packages: ["@pdftron/webviewer@12.2.1"],
+    delivery: "jsdelivr",
+    license: "Proprietary · demo mode (watermark)",
+    repo: "https://apryse.com/products/webviewer",
+    blurb:
+      "Commercial SDK that renders DOCX natively in the browser (WebAssembly). Runs here without a key, in demo mode with a watermark.",
+    docxRoundTrip: false,
+    agent: false,
+    kind: "viewer",
+    metricsNote: "Runs in this page; its office worker's files are counted from a list (workers are invisible to Resource Timing).",
+  },
+  {
+    slug: "nutrient",
+    name: "Nutrient Web SDK",
+    packages: ["@nutrient-sdk/viewer@1.25.0"],
+    delivery: "cdn-script",
+    license: "Proprietary · trial mode (watermark)",
+    repo: "https://www.nutrient.io/sdk/web/",
+    blurb:
+      "Formerly PSPDFKit. Converts DOCX to PDF in the browser with a .NET (GdPicture) WebAssembly engine, then renders it. Trial mode, no key.",
+    docxRoundTrip: false,
+    agent: false,
+    kind: "viewer",
+    metricsNote: "Runs in this page; its workers' files are counted from a list (workers are invisible to Resource Timing).",
+  },
 ];
 
 export function getEditor(slug: string): EditorMeta | undefined {
   return editors.find((e) => e.slug === slug);
 }
+
+export const isViewer = (e?: EditorMeta) => e?.kind === "viewer";

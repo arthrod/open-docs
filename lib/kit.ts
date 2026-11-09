@@ -39,6 +39,19 @@ export interface EditorAdapter {
    * own zoom. Omit when the editor already follows its container.
    */
   fit?(width: number, height: number): void;
+  /**
+   * A view-only, proprietary viewer (not an editor): the chrome hides the
+   * assistant, New and Export. getMarkdown/applyMarkdown are never called.
+   */
+  viewOnly?: boolean;
+  /**
+   * Open a document this site serves (a path such as "/api/showcase.docx").
+   * Viewers that fetch documents themselves (Office Online, Google) need a
+   * URL rather than bytes.
+   */
+  loadUrl?(path: string): Promise<void>;
+  /** false: can't open the user's own files (only public links). */
+  acceptsFiles?: boolean;
 }
 
 /** Exposed globals both the chrome and the adapters read. */

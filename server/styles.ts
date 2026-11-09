@@ -80,6 +80,8 @@ svg.ic circle { fill: currentColor; stroke: none; }
   font-size: 12px; color: var(--muted); min-height: 30px; }
 .od-sub code { font: 11.5px var(--mono); color: #334155; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
 .od-lic { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; }
+.od-viewonly { font-size: 11px; font-weight: 650; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 999px; padding: 0 8px; white-space: nowrap; }
+.od-menu-note { font-size: 11.5px; color: var(--muted); padding: 4px 10px 8px; max-width: 290px; line-height: 1.4; }
 .od-blurb { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .od-status { font-size: 12px; color: var(--muted); max-width: 52ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .od-status.err { color: var(--err); } .od-status.ok { color: var(--ok); }

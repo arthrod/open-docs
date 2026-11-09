@@ -13,10 +13,16 @@ const RENDER: Record<string, string> = {
   "eigenpal": "React + layout",
   "folio": "ProseMirror + layout",
   "wordcraft": "Rust WASM (egui canvas)",
+  "word-online": "Microsoft's servers (iframe)",
+  "google-viewer": "Google's servers (iframe)",
+  "apryse": "WASM office engine → canvas",
+  "nutrient": ".NET WASM → PDF → canvas",
 };
 
-export function landingPage(editors: EditorMeta[]): string {
-  const cards = editors.map((e) => `
+export function landingPage(all: EditorMeta[]): string {
+  const editors = all.filter((e) => e.kind !== "viewer");
+  const viewers = all.filter((e) => e.kind === "viewer");
+  const card = (e: EditorMeta) => `
     <a class="card" href="/e/${e.slug}" data-slug="${e.slug}">
       <div class="card-top">
         <h3>${esc(e.name)}</h3>
@@ -24,16 +30,22 @@ export function landingPage(editors: EditorMeta[]): string {
       </div>
       <p>${esc(e.blurb)}</p>
       <div class="pkgs">${e.packages.map((p) => `<code>${esc(p)}</code>`).join("")}</div>
-      <div class="tags"><span>${esc(RENDER[e.slug] ?? "")}</span><span>.docx in/out</span><span>AI assistant</span></div>
+      <div class="tags"><span>${esc(RENDER[e.slug] ?? "")}</span>${
+        e.kind === "viewer"
+          ? `<span class="vo">View-only</span>${e.opensFiles === false ? "<span>Site samples only</span>" : "<span>.docx in</span>"}`
+          : "<span>.docx in/out</span><span>AI assistant</span>"
+      }</div>
       <dl class="stats">
         <div><dt>Startup</dt><dd data-k="startupMs">—</dd></div>
         <div><dt>JS heap</dt><dd data-k="heapBytes">—</dd></div>
         <div><dt>Loaded</dt><dd data-k="loadedBytes">—</dd></div>
       </dl>
-      <span class="open">Open editor →</span>
-    </a>`).join("");
+      <span class="open">${e.kind === "viewer" ? "Open viewer →" : "Open editor →"}</span>
+    </a>`;
+  const cards = editors.map(card).join("");
+  const vcards = viewers.map(card).join("");
 
-  const rows = editors.map((e) => `
+  const row = (e: EditorMeta) => `
     <tr data-slug="${e.slug}">
       <td><a href="/e/${e.slug}">${esc(e.name)}</a></td>
       <td class="n" data-k="startupMs">—</td>
@@ -44,7 +56,9 @@ export function landingPage(editors: EditorMeta[]): string {
       <td class="n" data-k="resources">—</td>
       <td class="n" data-k="samples">0</td>
       <td class="bar"><i data-bar></i></td>
-    </tr>`).join("");
+    </tr>`;
+  const rows = editors.map(row).join("");
+  const vrows = viewers.map(row).join("");
 
   return `<!DOCTYPE html>
 <html lang="en"><head>
@@ -72,12 +86,14 @@ nav .sp { flex:1; } nav a { color:var(--muted); text-decoration:none; font-weigh
 .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(268px, 1fr)); gap:16px; padding:12px 0 40px; }
 .card { display:flex; flex-direction:column; gap:10px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; text-decoration:none; color:inherit; transition:box-shadow .15s, border-color .15s, transform .15s; }
 .card:hover { border-color:#c7d5f7; box-shadow:0 10px 30px rgba(37,87,214,.10); transform:translateY(-1px); }
-.card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.card-top { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 8px; }
 .card h3 { margin:0; font-size:16.5px; letter-spacing:-.01em; }
 .card p { margin:0; color:var(--muted); font-size:13px; flex:1; }
 .lic { font-size:11px; font-weight:600; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:1px 8px; white-space:nowrap; }
 .pkgs { display:flex; flex-wrap:wrap; gap:5px; } .pkgs code { font:11px var(--mono); background:#f3f5f8; border:1px solid var(--line); border-radius:5px; padding:1px 5px; }
 .tags { display:flex; flex-wrap:wrap; gap:5px; } .tags span { font-size:11px; color:#334155; background:#eef2f9; border-radius:5px; padding:2px 7px; }
+.tags span.vo { color:#7c2d12; background:#fef3c7; }
+.viewers-intro { max-width:760px; color:#475569; margin:0 0 18px; }
 .stats { display:grid; grid-template-columns:repeat(3,1fr); margin:4px 0 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
 .stats div { padding:7px 9px; } .stats div + div { border-left:1px solid var(--line); }
 .stats dt { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:#8b93a3; }
@@ -88,6 +104,7 @@ section > .wrap > p { color:var(--muted); margin:0 0 16px; max-width:760px; }
 table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:13px; }
 th, td { padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; }
 th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8b93a3; background:#fafbfc; font-weight:600; }
+tr.sep th { text-transform:none; letter-spacing:0; font-weight:500; color:#7c2d12; background:#fffbeb; text-align:left; }
 td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12.5px; }
 td a { color:var(--text); font-weight:600; text-decoration:none; } td a:hover { color:var(--accent); }
 td.bar { width:18%; } td.bar i { display:block; height:8px; border-radius:4px; background:linear-gradient(90deg,#2557d6,#7aa2f7); width:0; transition:width .4s; }
@@ -98,7 +115,7 @@ footer a { color:var(--muted); }
 </style></head>
 <body>
 <nav><div class="wrap"><span class="brand"><span class="logo"></span>open-docs</span><span class="sp"></span>
-  <a href="#editors">Editors</a><a href="#metrics">Measurements</a><a href="/source" target="_blank" rel="noopener">Source ↗</a></div></nav>
+  <a href="#editors">Editors</a><a href="#viewers">Viewers</a><a href="#metrics">Measurements</a><a href="/source" target="_blank" rel="noopener">Source ↗</a></div></nav>
 <header class="hero"><div class="wrap">
   <h1>Eight open-source Word editors, running in your browser — measured.</h1>
   <p>Each editor opens on a blank page, imports and exports real <b>.docx</b> files, and has an AI assistant
@@ -107,6 +124,14 @@ footer a { color:var(--muted); }
   <div class="cta"><a class="btn primary" href="/e/${editors[0]?.slug ?? ""}">Open an editor</a><a class="btn" href="/api/sample.docx">Download a sample .docx</a></div>
 </div></header>
 <section id="editors"><div class="wrap"><div class="grid">${cards}</div></div></section>
+<section id="viewers"><div class="wrap">
+  <h2>Proprietary viewers — for comparison, view-only</h2>
+  <p class="viewers-intro">These are <b>not editors</b>: they only display a .docx, so you can see how a commercial
+  renderer draws the same sample next to the open-source editors. Apryse and Nutrient run without a license key in
+  their vendors' evaluation (demo / trial) mode and watermark the pages. Microsoft's and Google's viewers render on
+  their own servers from a public URL, so they can only show this site's samples — never a file you open.</p>
+  <div class="grid">${vcards}</div>
+</div></section>
 <section id="metrics"><div class="wrap">
   <h2>Measurements</h2>
   <p>Medians over the most recent visits, measured in visitors' browsers. <b>Startup</b> is navigation start →
@@ -116,7 +141,8 @@ footer a { color:var(--muted); }
   stylesheet, font and WASM file the page pulled in.</p>
   <table><thead><tr><th>Editor</th><th class="n">Startup</th><th class="n hide-sm">Cold</th><th class="n hide-sm">Mount</th>
   <th class="n">JS heap</th><th class="n">Loaded</th><th class="n hide-sm">Files</th><th class="n hide-sm">Runs</th><th class="bar">Startup</th></tr></thead>
-  <tbody>${rows}</tbody></table>
+  <tbody>${rows}</tbody>
+  <tbody class="vbody"><tr class="sep"><th colspan="9">Proprietary viewers (view-only) — Microsoft and Google render on their servers: only the iframe's load is timed, and their memory and downloads are invisible to this page</th></tr>${vrows}</tbody></table>
   <p class="note" id="mnote">Loading measurements…</p>
 </div></section>
 <footer><div class="wrap">Built on <a href="https://val.town">Val Town</a>. Each editor keeps its own license — SuperDoc is AGPL-3.0, so check before you ship it in a closed product.</div></footer>
@@ -126,7 +152,9 @@ const fmtB = (n) => n == null ? "—" : n < 1048576 ? Math.round(n / 1024) + " K
 const fmt = { startupMs: fmtMs, coldStartupMs: fmtMs, mountMs: fmtMs, heapBytes: fmtB, loadedBytes: fmtB,
   resources: (n) => n == null ? "—" : Math.round(n), samples: (n) => n ?? 0 };
 const data = await fetch("/api/metrics").then((r) => r.json()).catch(() => ({}));
-const max = Math.max(1, ...Object.values(data).map((d) => d.startupMs ?? 0));
+// One scale per table body: editors against editors, viewers against viewers.
+const maxOf = (body) => Math.max(1, ...[...body.querySelectorAll("tr[data-slug]")].map((r) => data[r.dataset.slug]?.startupMs ?? 0));
+const maxes = new Map([...document.querySelectorAll("tbody")].map((b) => [b, maxOf(b)]));
 // Each editor has a card AND a table row; count samples once, from the data.
 const total = Object.values(data).reduce((n, d) => n + (d.samples ?? 0), 0);
 for (const el of document.querySelectorAll("[data-slug]")) {
@@ -134,7 +162,7 @@ for (const el of document.querySelectorAll("[data-slug]")) {
   if (!d) continue;
   for (const cell of el.querySelectorAll("[data-k]")) cell.textContent = fmt[cell.dataset.k](d[cell.dataset.k]);
   const bar = el.querySelector("[data-bar]");
-  if (bar && d.startupMs) bar.style.width = (100 * d.startupMs / max).toFixed(1) + "%";
+  if (bar && d.startupMs) bar.style.width = (100 * d.startupMs / maxes.get(el.closest("tbody"))).toFixed(1) + "%";
 }
 document.getElementById("mnote").textContent = total
   ? total + " recent measured page loads (up to 200 per editor). Open an editor to add yours — the numbers in its top bar are your own."

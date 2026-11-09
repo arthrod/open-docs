@@ -59,9 +59,12 @@ function shell(o: EditorShell): string {
   const importMap = o.importMap && Object.keys(o.importMap).length
     ? `<script type="importmap">${JSON.stringify({ imports: o.importMap })}</script>`
     : "";
-  const switcher = editors.map((e) =>
-    `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`
-  ).join("");
+  const viewer = meta?.kind === "viewer";
+  const opensFiles = meta?.opensFiles !== false;
+  const option = (e: typeof editors[number]) =>
+    `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
+  const switcher = `<optgroup label="Open-source editors">${editors.filter((e) => e.kind !== "viewer").map(option).join("")}</optgroup>` +
+    `<optgroup label="Proprietary viewers (view-only)">${editors.filter((e) => e.kind === "viewer").map(option).join("")}</optgroup>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -81,7 +84,7 @@ ${o.head ?? ""}
 <!-- The kit must exist before any adapter module runs. -->
 <script type="module" src="/lib/boot.ts"></script>
 </head>
-<body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}">
+<body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}">
   <header class="od-bar">
     <a class="od-brand" href="/" title="All editors">
       <span class="od-logo" aria-hidden="true"></span><span>open-docs</span>
@@ -97,18 +100,18 @@ ${o.head ?? ""}
       <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
       <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
     </button>
-    <button class="od-btn icon" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">
+    ${viewer ? "" : `<button class="od-btn icon" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">
       <svg class="ic" viewBox="0 0 20 20"><path d="M10 2.5l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z M15.5 13l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
-    </button>
+    </button>`}
     <div class="od-menu-wrap">
       <button class="od-btn od-menu-btn" id="od-more" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
         <svg class="ic" viewBox="0 0 20 20"><path d="M3.5 5.5h13 M3.5 10h13 M3.5 14.5h13"/></svg><span>Menu</span>
       </button>
       <div class="od-menu" id="od-menu" role="menu" hidden>
         <div class="od-menu-label">Document</div>
-        <button role="menuitem" id="od-new"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h6.5L16 7v10.5H5z M11.5 2.5V7H16" /></svg>New blank document<kbd>⌥N</kbd></button>
-        <button role="menuitem" id="od-import"><svg class="ic" viewBox="0 0 20 20"><path d="M10 13V3 M6 7l4-4 4 4 M3.5 12.5v4h13v-4" /></svg>Open .docx from your computer…<kbd>⌘O</kbd></button>
-        <button role="menuitem" id="od-export"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Export this document as .docx<kbd>⌘S</kbd></button>
+        ${viewer ? "" : `<button role="menuitem" id="od-new"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h6.5L16 7v10.5H5z M11.5 2.5V7H16" /></svg>New blank document<kbd>⌥N</kbd></button>`}
+        ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import"><svg class="ic" viewBox="0 0 20 20"><path d="M10 13V3 M6 7l4-4 4 4 M3.5 12.5v4h13v-4" /></svg>Open .docx from your computer…<kbd>⌘O</kbd></button>`}
+        ${viewer ? "" : `<button role="menuitem" id="od-export"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Export this document as .docx<kbd>⌘S</kbd></button>`}
         <hr />
         <div class="od-menu-label">Samples</div>
         <button role="menuitem" id="od-showcase"><svg class="ic" viewBox="0 0 20 20"><path d="M3 4.5h14v11H3z M3 12l4-3.5 3 2.5 3-3 4 3.5"/></svg>Load the rich sample<small>tables, lists, image, styles</small></button>
@@ -128,11 +131,12 @@ ${o.head ?? ""}
   <div class="od-sub">
     <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
     ${meta?.license ? `<span class="od-lic">${esc(meta.license)}</span>` : ""}
+    ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer — not an editor</span>` : ""}
     <span class="od-blurb">${esc(meta?.blurb ?? "")}</span>
     <span class="od-spacer"></span>
     <span class="od-status" id="od-status" role="status" aria-live="polite"></span>
   </div>
-  <div class="od-layout" id="od-layout">
+  <div class="od-layout${viewer ? " no-agent" : ""}" id="od-layout">
     <main class="od-stage" id="od-stage">
       ${o.body}
       <div class="od-loading" id="od-loading">
@@ -140,7 +144,7 @@ ${o.head ?? ""}
         <div><strong>Loading ${esc(meta?.name ?? o.title)}…</strong><span id="od-loading-detail">Fetching the editor from the CDN</span></div>
       </div>
     </main>
-    <aside class="od-aside" id="od-aside" aria-label="Assistant">
+    ${viewer ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
       <div class="od-aside-head">
         <div>
           <h2>Assistant</h2>
@@ -161,12 +165,13 @@ ${o.head ?? ""}
           <svg class="ic" viewBox="0 0 20 20"><path d="M3 10l14-6-5 14-2.5-5.5z"/></svg>
         </button>
       </form>
-    </aside>
+    </aside>`}
   </div>
   <dialog class="od-dialog" id="od-metrics-dialog">
     <form method="dialog">
       <header><h3>Performance of ${esc(meta?.name ?? o.title)}</h3><button class="od-btn icon" value="close" aria-label="Close">✕</button></header>
       <div id="od-metrics-body"></div>
+      ${meta?.metricsNote ? `<p class="od-note" style="padding:0 18px 12px">${esc(meta.metricsNote)}</p>` : ""}
       <footer><a href="/#metrics">Compare all editors →</a></footer>
     </form>
   </dialog>
