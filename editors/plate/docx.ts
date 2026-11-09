@@ -94,8 +94,20 @@ export async function importDocxToNodes(_editor: any, bytes: Uint8Array): Promis
     else if (t === "TABLE") {
       // Plate's table model: table → tr → td/th → paragraphs.
       const cell = (c: Element) => {
-        const ps = Array.from(c.querySelectorAll(":scope > p"));
-        const children = ps.length ? ps.map((p) => ({ type: "p", children: kids(p) })) : [{ type: "p", children: kids(c) }];
+        // Every block in the cell, in order: paragraphs and headings as
+        // paragraphs, list items as Plate list paragraphs, loose text as one.
+        const children: any[] = [];
+        const listItems = (list: Element, depth: number) => {
+          for (const li of Array.from(list.children)) {
+            children.push({ type: "p", listStyleType: list.tagName === "OL" ? "decimal" : "disc", indent: depth, children: kids(li) });
+            li.querySelectorAll(":scope > ul, :scope > ol").forEach((sub) => listItems(sub, depth + 1));
+          }
+        };
+        for (const k of Array.from(c.children)) {
+          if (k.tagName === "UL" || k.tagName === "OL") listItems(k, 1);
+          else children.push({ type: "p", children: kids(k) });
+        }
+        if (!children.length) children.push({ type: "p", children: kids(c) });
         const span = Number(c.getAttribute("colspan")) || 1;
         return { type: c.tagName === "TH" ? "th" : "td", ...(span > 1 ? { colSpan: span } : {}), children };
       };

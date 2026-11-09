@@ -88,16 +88,54 @@ p.add_run(" against the same period last year, driven by the blade retrofit on t
           "This paragraph is justified, with a first-line indent, so long lines show how an editor spreads text across the measure.")
 p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY; p.paragraph_format.first_line_indent = Cm(1)
 
+def multilevel(kind):
+    """A real Word multilevel list: one abstractNum with three levels, one num.
+    Nested items share the numId and differ by ilvl, as Word writes them."""
+    numbering = doc.part.numbering_part.element
+    ids = [int(x.get(qn("w:abstractNumId"))) for x in numbering.findall(qn("w:abstractNum"))]
+    aid = max(ids + [0]) + 1
+    an = OxmlElement("w:abstractNum"); an.set(qn("w:abstractNumId"), str(aid))
+    mlt = OxmlElement("w:multiLevelType"); mlt.set(qn("w:val"), "hybridMultilevel"); an.append(mlt)
+    fmts = [("bullet", "\u2022", "Symbol"), ("bullet", "o", "Courier New"), ("bullet", "\u25aa", "Wingdings")] if kind == "bullet" \
+        else [("decimal", "%1.", None), ("lowerLetter", "%2.", None), ("lowerRoman", "%3.", None)]
+    for i, (fmt, text, font) in enumerate(fmts):
+        lvl = OxmlElement("w:lvl"); lvl.set(qn("w:ilvl"), str(i))
+        for tag, val in (("w:start", "1"), ("w:numFmt", fmt), ("w:lvlText", text), ("w:lvlJc", "left")):
+            e = OxmlElement(tag); e.set(qn("w:val"), val); lvl.append(e)
+        ppr = OxmlElement("w:pPr"); ind = OxmlElement("w:ind")
+        ind.set(qn("w:left"), str(720 * (i + 1))); ind.set(qn("w:hanging"), "360"); ppr.append(ind); lvl.append(ppr)
+        if font:
+            rpr = OxmlElement("w:rPr"); rf = OxmlElement("w:rFonts")
+            for k in ("ascii", "hAnsi", "hint"): rf.set(qn(f"w:{k}"), font if k != "hint" else "default")
+            rpr.append(rf); lvl.append(rpr)
+        an.append(lvl)
+    first_num = numbering.find(qn("w:num"))
+    if first_num is not None: first_num.addprevious(an)
+    else: numbering.append(an)
+    nid = max([int(x.get(qn("w:numId"))) for x in numbering.findall(qn("w:num"))] + [0]) + 1
+    num = OxmlElement("w:num"); num.set(qn("w:numId"), str(nid))
+    ref = OxmlElement("w:abstractNumId"); ref.set(qn("w:val"), str(aid)); num.append(ref); numbering.append(num)
+    return nid
+
+def list_item(text, num_id, level):
+    par = doc.add_paragraph(text, style="List Paragraph")
+    ppr = par._p.get_or_add_pPr(); numpr = OxmlElement("w:numPr")
+    il = OxmlElement("w:ilvl"); il.set(qn("w:val"), str(level)); numpr.append(il)
+    ni = OxmlElement("w:numId"); ni.set(qn("w:val"), str(num_id)); numpr.append(ni)
+    ppr.append(numpr)
+    par.paragraph_format.space_after = Pt(2)
+
 doc.add_heading("1.1 Highlights", level=2)
+BULLETS, NUMBERS = multilevel("bullet"), multilevel("number")
 for text, lvl in [("Blade retrofit finished on turbines T1–T6", 0), ("Leading-edge erosion repaired on all six", 1),
                   ("Vortex generators fitted to T3 and T4", 1), ("T4 gained the most: +19 %", 2),
                   ("Unplanned downtime fell from 61 to 22 hours", 0), ("Two new technicians certified for tower climbs", 0)]:
-    doc.add_paragraph(text, style="List Bullet" if lvl == 0 else f"List Bullet {lvl + 1}")
+    list_item(text, BULLETS, lvl)
 
 doc.add_heading("1.2 Next steps", level=2)
 for text, lvl in [("Order replacement bearings for T9", 0), ("Get two quotes", 1), ("Approve before 30 June", 1),
                   ("Schedule the autumn inspection", 0), ("Publish this report to the community board", 0)]:
-    doc.add_paragraph(text, style="List Number" if lvl == 0 else f"List Number {lvl + 1}")
+    list_item(text, NUMBERS, lvl)
 
 doc.add_heading("2. Output by turbine string", level=1)
 rows = [("String", "Turbines", "Output (MWh)", "Change"), ("North", "T1–T6", "4,812", "+18.9 %"),
