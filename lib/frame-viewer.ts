@@ -21,7 +21,9 @@ export function frameViewer(name: string, viewerUrl: (docUrl: string) => string)
     new Promise<void>((resolve, reject) => {
       const mine = ++gen;
       // Cache-bust per load so the viewer re-fetches rather than showing its copy.
-      const src = () => viewerUrl(`${location.origin}${path}?v=${Date.now().toString(36)}`);
+      // An absolute URL (view-only pages pass the document's public URL) goes
+      // as is; a site path gets this origin and a cache-buster.
+      const src = () => viewerUrl(/^https?:/.test(path) ? path : `${location.origin}${path}?v=${Date.now().toString(36)}`);
       const done = (err?: Error) => {
         clearTimeout(retry);
         clearTimeout(timer);
@@ -52,7 +54,9 @@ export function frameViewer(name: string, viewerUrl: (docUrl: string) => string)
     async mount() {
       frame = await waitFor<HTMLIFrameElement>("#vw-frame");
       window.od.progress(`Loading ${name} (rendered on its own servers)…`);
-      await show("/api/showcase.docx");
+      const v = window.od.viewer;
+      if (v) v.taken = true;
+      await show(v ? v.srcUrl : "/api/showcase.docx");
     },
     loadUrl: show,
     load() {

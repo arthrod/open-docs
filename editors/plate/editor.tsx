@@ -293,7 +293,7 @@ function Toolbar({ editor }: { editor: any }) {
   );
 }
 
-function Editor({ initialValue, onReady }: { initialValue: any[]; onReady: (h: PlateHandle) => void }) {
+function Editor({ initialValue, onReady, readOnly }: { initialValue: any[]; onReady: (h: PlateHandle) => void; readOnly?: boolean }) {
   const editor = usePlateEditor({ plugins: PLUGINS, value: initialValue });
   const readyRef = useRef(false);
   if (!readyRef.current) {
@@ -319,25 +319,26 @@ function Editor({ initialValue, onReady }: { initialValue: any[]; onReady: (h: P
   }
   return (
     <Plate editor={editor}>
-      <Toolbar editor={editor} />
+      {readOnly ? null : <Toolbar editor={editor} />}
       <div className="pl-scroll">
         <div
           className="pl-page"
           // Clicks on the paper outside the text (margins, below the last
           // line) put the caret at the end, like a word processor.
           onMouseDown={(ev) => {
+            if (readOnly) return;
             if ((ev.target as HTMLElement).closest(".pl-content")) return;
             ev.preventDefault();
             editor.tf.focus({ edge: "end" });
           }}
         >
-          <PlateContent className="pl-content" placeholder="Start typing…" />
+          <PlateContent className="pl-content" placeholder="Start typing…" readOnly={readOnly} />
         </div>
       </div>
     </Plate>
   );
 }
 
-export function mountPlate(container: HTMLElement, initialValue: any[], onReady: (h: PlateHandle) => void) {
-  createRoot(container).render(<Editor initialValue={initialValue} onReady={onReady} />);
+export function mountPlate(container: HTMLElement, initialValue: any[], onReady: (h: PlateHandle) => void, readOnly = false) {
+  createRoot(container).render(<Editor initialValue={initialValue} onReady={onReady} readOnly={readOnly} />);
 }

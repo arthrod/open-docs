@@ -61,6 +61,7 @@ window.od.register({
     mod.registerComponents();
     mod.applyTheme?.("light");
     el = await upgraded(node);
+    if (window.od.viewer) el.setAttribute("editable", "false");
     // The element boots on its own empty document — that is our blank page.
   },
 

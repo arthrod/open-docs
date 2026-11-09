@@ -261,7 +261,14 @@ window.od.register({
     // handler; the browser's default action for that same mousedown then moves
     // focus to <body> (a canvas isn't focusable), so typing went nowhere.
     host.addEventListener("mousedown", (e) => e.preventDefault());
-    wireToolbar();
+    // View-only page: no toolbar (it's ours, built on the command API).
+    if (window.od.viewer) document.getElementById("ce-toolbar")?.style.setProperty("display", "none");
+    else wireToolbar();
+  },
+
+  // canvas-editor's own read-only mode (EditorMode.READONLY).
+  setReadOnly() {
+    editor?.command.executeMode("readonly" as never);
   },
 
   async load(bytes) {

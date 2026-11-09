@@ -169,7 +169,8 @@ window.od.register({
     await script(`${BASE}nutrient-viewer.js`);
     // deno-lint-ignore no-explicit-any
     NV = (window as any).NutrientViewer;
-    await open(() => fetchBytes("/api/showcase.docx"));
+    const v = window.od.viewer;
+    await open(() => (v ? v.initialDocx() : fetchBytes("/api/showcase.docx")));
   },
 
   load: (bytes) => open(() => Promise.resolve(bytes)),

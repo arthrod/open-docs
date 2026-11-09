@@ -129,9 +129,10 @@ function create(SuperDoc: any, bytes: Uint8Array): Promise<void> {
     const timer = setTimeout(() => reject(new Error("SuperDoc did not become ready within 60s")), 60_000);
     instance = new SuperDoc({
       selector: "#sd-editor",
-      toolbar: "#sd-toolbar",
+      // View-only page: SuperDoc's own "viewing" mode and no toolbar.
+      ...(window.od.viewer ? {} : { toolbar: "#sd-toolbar" }),
       document: toFile(bytes, "Untitled.docx"),
-      documentMode: "editing",
+      documentMode: window.od.viewer ? "viewing" : "editing",
       rulers: true,
       // SuperDoc's own fit-width zoom: the page shrinks with the window (never
       // past 100%), so a phone shows the whole page width.
@@ -160,7 +161,9 @@ window.od.register({
     await waitFor("#sd-editor");
     window.od.progress("Loading SuperDoc and its DOCX engine (~25 MB on first visit)…");
     const SuperDoc = await superdocGlobal();
-    await create(SuperDoc, await window.od.blankDocx());
+    const v = window.od.viewer;
+    if (v) document.getElementById("sd-toolbar")?.style.setProperty("display", "none");
+    await create(SuperDoc, v ? await v.initialDocx() : await window.od.blankDocx());
   },
 
   async load(bytes: Uint8Array) {

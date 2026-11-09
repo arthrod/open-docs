@@ -31,7 +31,7 @@ type EditorRef = {
 let ref: EditorRef | null = null;
 const FONTS = packagedFonts();
 
-function App({ onReady }: { onReady: () => void }) {
+function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "blank"; view: boolean }) {
   const r = useRef<EditorRef | null>(null);
   useEffect(() => {
     // The ref is attached on commit; poll until the editor reports a document.
@@ -55,7 +55,7 @@ function App({ onReady }: { onReady: () => void }) {
     <div style={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
       {/* The library's default fit stops at 50%, which still overflows a phone;
           same fit, lower floor. */}
-      <DocxEditor ref={r as any} document="blank" mode="edit" fonts={FONTS}
+      <DocxEditor ref={r as any} document={doc} mode={view ? "view" : "edit"} fonts={FONTS}
         zoomMode={{ type: "fit", fit: "pageWidth", minZoom: 0.25, maxZoom: 1 }} />
     </div>
   );
@@ -67,9 +67,12 @@ window.od.register({
 
   async mount() {
     const root = await waitFor<HTMLDivElement>("#ep-root");
+    // View-only page: its own "view" mode, opened on the real document.
+    const v = window.od.viewer;
+    const doc = v ? (await v.initialDocx()).slice(0) : "blank" as const;
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("docx-editor.dev did not start within 45s")), 45_000);
-      createRoot(root).render(<App onReady={() => { clearTimeout(timer); resolve(); }} />);
+      createRoot(root).render(<App doc={doc} view={!!v} onReady={() => { clearTimeout(timer); resolve(); }} />);
     });
   },
 

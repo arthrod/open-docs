@@ -115,10 +115,15 @@ window.od.register({
       );
     });
     const glue = await import(GLUE);
-    await glue.default({ module_or_path: WASM });
+    // Resolved against this module, not the page: on a view-only page served
+    // by another val the .wasm still comes straight from open-docs.
+    await glue.default({ module_or_path: new URL(WASM, import.meta.url).href });
     await ready;
     // In host mode WordCraft waits for the page's document: hand it a blank one.
-    open(`${docName}.docx`, await window.od.blankDocx());
+    // View-only pages hand the real document straight in. WordCraft 0.16.0
+    // has no read-only mode, so there it stays editable.
+    const v = window.od.viewer;
+    open(`${docName}.docx`, v ? await v.initialDocx() : await window.od.blankDocx());
     await settle();
   },
 

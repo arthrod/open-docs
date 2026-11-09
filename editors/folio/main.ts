@@ -51,10 +51,14 @@ async function open(input: Uint8Array | ArrayBuffer): Promise<void> {
   } catch { /* already gone */ }
   handle = undefined;
   host.innerHTML = "";
+  const view = !!window.od.viewer;
   handle = await f.renderAsync(input, host, {
-    showToolbar: true,
+    // View-only page: folio's own read-only mode (it also hides the toolbar
+    // and rulers).
+    readOnly: view,
+    showToolbar: !view,
     showZoomControl: true,
-    showRuler: true,
+    showRuler: !view,
     initialZoom: fitZoom,
     author: "open-docs",
     colorMode: "light",
@@ -83,7 +87,8 @@ window.od.register({
   async mount() {
     host = await waitFor<HTMLDivElement>("#folio-root");
     window.od.progress("Loading folio (Vue + ProseMirror, ~4 MB)…");
-    await open(await blank());
+    const v = window.od.viewer;
+    await open(v ? (await v.initialDocx()).slice() : await blank());
   },
 
   // A Letter page is 816 px plus folio's vertical ruler and margins: on a

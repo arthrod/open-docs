@@ -52,11 +52,34 @@ export interface EditorAdapter {
   loadUrl?(path: string): Promise<void>;
   /** false: can't open the user's own files (only public links). */
   acceptsFiles?: boolean;
+  /**
+   * View-only pages (the open-docs-viewer val): switch the library to its own
+   * read-only mode once the document is open. Omit when `mount()` already
+   * honours `window.od.viewer` (or the library has no read-only mode).
+   */
+  setReadOnly?(): void | Promise<void>;
+}
+
+/**
+ * Set by a view-only page before `mount()` runs. Adapters that create their
+ * editor FROM a document call `initialDocx()` in `mount()` (so the page opens
+ * the real document, not a blank one first) and open it read-only; the page
+ * calls `load()` itself only when `mount()` didn't take the document.
+ */
+export interface ViewerContext {
+  /** The document to show, fetched once; calling it marks it taken. */
+  initialDocx(): Promise<Uint8Array>;
+  /** The public URL it came from (viewers that fetch by URL, e.g. Office Online). */
+  srcUrl: string;
+  /** True once `initialDocx()` was called. */
+  taken: boolean;
 }
 
 /** Exposed globals both the chrome and the adapters read. */
 export interface KitGlobal {
   adapter?: EditorAdapter;
+  /** Present only on view-only pages: see ViewerContext. */
+  viewer?: ViewerContext;
   /** Called by an adapter at module top level. */
   register(adapter: EditorAdapter): void;
   /** performance.now() when the adapter registered (its module finished evaluating). */

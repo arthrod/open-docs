@@ -27,6 +27,8 @@ type Ribbon = {
 };
 
 let ribbon: Ribbon | undefined;
+/** On view-only pages: Docxodus's read-only viewer (createViewer), not the ribbon. */
+let viewer: { reload(bytes: Uint8Array): Promise<void> } | undefined;
 
 function saveBytes(): Uint8Array | undefined {
   const out = ribbon?.save();
@@ -47,6 +49,14 @@ window.od.register({
     host.append(target);
 
     const mod = await import(BUNDLE_URL);
+    const v = window.od.viewer;
+    if (v) {
+      if (typeof mod.createViewer !== "function") throw new Error("docxodus bundle has no createViewer()");
+      target.style.overflow = "auto";
+      target.style.background = "#eef1f5";
+      viewer = await mod.createViewer(target, await v.initialDocx(), { wasmBasePath: WASM_BASE });
+      return;
+    }
     if (typeof mod.createRibbonEditor !== "function") {
       throw new Error("docxodus bundle has no createRibbonEditor()");
     }
@@ -61,6 +71,7 @@ window.od.register({
   },
 
   async load(bytes: Uint8Array) {
+    if (viewer) return viewer.reload(bytes);
     if (!ribbon) throw new Error("Docxodus not mounted");
     ribbon.open(bytes, "document.docx");
   },

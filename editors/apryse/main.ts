@@ -110,7 +110,9 @@ window.od.register({
     // deno-lint-ignore no-explicit-any
     instance = await (window as any).WebViewer({ path: `${BASE}/public` }, host);
     makeReadOnly();
-    await open(`${location.origin}/api/showcase.docx`, "showcase.docx");
+    const v = window.od.viewer;
+    if (v) await open(new Blob([(await v.initialDocx()).slice()]), "document.docx");
+    else await open(`${location.origin}/api/showcase.docx`, "showcase.docx");
   },
 
   load: (bytes) => open(new Blob([bytes.slice()]), "document.docx"),

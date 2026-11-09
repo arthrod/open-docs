@@ -26,7 +26,7 @@ window.od.register({
         // Exposed for debugging from the console.
         (window as any).__plate = h.editor;
         resolve();
-      })
+      }, !!window.od.viewer)
     );
   },
 
