@@ -29,18 +29,53 @@ export interface DocxParagraph {
   bullet?: number;
   bold?: boolean;
   italic?: boolean;
+  /** Center the paragraph (caption blocks). */
+  center?: boolean;
+  /** Right-align the paragraph (counsel / signature blocks). */
+  right?: boolean;
+  /** Justify both margins (brief body text). */
+  justify?: boolean;
+  /** Half-points (24 = 12pt). Overrides the document default. */
+  size?: number;
+  /** Serif face (legal documents): Times New Roman. */
+  serif?: boolean;
+  /** Line spacing in 240ths (360 = 1.5, 480 = double). */
+  line?: number;
+  /** Space after, in twentieths of a point (240 = 12pt). */
+  after?: number;
+  /** Space before, in twentieths of a point. */
+  before?: number;
+  /** Bottom hairline rule (section separators, notes blocks). */
+  ruleBelow?: boolean;
+}
+
+export interface DocxTable {
+  /** Two-column caption table: parties left, case number/title right. */
+  table: { left: DocxParagraph[]; right: DocxParagraph[] };
 }
 
 function paragraphXml(p: DocxParagraph): string {
   const rPr = [
     p.bold ? "<w:b/>" : "",
     p.italic ? "<w:i/>" : "",
+    p.serif ? '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>' : "",
+    p.size ? `<w:sz w:val="${p.size}"/><w:szCs w:val="${p.size}"/>` : "",
+  ].join("");
+  const spacing = [
+    p.line || p.after !== undefined || p.before !== undefined
+      ? `<w:spacing ${p.line ? `w:line="${p.line}" w:lineRule="auto"` : ""}${p.after !== undefined ? ` w:after="${p.after}"` : ""}${p.before !== undefined ? ` w:before="${p.before}"` : ""}/>`
+      : "",
+    p.ruleBelow ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : "",
   ].join("");
   const pPr = [
     p.style ? `<w:pStyle w:val="${escapeXml(p.style)}"/>` : "",
     p.bullet
       ? `<w:numPr><w:ilvl w:val="${p.bullet - 1}"/><w:numId w:val="1"/></w:numPr>`
       : "",
+    p.center ? '<w:jc w:val="center"/>' : "",
+    p.right ? '<w:jc w:val="right"/>' : "",
+    p.justify ? '<w:jc w:val="both"/>' : "",
+    spacing,
   ].join("");
   const pPrXml = pPr ? `<w:pPr>${pPr}</w:pPr>` : "";
   // An empty paragraph has NO run: `<w:r><w:t></w:t></w:r>` is legal OOXML but
@@ -53,19 +88,34 @@ function paragraphXml(p: DocxParagraph): string {
   return `<w:p>${pPrXml}${runs}</w:p>`;
 }
 
+/** Two-column bordered caption table (parties | case number + title). */
+function captionTableXml(t: DocxTable): string {
+  const border = '<w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tcBorders>';
+  const cell = (paras: DocxParagraph[], width: number) =>
+    `<w:tc><w:tcPr>${border}<w:tcW w:w="${width}" w:type="dxa"/></w:tcPr>${paras.map(paragraphXml).join("")}</w:tc>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tblBorders></w:tblPr>` +
+    `<w:tblGrid><w:gridCol w:w="5100"/><w:gridCol w:w="3600"/></w:tblGrid>` +
+    `<w:tr>${cell(t.table.left, 5100)}${cell(t.table.right, 3600)}</w:tr></w:tbl>` +
+    `<w:p/>`;
+}
+
 /** Build a minimal but valid .docx from plain paragraphs. */
 export function buildDocx(
-  paragraphs: Array<DocxParagraph | string>,
+  paragraphs: Array<DocxParagraph | DocxTable | string>,
   title = "Document",
 ): Uint8Array {
   const paras = paragraphs.map((p) => typeof p === "string" ? { text: p } : p);
   if (!paras.length) paras.push({ text: "" });
 
+  const bodyXml = paras.map((p) =>
+    "table" in p && p.table ? captionTableXml(p) : paragraphXml(p as DocxParagraph),
+  ).join("\n    ");
+
   const documentXml = `${XML_DECL}
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <w:body>
-    ${paras.map(paragraphXml).join("\n    ")}
+    ${bodyXml}
     <w:sectPr>
       <w:pgSz w:w="11906" w:h="16838"/>
       <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/>

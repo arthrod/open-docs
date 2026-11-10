@@ -64,9 +64,18 @@ let editor: any;
 let report: any = null;
 // deno-lint-ignore no-explicit-any
 let lastInput: any = null;
+// Loaded sources are page state now (no textarea): each entry is one imported
+// file's source(s), or the bundled demo set (demo: true, toggled in/out).
+// deno-lint-ignore no-explicit-any
+let loaded: Array<{ key: string; source: any; demo?: boolean }> = [];
 // deno-lint-ignore no-explicit-any
 let sources: any[] = [];
 let docName = "Untitled document";
+// Hidden second editor instance (docx + markdown plugins) used to read .docx
+// source files natively: executeImportDocx → executeExportMarkdown.
+// deno-lint-ignore no-explicit-any
+let srcEditor: any = null;
+let srcSeq = 0;
 // Native range cached at capture time (A4): {startIndex, endIndex, text}.
 // deno-lint-ignore no-explicit-any
 let capture: any = null;
@@ -160,6 +169,9 @@ window.od.register({
   report: () => report,
   lastInput: () => lastInput,
   parseSources,
+  sourcesFromText,
+  addSourceFile,
+  toggleDemoSources,
   runCheck,
   importDocx,
   highlightQuote,
@@ -171,7 +183,7 @@ window.od.register({
 /* ------------------------------ the pipeline ------------------------------ */
 
 /**
- * Parse the sources textarea:
+ * Parse source text in the panel format:
  *   --- Source name | optional alias ---
  *   [p. 12]
  *   page text…
@@ -205,6 +217,129 @@ function parseSources(text: string) {
   return out;
 }
 
+/**
+ * Source text → core source objects. Panel format (--- name --- headers) wins;
+ * otherwise the whole file is ONE source named after the file, with [p. N]
+ * page markers honored when present (that is what a .docx source exports to).
+ */
+function sourcesFromText(text: string, fallbackName: string) {
+  const parsed = parseSources(text);
+  if (parsed.length) return parsed;
+  const name = fallbackName || "Source";
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "src";
+  const segs = text.split(/\[p\.\s*(\d+)\]\s*/);
+  // deno-lint-ignore no-explicit-any
+  const pages: any[] = [];
+  for (let j = 1; j < segs.length; j += 2) {
+    const t = (segs[j + 1] ?? "").trim();
+    if (t) pages.push({ number: Number(segs[j]), text: t });
+  }
+  // deno-lint-ignore no-explicit-any
+  const s: any = { id, name };
+  if (pages.length) s.pages = pages;
+  else s.text = text.trim();
+  return [s];
+}
+
+/** The hidden second editor that reads .docx SOURCE files natively. */
+function hiddenSourceEditor() {
+  if (srcEditor) return srcEditor;
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText =
+    "position:fixed;left:-99999px;top:0;width:794px;height:1123px;visibility:hidden;pointer-events:none";
+  document.body.append(host);
+  srcEditor = new Editor(host, { main: [{ value: "\n" }] }, {
+    width: 794,
+    height: 1123,
+    margins: [96, 96, 96, 96],
+  });
+  srcEditor.use(docxPlugin);
+  srcEditor.use(markdownPlugin);
+  return srcEditor;
+}
+
+/** .docx source text via the native import → markdown-export pipeline. */
+async function docxSourceText(bytes: Uint8Array): Promise<string> {
+  const ed = hiddenSourceEditor();
+  await ed.command.executeImportDocx({ arrayBuffer: bytes.slice().buffer });
+  return ed.command.executeExportMarkdown();
+}
+
+/** One imported file → one or more loaded sources. Filename = source name. */
+async function addSourceFile(f: File) {
+  const name = f.name.replace(/\.[^.]+$/, "");
+  let text: string;
+  if (/\.docx$/i.test(f.name) || f.type.includes("wordprocessingml")) {
+    text = await docxSourceText(new Uint8Array(await f.arrayBuffer()));
+  } else {
+    text = await f.text();
+  }
+  const added = sourcesFromText(text, name);
+  loaded.push(...added.map((source) => ({ key: `s${++srcSeq}`, source })));
+  renderSources();
+  if (editor) await runCheck();
+  return added;
+}
+
+/** Toggle the brief's bundled full source set in/out of the loaded list. */
+async function toggleDemoSources() {
+  const has = loaded.some((e) => e.demo);
+  if (has) {
+    loaded = loaded.filter((e) => !e.demo);
+    renderSources();
+    if (editor) await runCheck();
+    return false;
+  }
+  const text = await (await fetch("/api/cite-check/sources.txt")).text();
+  const added = sourcesFromText(text, "demo-sources.txt");
+  loaded.push(...added.map((source) => ({ key: `s${++srcSeq}`, source, demo: true })));
+  renderSources();
+  if (editor) await runCheck();
+  return true;
+}
+
+function removeSource(key: string) {
+  loaded = loaded.filter((e) => e.key !== key);
+  renderSources();
+  if (editor) void runCheck().catch(() => {});
+}
+
+function renderSources() {
+  const list = document.getElementById("cc-source-list");
+  const info = document.getElementById("cc-src-info");
+  const demoBtn = document.getElementById("cc-demo-sources") as HTMLButtonElement | null;
+  sources = loaded.map((e) => e.source);
+  if (!list) return;
+  list.className = "cc-source-list";
+  list.innerHTML = "";
+  if (!loaded.length) {
+    list.className = "hint";
+    list.textContent = "No sources loaded — import .docx / .txt / .md source files, or add the demo set.";
+  }
+  for (const e of loaded) {
+    const s = e.source;
+    const segs = s.pages?.length ? `${s.pages.length} page(s)` : "full text";
+    const row = document.createElement("div");
+    row.className = "cc-src" + (e.demo ? " demo" : "");
+    row.innerHTML =
+      `<span class="nm" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}${e.demo ? " · demo" : ""}</span>` +
+      `<span class="meta">${segs}</span>` +
+      `<button type="button" class="quiet" data-rm="${e.key}" title="Remove this source">✕</button>`;
+    list.append(row);
+  }
+  if (demoBtn) {
+    const on = loaded.some((x) => x.demo);
+    demoBtn.textContent = on ? "Remove" : "Add full demo sources";
+    demoBtn.title = on ? "Remove the bundled demo source set" : "Add the demo brief's bundled source set";
+  }
+  if (info) {
+    info.textContent = sources.length
+      ? `${sources.length} source(s) loaded: ${sources.map((x: { name: string }) => x.name).join("; ")}`
+      : "Sources are matched to footnotes by name (aliases included).";
+  }
+}
+
 /** Import real .docx bytes, then run the check over the REAL document text. */
 async function importDocx(bytes: Uint8Array, name: string) {
   if (!editor) throw new Error("editor not ready");
@@ -217,21 +352,18 @@ async function importDocx(bytes: Uint8Array, name: string) {
 /** The core always consumes executeExportMarkdown() of the imported doc. */
 async function runCheck() {
   const text = await editor.command.executeExportMarkdown();
-  sources = parseSources((document.getElementById("cc-sources") as HTMLTextAreaElement)?.value ?? "");
+  sources = loaded.map((e) => e.source);
   lastInput = { document: { name: docName, text }, sources };
   report = runCiteCheck(lastInput);
   renderReport();
+  renderSources();
   return report;
 }
 
 async function loadFixture() {
-  const [memo, src] = await Promise.all([
-    fetch("/api/cite-check/reviewed-memo.docx"),
-    fetch("/api/cite-check/sources.txt"),
-  ]);
-  const srcBox = document.getElementById("cc-sources") as HTMLTextAreaElement | null;
-  if (srcBox) srcBox.value = await src.text();
-  return importDocx(new Uint8Array(await memo.arrayBuffer()), "reviewed-memo.docx");
+  const brief = await fetch("/api/cite-check/appellate-brief.docx");
+  if (!brief.ok) throw new Error(`fixture fetch failed: HTTP ${brief.status}`);
+  return importDocx(new Uint8Array(await brief.arrayBuffer()), "appellate-brief.docx");
 }
 
 /* ------------------------------- annotations ------------------------------ */
@@ -315,16 +447,12 @@ function renderReport() {
   const box = document.getElementById("cc-quotes");
   const warn = document.getElementById("cc-warnings");
   const summary = document.getElementById("cc-summary");
-  const srcInfo = document.getElementById("cc-src-info");
-  if (!box || !warn || !summary || !srcInfo) return;
+  if (!box || !warn || !summary) return;
   box.innerHTML = "";
   warn.innerHTML = "";
   if (!report) return;
   const s = report.summary;
   summary.textContent = `— ${s.total} quotes: ${s.exact} exact · ${s.normalized} normalized · ${s.fuzzy} fuzzy · ${s.not_found} not checked`;
-  srcInfo.textContent = sources.length
-    ? `${sources.length} source(s) parsed: ${sources.map((x: { name: string }) => x.name).join("; ")}`
-    : "No sources parsed yet — paste sources and run again.";
 
   // deno-lint-ignore no-explicit-any
   for (const r of report.results as any[]) {
@@ -404,16 +532,35 @@ function wirePanel() {
   $("cc-fixture")?.addEventListener("click", async () => {
     try {
       const rep = await loadFixture();
-      status(`Fixture loaded — ${rep?.summary?.total ?? 0} quotes`, "ok");
+      status(`Demo brief loaded — ${rep?.summary?.total ?? 0} quotes`, "ok");
     } catch (err) {
       status(`Fixture failed: ${(err as Error).message}`, "err");
     }
   });
-  $("cc-load-sources")?.addEventListener("click", async () => {
-    const box = $<HTMLTextAreaElement>("cc-sources");
-    if (!box) return;
-    box.value = await (await fetch("/api/cite-check/sources.txt")).text();
-    if (report) await runCheck();
+
+  // Sources: file import (hidden second editor for .docx) + demo-set toggle.
+  const srcFile = $<HTMLInputElement>("cc-source-file");
+  $("cc-add-source")?.addEventListener("click", () => srcFile?.click());
+  srcFile?.addEventListener("change", async () => {
+    const files = Array.from(srcFile.files ?? []);
+    srcFile.value = "";
+    if (!files.length) return;
+    try {
+      let n = 0;
+      for (const f of files) n += (await addSourceFile(f)).length;
+      status(`Loaded ${n} source(s) from ${files.length} file(s)`, "ok");
+    } catch (err) {
+      status(`Source import failed: ${(err as Error).message}`, "err");
+    }
+  });
+  $("cc-demo-sources")?.addEventListener("click", () => {
+    toggleDemoSources()
+      .then((on) => status(on ? "Demo source set added" : "Demo source set removed", "ok"))
+      .catch((err) => status(`Demo sources failed: ${(err as Error).message}`, "err"));
+  });
+  $("cc-source-list")?.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("button[data-rm]");
+    if (btn) removeSource(btn.dataset.rm!);
   });
   $("cc-run")?.addEventListener("click", async () => {
     try {
@@ -423,7 +570,6 @@ function wirePanel() {
       status(`Check failed: ${(err as Error).message}`, "err");
     }
   });
-  $("cc-sources")?.addEventListener("change", () => void runCheck().catch(() => {}));
 
   // Undo / redo / export: native commands; import is exempt (A7, vendor).
   $("cc-undo")?.addEventListener("click", () => editor?.command.executeUndo());

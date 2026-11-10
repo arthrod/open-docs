@@ -14,7 +14,8 @@ import { chromium } from "playwright-core";
 const BASE = (process.argv[2] ?? "http://127.0.0.1:8788").replace(/\/$/, "");
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const Q1 = "The district court retains wide latitude to admit or exclude summary judgment evidence under Rule 56(c).";
-const T5_SPAN = "Plaintiff Halcyon Foods, Inc. moves for summary judgment on its breach-of-warranty claim";
+const T5_SPAN = "The delivery contract at issue was executed in March 2024";
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 const results = [];
 const check = (id, name, ok, evidence = "") => {
@@ -66,6 +67,13 @@ async function readZipEntryInPage(bytes, name) {
   check("T1", "route 200 + shell", res.status === 200,
     `status ${res.status}, importmap:${html.includes("esm.sh/@hufe921/canvas-editor@1.1.0")}, panel:${html.includes("cc-panel")}`);
   check("T1", "pinned esm.sh import map", html.includes("esm.sh/@hufe921/canvas-editor@1.1.0") && html.includes("cc-panel"));
+  // No-agent page (owner mandate): the served shell must not even contain the
+  // assistant aside, its toggle, or the prompt-chip containers.
+  check("T1", "no assistant panel in the served page",
+    !html.includes('id="od-aside"') && !html.includes('id="od-toggle-agent"') && !html.includes('id="od-suggestions"') && !html.includes('id="od-prompt"'),
+    `od-aside:${html.includes('id="od-aside"')}, toggle:${html.includes('id="od-toggle-agent"')}, chips:${html.includes('id="od-suggestions"')}`);
+  check("T1", "sources are file-import (no textarea)", html.includes('id="cc-source-file"') && !html.includes('id="cc-sources"'),
+    `file input:${html.includes('id="cc-source-file"')}, textarea:${html.includes('id="cc-sources"')}`);
 }
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true, args: ["--headless=new"] });
@@ -88,21 +96,51 @@ try {
       return { editor: !!window.__citeCheck.editor(), canvas: !!host?.querySelector("canvas") };
     });
     check("T2", "editor mounted + canvas", mounted.editor && mounted.canvas, JSON.stringify(mounted));
+    // No-agent, live DOM: nothing may render late either (ui.ts chips).
+    const agentDom = await page.evaluate(() => ({
+      aside: !!document.querySelector("#od-aside"),
+      toggle: !!document.querySelector("#od-toggle-agent"),
+      chips: !!document.querySelector("#od-suggestions"),
+      prompt: !!document.querySelector("#od-prompt"),
+      noAgentClass: document.querySelector("#od-layout")?.classList.contains("no-agent") ?? false,
+      sourcesTextarea: !!document.querySelector("#cc-sources"),
+      sourceFile: !!document.querySelector("#cc-source-file"),
+    }));
+    check("T2", "no assistant panel / toggle / chips rendered", !agentDom.aside && !agentDom.toggle && !agentDom.chips && !agentDom.prompt,
+      JSON.stringify(agentDom));
+    check("T2", "layout is agentless", agentDom.noAgentClass);
+    check("T2", "sources UI is file-import", agentDom.sourceFile && !agentDom.sourcesTextarea);
   }
 
   /* -------------------------------- T3 ---------------------------------- */
-  const fixtureBytes = new Uint8Array(await (await fetch(`${BASE}/api/cite-check/reviewed-memo.docx`)).arrayBuffer());
+  const fixtureBytes = new Uint8Array(await (await fetch(`${BASE}/api/cite-check/appellate-brief.docx`)).arrayBuffer());
   const sourcesText = await (await fetch(`${BASE}/api/cite-check/sources.txt`)).text();
   {
-    const md = await page.evaluate(async ([arr, srcText]) => {
-      // sources first, so import → extract resolves the footnotes immediately
-      document.getElementById("cc-sources").value = srcText;
-      await window.__citeCheck.importDocx(new Uint8Array(arr), "reviewed-memo.docx");
+    // Sources load via the real file path: DataTransfer + change event on
+    // #cc-source-file, the fixture source set as a .txt File.
+    const imported = await page.evaluate(async ([srcText]) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([srcText], "demo-sources.txt", { type: "text/plain" }));
+      const input = document.getElementById("cc-source-file");
+      input.files = dt.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      for (let i = 0; i < 200; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+        if (document.querySelectorAll("#cc-source-list .cc-src").length >= 4) break;
+      }
+      return {
+        rows: [...document.querySelectorAll("#cc-source-list .cc-src .nm")].map((n) => n.textContent),
+      };
+    }, [sourcesText]);
+    check("T3", "sources imported via the file input path", imported.rows.length === 4,
+      JSON.stringify(imported.rows));
+    const md = await page.evaluate(async ([arr]) => {
+      await window.__citeCheck.loadFixture();
       return window.__citeCheck.editor().command.executeExportMarkdown();
-    }, [Array.from(fixtureBytes), sourcesText]);
-    const ok = md.includes("Halcyon Foods") && md.includes(Q1);
-    check("T3", "native docx import + markdown export", ok,
-      `len ${md.length}, has 'Halcyon Foods': ${md.includes("Halcyon Foods")}, has Q1: ${md.includes(Q1)}`);
+    }, [Array.from(fixtureBytes)]);
+    const ok = md.includes("APPELLANT'S OPENING BRIEF") && md.includes(Q1) && md.includes("PRELIMINARY STATEMENT");
+    check("T3", "appellate brief imports natively + exports markdown", ok,
+      `len ${md.length}, caption:${md.includes("APPELLANT'S OPENING BRIEF")}, sections:${md.includes("PRELIMINARY STATEMENT")}, Q1:${md.includes(Q1)}`);
   }
 
   /* ------------------------- T4 (amendments A3) --------------------------- */
@@ -132,12 +170,71 @@ try {
       `sha256 ${t4.hFresh.slice(0, 16)}… ${t4.byteIdentical ? "=" : "≠"} ${t4.hPassed.slice(0, 16)}…`);
     check("T4", "probe recompute deep-equals panel report (A3b)", t4.deepEqual);
     const s = t4.summary;
-    check("T4", "engineered counts on the real doc", s.total === 3 && s.exact === 1 && s.normalized === 1 && s.fuzzy === 1,
+    check("T4", "engineered counts on the real brief", s.total === 4 && s.exact === 2 && s.normalized === 1 && s.fuzzy === 1,
       JSON.stringify(s));
     check("T4", "number guard flagged on the fuzzy quote", t4.fuzzyNotes.some((n) => n.includes("number alteration")),
       t4.fuzzyNotes[0]?.slice(0, 120) ?? "none");
     check("T4", "extraction warnings present", t4.warnings.length >= 1, t4.warnings[0] ?? "none");
-    check("T4", "panel rendered 3 rows from the core", t4.rows === 3, `rows ${t4.rows}`);
+    check("T4", "panel rendered 4 rows from the core", t4.rows === 4, `rows ${t4.rows}`);
+  }
+
+  /* ------------- T9 sources panel: toggle, remove, .docx source ------------ */
+  {
+    const t9 = await page.evaluate(async ([arr, srcText, docxMime]) => {
+      const out = {};
+      const rows = () => [...document.querySelectorAll("#cc-source-list .cc-src .nm")].map((n) => n.textContent);
+      const waitRows = async (n) => {
+        for (let i = 0; i < 200; i++) {
+          await new Promise((r) => setTimeout(r, 50));
+          if (document.querySelectorAll("#cc-source-list .cc-src").length === n) return true;
+        }
+        return false;
+      };
+      const importFile = async (file) => {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        const input = document.getElementById("cc-source-file");
+        input.files = dt.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      out.before = rows().length; // 4 file-imported sources
+      // 1. toggle the bundled full demo set IN (same 4 sources, demo-flagged)
+      document.getElementById("cc-demo-sources").click();
+      out.afterAdd = await waitRows(out.before + 4);
+      out.labelOn = document.getElementById("cc-demo-sources").textContent.trim();
+      // 2. toggle it back OUT — the file-imported ones must survive
+      document.getElementById("cc-demo-sources").click();
+      out.afterRemove = await waitRows(out.before);
+      out.labelOff = document.getElementById("cc-demo-sources").textContent.trim();
+      // 3. per-source remove: drop the first (Smith v. United Services)
+      out.removedName = rows()[0];
+      document.querySelector("#cc-source-list .cc-src button[data-rm]").click();
+      out.afterOneRemoved = await waitRows(out.before - 1);
+      // 4. .docx source via the hidden second editor (importDocx+exportMarkdown)
+      await importFile(new File([new Uint8Array(arr)], "appellate-brief.docx", { type: docxMime }));
+      out.docxSourceAdded = await waitRows(out.before);
+      out.docxRow = rows().find((n) => n.includes("appellate-brief"));
+      const docxRowBtn = [...document.querySelectorAll("#cc-source-list .cc-src")]
+        .find((r) => r.querySelector(".nm")?.textContent.includes("appellate-brief"))
+        ?.querySelector("button[data-rm]");
+      docxRowBtn?.click();
+      out.docxSourceRemoved = await waitRows(out.before - 1);
+      // 5. restore the full source set for the annotation checks below
+      await importFile(new File([srcText], "demo-sources.txt", { type: "text/plain" }));
+      out.restored = await waitRows(out.before * 2 - 1);
+      out.reportAfter = window.__citeCheck.report()?.summary;
+      return out;
+    }, [Array.from(fixtureBytes), sourcesText, DOCX_MIME]).catch((e) => ({ error: String(e) }));
+    if (t9.error) {
+      check("T9", "sources panel (toggle/remove/docx)", false, t9.error);
+    } else {
+      check("T9", "'Add full demo sources' toggles the bundled set in", t9.afterAdd && t9.labelOn === "Remove", `label "${t9.labelOn}", rows ${t9.before}→${t9.before + 4}`);
+      check("T9", "toggle 'Remove' drops only the demo set", t9.afterRemove && t9.labelOff === "Add full demo sources", `label "${t9.labelOff}", rows back to ${t9.before}`);
+      check("T9", "per-source remove drops one source", t9.afterOneRemoved, `removed "${t9.removedName}"`);
+      check("T9", ".docx source read via hidden editor (native)", !!t9.docxRow, `row "${t9.docxRow}"`);
+      check("T9", ".docx source removable", t9.docxSourceRemoved);
+      check("T9", "restored set re-checks the brief", t9.reportAfter?.total === 4 && t9.reportAfter?.exact === 2, JSON.stringify(t9.reportAfter));
+    }
   }
 
   /* --------------------- T5 (amendment A1: mandatory) --------------------- */
