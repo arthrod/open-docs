@@ -1,0 +1,14 @@
+{
+  "name": "open-docs-plate-docx-io",
+  "private": true,
+  "description": "Plate's own .docx import/export (@platejs/docx-io) bundled for the browser; Plate and React stay external.",
+  "dependencies": {
+    "@platejs/docx-io": "53.5.5",
+    "buffer": "6.0.3",
+    "events": "3.3.0",
+    "path-browserify": "1.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.5"
+  }
+}
