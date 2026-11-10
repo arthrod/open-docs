@@ -271,7 +271,7 @@ html { scroll-behavior: smooth; }
   <a class="wm" href="/">
     <span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH
   </a>
-  <span class="crumb">/ open-docs</span>
+  <span class="crumb">/ editors</span>
   <button class="nav-menu" id="od-land-menu" type="button" aria-expanded="false" aria-controls="od-land-nav">
     <span class="nav-burger" aria-hidden="true"><i></i><i></i><i></i></span> MENU
   </button>
@@ -281,6 +281,7 @@ html { scroll-behavior: smooth; }
     <a href="#metrics">Measurements</a>
     <a href="https://editors-arena.val.run" target="_blank" rel="noopener">Arena →</a>
     <a href="/source" target="_blank" rel="noopener">Source →</a>
+    <a href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
   </nav>
 </header>
 <section class="hero reveal"><div class="wrap">

@@ -136,3 +136,14 @@ Deno.test("viewer page has no rename item", async () => {
     assertEquals(html.includes(`id="od-docname"`), false, path);
   }
 });
+
+Deno.test("navbar crumb reads / editors and Contact is the last menu item, embed too (#40)", async () => {
+  for (const path of ["/e/plate", "/e/plate?embed=1"]) {
+    const html = await get(path);
+    const menu = html.slice(html.indexOf(`id="od-menu"`));
+    const items = [...menu.slice(0, menu.indexOf("</div>\n    </div>") === -1 ? undefined : menu.indexOf("</div>\n    </div>")).matchAll(/role="menuitem"[^>]*>([^<]*)</g)].map((m) => m[1].trim());
+    assertEquals(items.at(-1), "Contact →", path);
+    assertEquals(menu.includes(`href="https://arthur.law/contact"`), true, path);
+  }
+  assertEquals((await get("/e/plate")).includes(`<span class="crumb">/ editors</span>`), true);
+});
