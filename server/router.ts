@@ -13,7 +13,7 @@
  */
 import type { Hono } from "npm:hono@4";
 import { serveFile } from "https://esm.town/v/std/utils/index.ts";
-import { editors } from "./registry.ts";
+import { editors, type Maker } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
 import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
@@ -58,7 +58,23 @@ const esc = (s: string) =>
  * "All editors & measurements" in a new tab so the iframe does not navigate.
  * The non-embed string is the historical markup, whitespace included.
  */
-function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string): string {
+/** A maker's link: LinkedIn when verified, GitHub otherwise. */
+const makerHref = (m: Maker) => m.linkedin ?? m.github ?? "#";
+const makerVia = (m: Maker) => (m.linkedin ? "LinkedIn" : "GitHub");
+
+/** "/ Made by" menu section; empty when the registry credits nobody. */
+function madeBySection(makers: Maker[]): string {
+  if (!makers.length) return "";
+  const items = makers.map((m) =>
+    `<a role="menuitem" href="${esc(makerHref(m))}" target="_blank" rel="noopener">${esc(m.name)} →<small>${m.kind === "company" ? "Company" : "Developer"} · ${makerVia(m)}</small></a>`
+  ).join("\n        ");
+  return `
+        <hr />
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Made by</div>
+        ${items}`;
+}
+
+function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string, makers: Maker[] = []): string {
   const allEditors = embed
     ? `<a role="menuitem" href="/" target="_blank" rel="noopener">All editors &amp; measurements</a>`
     : `<a role="menuitem" href="/">All editors &amp; measurements</a>`;
@@ -79,7 +95,7 @@ function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: s
         <hr />
         <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / View</div>
         <button role="menuitem" id="od-metrics-item">Performance of this load</button>
-        <button role="menuitem" id="od-reload">Reload editor</button>
+        <button role="menuitem" id="od-reload">Reload editor</button>${madeBySection(makers)}
         <hr />
         ${allEditors}${arena}
         <a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
@@ -112,7 +128,7 @@ function shell(o: EditorShell, embed = false): string {
     `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
   const switcher = `<optgroup label="Open-source editors">${editors.filter((e) => e.kind !== "viewer").map(option).join("")}</optgroup>` +
     `<optgroup label="Proprietary viewers (view-only)">${editors.filter((e) => e.kind === "viewer").map(option).join("")}</optgroup>`;
-  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#");
+  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#", meta?.makers ?? []);
   // Leading spaces live on the template line, so a non-embed page stays byte-identical.
   const embedMenu = embed
     ? `<div class="od-menu-wrap od-embed-menu">\n${panel}\n    </div>\n`
@@ -180,6 +196,7 @@ ${panel}
   ${embed ? "" : `<div class="od-sub">
     <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
     ${meta?.license ? `<span class="od-lic">${esc(meta.license)}</span>` : ""}
+    ${meta?.makers?.length ? `<span class="od-makers">by ${meta.makers.map((m) => `<a href="${esc(makerHref(m))}" target="_blank" rel="noopener" title="${esc(m.name)} on ${makerVia(m)}">${esc(m.name)}</a>`).join(", ")}</span>` : ""}
     ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer, not an editor</span>` : ""}
     <span class="od-blurb">${esc(meta?.blurb ?? "")}</span>
     <span class="od-spacer"></span>

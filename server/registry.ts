@@ -30,6 +30,19 @@ export interface EditorMeta {
   metricsNote?: string;
   /** false: the viewer fetches documents by public URL, so it can't open the user's own file. */
   opensFiles?: boolean;
+  /**
+   * Who builds it, credited in the menu, the sub-bar and the landing card.
+   * LinkedIn only where verified (the GitHub profile/org links it, or the
+   * LinkedIn page names the project or company); otherwise GitHub.
+   */
+  makers?: Maker[];
+}
+
+export interface Maker {
+  name: string;
+  kind: "company" | "person";
+  linkedin?: string;
+  github?: string;
 }
 
 export const editors: EditorMeta[] = [
@@ -44,6 +57,9 @@ export const editors: EditorMeta[] = [
       "Canvas/SVG-rendered paginated editor — the document is drawn, not DOM. Form/EMR oriented.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "Hufe", kind: "person", github: "https://github.com/Hufe921" },
+    ],
   },
   {
     slug: "cite-check",
@@ -68,6 +84,10 @@ export const editors: EditorMeta[] = [
       ".NET compiled to WebAssembly: Word-grade rendering, real tracked changes and redlines, all client-side.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "John Scrudato", kind: "person", linkedin: "https://www.linkedin.com/in/john-scrudato/", github: "https://github.com/JSv4" },
+      { name: "Eric White", kind: "person", linkedin: "https://www.linkedin.com/in/ericwhitedev/", github: "https://github.com/EricWhiteDev" },
+    ],
   },
   {
     slug: "superdoc",
@@ -80,6 +100,11 @@ export const editors: EditorMeta[] = [
       "Full DOCX editor with comments, track changes and a Vue/React surface. Heaviest of the set.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "SuperDoc", kind: "company", linkedin: "https://www.linkedin.com/company/superdoc-dev/", github: "https://github.com/superdoc" },
+      { name: "Nick Bernal", kind: "person", linkedin: "https://www.linkedin.com/in/nickjbernal/", github: "https://github.com/harbournick" },
+      { name: "Caio Pizzol", kind: "person", linkedin: "https://www.linkedin.com/in/caiopizzol/", github: "https://github.com/caio-pizzol" },
+    ],
   },
   {
     slug: "plate",
@@ -92,6 +117,10 @@ export const editors: EditorMeta[] = [
       "Slate-based plugin framework. DOCX comes in through mammoth and goes out through a small OOXML writer, not a native engine.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "Udecode", kind: "company", linkedin: "https://www.linkedin.com/company/udecode/", github: "https://github.com/udecode" },
+      { name: "Ziad Beyens", kind: "person", linkedin: "https://www.linkedin.com/in/zbeyens/", github: "https://github.com/zbeyens" },
+    ],
   },
   {
     slug: "docen",
@@ -104,6 +133,9 @@ export const editors: EditorMeta[] = [
       "Canvas web-component editor with a headless Markdown/DOCX conversion API in the same package.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "Demo Macro", kind: "person", github: "https://github.com/DemoMacro" },
+    ],
   },
   {
     slug: "eigenpal",
@@ -115,6 +147,10 @@ export const editors: EditorMeta[] = [
     blurb: "React DOCX editor adapter with a headless core you can drive yourself.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "EigenPal", kind: "company", linkedin: "https://www.linkedin.com/company/eigenpal/", github: "https://github.com/eigenpal" },
+      { name: "Jedrzej Blaszyk", kind: "person", linkedin: "https://www.linkedin.com/in/jedrzej-blaszyk/", github: "https://github.com/jedrazb" },
+    ],
   },
   {
     slug: "folio",
@@ -127,6 +163,10 @@ export const editors: EditorMeta[] = [
       "ProseMirror + paginated layout DOCX editor with first-class AI edit/suggestion primitives.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "stella", kind: "company", linkedin: "https://www.linkedin.com/company/stella-app/", github: "https://github.com/stella" },
+      { name: "Jan Kubica", kind: "person", linkedin: "https://www.linkedin.com/in/kubicajan/", github: "https://github.com/jan-kubica" },
+    ],
   },
   {
     slug: "wordcraft",
@@ -139,6 +179,9 @@ export const editors: EditorMeta[] = [
       "A clean-room Word in pure Rust: its own layout engine and egui UI drawn into one canvas via WebGPU/WebGL2.",
     docxRoundTrip: true,
     agent: true,
+    makers: [
+      { name: "ArtCraft", kind: "company", linkedin: "https://www.linkedin.com/company/artcraft-ai/", github: "https://github.com/storytold" },
+    ],
   },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
@@ -156,6 +199,9 @@ export const editors: EditorMeta[] = [
     opensFiles: false,
     metricsNote:
       "Rendered on Microsoft's servers inside a cross-origin frame: startup is the frame's load event, and the frame's bytes and memory are invisible to this page.",
+    makers: [
+      { name: "Microsoft", kind: "company", linkedin: "https://www.linkedin.com/company/microsoft/" },
+    ],
   },
   {
     slug: "google-viewer",
@@ -172,6 +218,9 @@ export const editors: EditorMeta[] = [
     opensFiles: false,
     metricsNote:
       "Rendered on Google's servers inside a cross-origin frame: startup is the frame's load event, and the frame's bytes and memory are invisible to this page.",
+    makers: [
+      { name: "Google", kind: "company", linkedin: "https://www.linkedin.com/company/google/" },
+    ],
   },
   {
     slug: "apryse",
@@ -186,6 +235,9 @@ export const editors: EditorMeta[] = [
     agent: false,
     kind: "viewer",
     metricsNote: "Runs in this page; its office worker's files are counted from a list (workers are invisible to Resource Timing).",
+    makers: [
+      { name: "Apryse", kind: "company", linkedin: "https://www.linkedin.com/company/aprysesolutions/" },
+    ],
   },
   {
     slug: "nutrient",
@@ -200,6 +252,9 @@ export const editors: EditorMeta[] = [
     agent: false,
     kind: "viewer",
     metricsNote: "Runs in this page; its workers' files are counted from a list (workers are invisible to Resource Timing).",
+    makers: [
+      { name: "Nutrient", kind: "company", linkedin: "https://www.linkedin.com/company/nutrient-sdk/" },
+    ],
   },
 ];
 

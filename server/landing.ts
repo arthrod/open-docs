@@ -33,6 +33,7 @@ export function landingPage(all: EditorMeta[]): string {
         <span class="v-lic">${esc(e.license)}</span>
       </div>
       <p class="v-blurb">${esc(e.blurb)}</p>
+      ${e.makers?.length ? `<p class="v-makers">By ${e.makers.map((m) => esc(m.name)).join(", ")}</p>` : ""}
       <div class="pkgs">${e.packages.map((p) => `<code>${esc(p)}</code>`).join("")}</div>
       <div class="tags"><span>${esc(RENDER[e.slug] ?? "")}</span>${
         e.kind === "viewer"
@@ -91,7 +92,7 @@ html { scroll-behavior: smooth; }
 .site-nav {
   position: sticky; top: 0; z-index: 60;
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  padding: 12px clamp(20px, 5vw, 56px);
+  min-height: 52px; box-sizing: border-box; padding: 0 clamp(20px, 5vw, 56px);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   -webkit-backdrop-filter: saturate(140%) blur(10px); backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--ink);
@@ -109,6 +110,7 @@ html { scroll-behavior: smooth; }
   font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
 }
 .site-nav .nav-menu[aria-expanded="true"] { background: var(--mark); color: var(--ink); }
+.nav-label { display: none; }
 .nav-burger {
   display: inline-flex; flex-direction: column; justify-content: space-between;
   width: 14px; height: 11px; flex: none;
@@ -127,7 +129,18 @@ html { scroll-behavior: smooth; }
     border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); border-left: 1px solid var(--ink);
   }
   .site-nav nav.is-open { display: flex; }
-  .site-nav nav > a { padding: 10px 16px; border-bottom-color: transparent; }
+  /* Same look as every other menu: / Site label, sentence-case items, 8px inset, offset shadow. */
+  .site-nav nav { left: 8px; right: 8px; min-width: 0; padding: 6px; border: 1px solid var(--ink); box-shadow: var(--shadow-offset, 7px 7px 0 var(--mark)); }
+  .site-nav nav > a {
+    padding: 8px 10px; border-bottom: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 400;
+    letter-spacing: -0.01em; text-transform: none; color: var(--ink);
+  }
+  .site-nav nav > a:hover { background: var(--mark); }
+  .nav-label {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px 2px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  }
+  .nav-label .sq { width: 8px; height: 8px; background: var(--mark); display: inline-block; }
 }
 .hero { padding: 44px 0 36px; }
 .eyebrow {
@@ -187,6 +200,7 @@ html { scroll-behavior: smooth; }
 .vendor:hover { transform: translateY(-3px); box-shadow: var(--shadow-offset); }
 .v-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 10px; }
 .v-name { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+.v-makers { margin: -4px 0 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .v-lic {
   font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--muted); border: 1px solid var(--ink); padding: 2px 7px; white-space: nowrap;
@@ -280,6 +294,7 @@ html { scroll-behavior: smooth; }
     <span class="nav-burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="nav-menu-lbl">MENU</span>
   </button>
   <nav id="od-land-nav" aria-label="Site">
+    <div class="nav-label" aria-hidden="true"><span class="sq"></span> / Site</div>
     <a href="#editors">Editors</a>
     <a href="#viewers">Viewers</a>
     <a href="#metrics">Measurements</a>
