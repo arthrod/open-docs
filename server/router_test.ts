@@ -27,32 +27,53 @@ Deno.test("shell without ?embed=1 is the full chrome: assistant, sub-bar, switch
   assertEquals(html.includes(`id="od-aside"`), true);
   assertEquals(html.includes(`id="od-toggle-agent"`), true);
   assertEquals(html.includes(`id="od-switch"`), true);
+  assertEquals(html.includes(`id="od-more"`), true);
+  assertEquals(html.includes(`id="od-docname"`), true);
+  assertEquals(html.includes(`id="od-metrics"`), true);
   assertEquals(html.includes(`class="od-sub"`), true);
   assertEquals(html.includes(`id="od-menu"`), true);
   assertEquals(html.includes(`class="od-embed"`), false);
   assertEquals(html.includes(`class="od-layout"`), true);
+  assertEquals(html.includes(`<header class="site-nav od-bar">`), true);
+  assertEquals(html.includes(">CHILL<"), true);
+  assertEquals(html.includes(">NEUROTIC<"), true);
+  assertEquals(html.includes(`href="https://editors-arena.val.run"`), true);
+  assertEquals(html.includes("Editors arena →"), true);
 });
 
-Deno.test("shell with ?embed=1 sends no assistant markup and the compact bar", async () => {
+Deno.test("shell with ?embed=1 sends no bar and no assistant", async () => {
   const html = await get("/e/plate?embed=1");
-  // No assistant panel, no toggle, no agent wiring targets at all.
-  for (const absent of [`id="od-aside"`, `id="od-toggle-agent"`, `id="od-form"`, `id="od-prompt"`, `id="od-log"`, `id="od-suggestions"`, `id="od-menu"`, `id="od-switch"`, `class="od-sub"`, `id="od-new"`, `id="od-sample"`, "Assistant"]) {
+  // No assistant panel, no bar, no toggle, no agent wiring targets at all.
+  for (const absent of [
+    `<header class="od-bar"`,
+    `<header class="site-nav`,
+    `id="od-aside"`,
+    `id="od-toggle-agent"`,
+    `id="od-form"`,
+    `id="od-prompt"`,
+    `id="od-log"`,
+    `id="od-suggestions"`,
+    `id="od-menu"`,
+    `id="od-more"`,
+    `id="od-switch"`,
+    `id="od-docname"`,
+    `id="od-metrics"`,
+    `class="od-sub"`,
+    `class="od-engine"`,
+    `id="od-new"`,
+    `id="od-sample"`,
+    "Assistant",
+  ]) {
     assertEquals(html.includes(absent), false, `expected no ${absent} in embed mode`);
   }
-  // Compact bar: engine name, doc name, Open/Sample/Export, metrics chip.
   assertEquals(html.includes(`class="od-embed"`), true);
-  assertEquals(html.includes(`class="od-engine"`), true);
-  assertEquals(html.includes(`id="od-docname"`), true);
-  assertEquals(html.includes(`id="od-import"`), true);
-  assertEquals(html.includes(`id="od-showcase"`), true);
-  assertEquals(html.includes(`id="od-export"`), true);
-  assertEquals(html.includes(`id="od-metrics"`), true);
-  // The editor takes the freed space: single-column layout.
+  // The editor takes the iframe: single-column layout, no chrome bar.
   assertEquals(html.includes(`class="od-layout no-agent"`), true);
-  // What embed mode must keep: the stage, the loading overlay, the file input.
+  // What embed mode must keep: the stage, the loading overlay, the file input, the dialog.
   assertEquals(html.includes(`id="od-stage"`), true);
   assertEquals(html.includes(`id="od-loading"`), true);
   assertEquals(html.includes(`id="od-file"`), true);
+  assertEquals(html.includes(`id="od-metrics-dialog"`), true);
 });
 
 Deno.test("shell with any other embed value is the full chrome", async () => {

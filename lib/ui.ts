@@ -10,6 +10,7 @@ import { mdToBlocks } from "./md.ts";
 import type { EditorAdapter } from "./kit.ts";
 import {
   childError,
+  childExported,
   childOpened,
   childReady,
   type ChildMessage,
@@ -27,8 +28,10 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const embed = isEmbedUrl(location.href);
 if (embed) document.body.classList.add("od-embed");
 /** Only embed mode ever posts, and only to the embedding parent. */
-const postChild = (msg: ChildMessage) => {
-  if (embed) window.parent.postMessage(msg, "*");
+const postChild = (msg: ChildMessage, transfer?: Transferable[]) => {
+  if (!embed) return;
+  if (transfer && transfer.length) window.parent.postMessage(msg, "*", transfer);
+  else window.parent.postMessage(msg, "*");
 };
 /** A parent message that arrived before the adapter mounted; run after. */
 let pendingEmbedAction: (() => void) | undefined;
@@ -255,7 +258,7 @@ async function start(adapter: EditorAdapter) {
   } catch (err) {
     paintChip(undefined, "err");
     const e = err as Error;
-    postChild(childError(slug, `${adapter.name} failed to start: ${e?.message ?? String(err)}`));
+    postChild(childError(slug, `${adapter.name} failed to start: ${e?.message ?? String(err)}`, "mount"));
     fail(`${adapter.name} failed to start`, err);
   }
 }
@@ -286,26 +289,33 @@ function watchFit(adapter: EditorAdapter) {
 
 /* ------------------------------- documents ------------------------------- */
 
+/** Last name set by the chrome. Embed mode has no #od-docname, so this is the name. */
+let docTitle = "Untitled document";
+
 function docName(): string {
-  const raw = ($("od-docname") as HTMLInputElement | null)?.value.trim() || "Untitled document";
+  const el = $("od-docname") as HTMLInputElement | null;
+  const raw = (el ? el.value : docTitle).trim() || "Untitled document";
   return raw.replace(/\.docx$/i, "").replace(/[\\/:*?"<>|]+/g, "-");
 }
 
 function setDocName(name: string) {
+  docTitle = name.replace(/\.docx$/i, "");
   const el = $("od-docname") as HTMLInputElement | null;
-  if (el) el.value = name.replace(/\.docx$/i, "");
+  if (el) el.value = docTitle;
 }
 
-async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void>) {
+async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void>): Promise<boolean> {
   if (!current || !mounted) {
     setStatus("The editor is still loading…", "err");
-    return;
+    return false;
   }
   setStatus(`${label}…`);
   try {
     await fn(current);
+    return true;
   } catch (err) {
     fail(label, err);
+    return false;
   }
 }
 
@@ -347,21 +357,32 @@ const openSample = () =>
 
 async function importFile(file: File) {
   if (!/\.docx$/i.test(file.name)) {
-    setStatus(`${file.name} is not a .docx file`, "err");
+    const message = `${file.name} is not a .docx file`;
+    setStatus(message, "err");
+    postChild(childError(slug, message, "open"));
     return;
   }
   if (current?.acceptsFiles === false) {
-    setStatus(`${editorName} only opens documents from a public link — it shows this site's samples`, "err");
+    const message = `${editorName} only opens documents from a public link — it shows this site's samples`;
+    setStatus(message, "err");
+    postChild(childError(slug, message, "open"));
     return;
   }
-  await withAdapter(`Import ${file.name}`, async (a) => {
-    await a.load(new Uint8Array(await file.arrayBuffer()));
+  let openError: string | undefined;
+  const ok = await withAdapter(`Import ${file.name}`, async (a) => {
+    try {
+      await a.load(new Uint8Array(await file.arrayBuffer()));
+    } catch (err) {
+      openError = (err as Error)?.message ?? String(err);
+      throw err;
+    }
     newDocument();
     setDocName(file.name);
     postChild(childOpened(slug, docName()));
     fitNow();
     setStatus(`Imported ${file.name}`, "ok");
   });
+  if (!ok) postChild(childError(slug, openError ?? "The editor is still loading", "open"));
 }
 
 /* ---------------------------- embed channel ---------------------------- */
@@ -377,6 +398,8 @@ function onParentMessage(e: MessageEvent) {
   if (!msg) return;
   const act = msg.type === "sample"
     ? () => void openShowcase()
+    : msg.type === "export"
+    ? () => void exportForParent()
     : () => void importFile(new File([msg.bytes], embedFileName(msg.name)));
   if (!current || !mounted) pendingEmbedAction = act;
   else act();
@@ -399,6 +422,28 @@ const exportDocx = () =>
     window.od.download(bytes, `${docName()}.docx`);
     setStatus(`Exported ${docName()}.docx (${fmtBytes(bytes.length)})`, "ok");
   });
+
+/**
+ * Parent "export": the same bytes the Export button writes, posted back
+ * instead of downloaded. The copy is transferred so a view into the editor's
+ * own buffer (WASM memory) is never detached.
+ */
+async function exportForParent() {
+  try {
+    if (!current || !mounted) throw new Error("The editor is still loading");
+    if (current.viewOnly) throw new Error(`${current.name} is a view-only viewer: nothing to export`);
+    const bytes = await currentDocx(current);
+    const ab = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(ab).set(bytes);
+    const name = docName();
+    postChild(childExported(slug, name, ab), [ab]);
+    setStatus(`Exported ${name}.docx (${fmtBytes(bytes.length)})`, "ok");
+  } catch (err) {
+    const message = (err as Error)?.message ?? String(err);
+    setStatus(`Export .docx: ${message}`, "err");
+    postChild(childError(slug, message, "export"));
+  }
+}
 
 /* ------------------------------- assistant ------------------------------- */
 
@@ -784,7 +829,7 @@ addEventListener("error", (e) => {
   if (current || !(e as ErrorEvent).message) return;
   const msg = (e as ErrorEvent).message;
   if (/module|specifier|import|fetch/i.test(msg)) {
-    postChild(childError(slug, `${editorName} could not load: ${msg}`));
+    postChild(childError(slug, `${editorName} could not load: ${msg}`, "mount"));
     fail(`${editorName} could not load`, (e as ErrorEvent).error ?? new Error(msg));
     paintChip(undefined, "err");
   }
@@ -793,7 +838,7 @@ addEventListener("error", (e) => {
 // If nothing registered after a generous wait, say so loudly.
 setTimeout(() => {
   if (!current) {
-    postChild(childError(slug, `${editorName} never loaded: the adapter module never called window.od.register()`));
+    postChild(childError(slug, `${editorName} never loaded: the adapter module never called window.od.register()`, "mount"));
     fail(
       `${editorName} never loaded`,
       new Error(
