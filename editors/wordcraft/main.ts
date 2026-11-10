@@ -125,6 +125,14 @@ window.od.register({
     // by another val the .wasm still comes straight from open-docs.
     await glue.default({ module_or_path: new URL(WASM, import.meta.url).href });
     await ready;
+    // WordCraft follows the OS appearance. The shell is light, so force its
+    // own theme command (v0.17.0 prefs: ui.theme {value}). A failure here must
+    // not stop the mount.
+    try {
+      await window.wordcraft.execute("ui.theme", { value: "light" });
+    } catch (err) {
+      console.warn("[open-docs] wordcraft ui.theme", err);
+    }
     // In host mode WordCraft waits for the page's document: hand it a blank one.
     // View-only pages hand the real document straight in. This adapter does
     // not enable a read-only mode, so there it stays editable.

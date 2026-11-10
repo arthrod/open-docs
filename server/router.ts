@@ -67,6 +67,7 @@ function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: s
     : `\n        <a role="menuitem" href="https://editors-arena.val.run" target="_blank" rel="noopener">Editors arena →</a>`;
   return `      <div class="od-menu" id="od-menu" role="menu" hidden>
         <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Document</div>
+        ${viewer ? "" : `<button role="menuitem" id="od-rename">Rename document…</button>`}
         ${viewer ? "" : `<button role="menuitem" id="od-new">New blank document<kbd>⌥N</kbd></button>`}
         ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import">Open .docx from your computer…<kbd>⌘O</kbd></button>`}
         ${viewer ? "" : `<button role="menuitem" id="od-export">Export this document as .docx<kbd>⌘S</kbd></button>`}
@@ -115,6 +116,21 @@ function shell(o: EditorShell, embed = false): string {
   const embedMenu = embed
     ? `<div class="od-menu-wrap od-embed-menu">\n${panel}\n    </div>\n`
     : "";
+  const renameDialog = viewer
+    ? ""
+    : `<dialog class="od-dialog od-name-dialog" id="od-rename-dialog" aria-labelledby="od-rename-title">
+    <form id="od-rename-form">
+      <header><h3 id="od-rename-title">Rename document</h3><button class="od-btn icon" type="button" data-od-rename-cancel aria-label="Cancel">×</button></header>
+      <div class="od-name-body">
+        <label for="od-rename-input">Document name</label>
+        <input id="od-rename-input" type="text" spellcheck="false" autocomplete="off" />
+      </div>
+      <footer>
+        <button class="od-btn" type="button" data-od-rename-cancel>Cancel</button>
+        <button class="od-btn primary" type="submit">Save</button>
+      </footer>
+    </form>
+  </dialog>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -142,11 +158,11 @@ ${o.head ?? ""}
       <span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH
     </a>
     <span class="crumb">/ open-docs</span>
+    <span class="od-spacer"></span>
     <label class="od-switch" title="Switch editor">
+      <img class="od-switch-ico" src="/lib/icons/numpad.svg" alt="" width="16" height="16" />
       <select id="od-switch" aria-label="Editor">${switcher}</select>
     </label>
-    <input id="od-docname" class="od-docname" value="Untitled document" spellcheck="false" aria-label="Document name" />
-    <span class="od-spacer"></span>
     <button class="od-metrics" id="od-metrics" title="Measured on this page load. Click for details." aria-haspopup="dialog">
       <span class="m"><i class="dot"></i><b id="od-m-time">—</b><small>startup</small></span>
       <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
@@ -154,8 +170,8 @@ ${o.head ?? ""}
     </button>
     ${viewer ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
     <div class="od-menu-wrap">
-      <button class="od-btn od-menu-btn" id="od-more" type="button" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
-        <span class="od-burger" aria-hidden="true"><i></i><i></i><i></i></span><span>MENU</span>
+      <button class="od-btn od-menu-btn" id="od-more" type="button" title="Menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
+        <span class="od-burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="od-menu-lbl">MENU</span>
       </button>
 ${panel}
     </div>
@@ -205,6 +221,7 @@ ${panel}
       <footer><a href="/#metrics">Compare all editors →</a></footer>
     </form>
   </dialog>
+  ${renameDialog}
   <input type="file" id="od-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden />
   <script src="https://esm.town/v/std/catch"></script>
   <!-- Adapter first (it registers synchronously), chrome second. -->
