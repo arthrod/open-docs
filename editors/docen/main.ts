@@ -11,12 +11,13 @@ import { waitFor } from "/lib/kit.ts";
 import { DOCEN } from "./assets.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-/** docen's own markdown importer — @docen/docx@0.7.0's parseMarkdown, the exact
- * converter `<docen-document>.openMarkdown` calls (same MarkdownManager, same
- * token bridges). Imported as a subpath so we can parse without swapping the
- * editor's state. */
-const DOCX_MARKDOWN =
-  "https://esm.sh/@docen/docx@0.7.0/converters/markdown.mjs?target=es2022";
+/** docen's own HTML paste parser (@docen/docx@0.7.0 extensions/paste): the
+ * editor's own parseDOM rules, as when HTML is pasted into it. Its markdown
+ * importer (parseMarkdown / openMarkdown) drops bold, italic, the text of
+ * inline code and whole tables: its marks and table node have no markdown
+ * token handlers. */
+const DOCX_PASTE = "https://esm.sh/@docen/docx@0.7.0/extensions/paste.mjs?target=es2022";
+const MARKED = "https://esm.sh/marked@18.1.3?target=es2022";
 
 type DocenEl = HTMLElement & {
   openDOCX(bytes: Uint8Array | ArrayBuffer): Promise<void>;
@@ -26,7 +27,7 @@ type DocenEl = HTMLElement & {
   setZoom?(pct: number): void;
   getZoom?(): number;
   /** The underlying Tiptap editor (main document story). */
-  readonly editor?: { commands: { setContent(content: unknown): boolean } };
+  readonly editor?: { schema: unknown; commands: { setContent(content: unknown): boolean } };
 };
 
 let el: DocenEl | undefined;
@@ -88,23 +89,17 @@ window.od.register({
 
   async applyMarkdown(markdown) {
     if (!el) throw new Error("docen not mounted");
-    // In-history apply. Parse with the engine's own importer (DOCX_MARKDOWN —
-    // the same parseMarkdown openMarkdown uses), then apply via Tiptap's own
-    // `setContent` command on the element's editor: @tiptap/core@3.29.2's
-    // setContent is one docChanged transaction with no addToHistory:false
-    // meta, so the editor's own UndoRedo history records it and undo()/redo()
-    // (editor.commands.undo/redo) revert / re-apply the whole edit in one step.
-    // openMarkdown can't be used here: it rebuilds a fresh EditorState
-    // (#loadDoc → view.updateState), which resets the history stack.
-    // Known losses unchanged — same importer as before (@docen/docx@0.7.0:
-    // Bold/Italic/Code marks have no markdown token handlers, so bold, italic
-    // and the TEXT of inline code are dropped; its token bridges cover
-    // heading/list/code/hr/blockquote but not tables).
+    // markdown → HTML (marked) → docen's own paste parser → Tiptap's own
+    // setContent: one docChanged transaction, one step of the editor's
+    // UndoRedo history. (openMarkdown can't be used: it rebuilds the
+    // EditorState, which resets the history.) Known loss: docen's paste rules
+    // have no <blockquote> rule, so a quote lands as a plain paragraph.
     const editor = el.editor;
     if (!editor) throw new Error("docen editor not ready");
-    const { parseMarkdown } = await import(DOCX_MARKDOWN);
-    if (!editor.commands.setContent(parseMarkdown(markdown))) {
-      throw new Error("docen setContent rejected the parsed markdown");
+    const [{ marked }, { parseHTMLBody }] = await Promise.all([import(MARKED), import(DOCX_PASTE)]);
+    const body = new DOMParser().parseFromString(await marked.parse(markdown), "text/html").body;
+    if (!editor.commands.setContent(parseHTMLBody(body, editor.schema))) {
+      throw new Error("docen setContent rejected the pasted content");
     }
   },
 
