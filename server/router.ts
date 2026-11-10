@@ -44,7 +44,7 @@ export const REACT_IMPORTS: Record<string, string> = {
 };
 
 export function registerEditor(app: Hono, opts: EditorShell) {
-  app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts)));
+  app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts, c.req.query("embed") === "1")));
   // The editor folder's own client modules + assets.
   app.get(`/e/${opts.slug}/*`, (c) => serveFile(c.req.path));
 }
@@ -52,7 +52,12 @@ export function registerEditor(app: Hono, opts: EditorShell) {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function shell(o: EditorShell): string {
+/**
+ * The editor page. `embed` (from ?embed=1): editors-arena loads the page in an
+ * iframe: compact bar, no assistant markup at all, and a postMessage channel
+ * driven by lib/ui.ts (lib/embed.ts holds the message shapes).
+ */
+function shell(o: EditorShell, embed = false): string {
   const meta = editors.find((e) => e.slug === o.slug);
   const packages = meta?.packages ?? [];
   // Every page: React (Plate's esm.sh modules leave it bare) and the SRI hash
@@ -89,8 +94,21 @@ ${o.head ?? ""}
 <!-- The kit must exist before any adapter module runs. -->
 <script type="module" src="/lib/boot.ts"></script>
 </head>
-<body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}">
-  <header class="od-bar">
+<body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}"${embed ? ' class="od-embed"' : ""}>
+  ${embed ? `<header class="od-bar">
+    <span class="od-engine" title="${esc(meta?.name ?? o.title)}">${esc(meta?.name ?? o.title)}</span>
+    <input id="od-docname" class="od-docname" value="Untitled document" spellcheck="false" aria-label="Document name" />
+    <span class="od-spacer"></span>
+    ${opensFiles ? `<button class="od-btn" id="od-import" title="Open a .docx from your computer (⌘O)">Open .docx</button>` : ""}
+    <button class="od-btn" id="od-showcase" title="Load the rich sample (tables, lists, image, styles)">Sample</button>
+    ${viewer ? "" : `<button class="od-btn" id="od-export" title="Export this document as .docx (⌘S)">Export .docx ↓</button>`}
+    <button class="od-metrics" id="od-metrics" title="Measured on this page load. Click for details." aria-haspopup="dialog">
+      <span class="m"><i class="dot"></i><b id="od-m-time">—</b><small>startup</small></span>
+      <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
+      <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
+    </button>
+  </header>
+  ` : `<header class="od-bar">
     <a class="od-brand od-wm" href="/" title="All editors" aria-label="open-docs, all editors">
       <span class="del">DOC</span><span class="ins">OPEN</span><span class="od-wm-tail">-DOCS</span>
     </a>
@@ -130,16 +148,16 @@ ${o.head ?? ""}
         <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
       </div>
     </div>
-  </header>
-  <div class="od-sub">
+  </header>`}
+  ${embed ? "" : `<div class="od-sub">
     <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
     ${meta?.license ? `<span class="od-lic">${esc(meta.license)}</span>` : ""}
     ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer, not an editor</span>` : ""}
     <span class="od-blurb">${esc(meta?.blurb ?? "")}</span>
     <span class="od-spacer"></span>
     <span class="od-status" id="od-status" role="status" aria-live="polite"></span>
-  </div>
-  <div class="od-layout${viewer ? " no-agent" : ""}" id="od-layout">
+  </div>`}
+  <div class="od-layout${viewer || embed ? " no-agent" : ""}" id="od-layout">
     <main class="od-stage" id="od-stage">
       ${o.body}
       <div class="od-loading" id="od-loading">
@@ -147,7 +165,7 @@ ${o.head ?? ""}
         <div><strong>Loading ${esc(meta?.name ?? o.title)}…</strong><span id="od-loading-detail">Fetching the editor from the CDN</span></div>
       </div>
     </main>
-    ${viewer ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
+    ${viewer || embed ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
       <div class="od-aside-head">
         <div>
           <h2><span class="sq" aria-hidden="true"></span> / Assistant</h2>
@@ -190,7 +208,7 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 /** Mount every shared API route onto the app. */
 export function mountShared(app: Hono) {
   app.get("/api/sample.docx", () =>
-    new Response(sampleDocx(), {
+    new Response(new Uint8Array(sampleDocx()), {
       headers: {
         "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-sample.docx"',
@@ -199,7 +217,7 @@ export function mountShared(app: Hono) {
     }));
 
   app.get("/api/showcase.docx", () =>
-    new Response(showcaseDocx(), {
+    new Response(new Uint8Array(showcaseDocx()), {
       headers: {
         "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-showcase.docx"',
@@ -212,7 +230,7 @@ export function mountShared(app: Hono) {
 
   /** A valid, empty .docx (one empty paragraph), built by the same writer as the sample. */
   app.get("/api/blank.docx", () =>
-    new Response(buildDocx([{ text: "" }], "Untitled document"), {
+    new Response(new Uint8Array(buildDocx([{ text: "" }], "Untitled document")), {
       headers: { "content-type": DOCX_MIME, "cache-control": "no-cache" },
     }));
 

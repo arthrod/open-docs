@@ -1,0 +1,62 @@
+import { assertEquals } from "jsr:@std/assert@1.0.13";
+import { Hono } from "npm:hono@4";
+import type { EditorShell } from "./router.ts";
+
+// server/router.ts imports esm.town's serveFile, whose module eagerly builds a
+// ValTown client — it needs a non-empty key even though the tests never call it.
+Deno.env.set("VAL_TOWN_API_KEY", Deno.env.get("VAL_TOWN_API_KEY") ?? "test-only");
+const { registerEditor } = await import("./router.ts");
+
+/** A minimal editor shell on a real registry slug ("plate" is an editor). */
+const plate: EditorShell = {
+  slug: "plate",
+  entry: "/e/plate/main.tsx",
+  body: "<div id=\"app\"></div>",
+  title: "Plate",
+};
+
+async function get(path: string): Promise<string> {
+  const app = new Hono();
+  registerEditor(app, plate);
+  const res = await app.request(path);
+  return await res.text();
+}
+
+Deno.test("shell without ?embed=1 is the full chrome: assistant, sub-bar, switcher", async () => {
+  const html = await get("/e/plate");
+  assertEquals(html.includes(`id="od-aside"`), true);
+  assertEquals(html.includes(`id="od-toggle-agent"`), true);
+  assertEquals(html.includes(`id="od-switch"`), true);
+  assertEquals(html.includes(`class="od-sub"`), true);
+  assertEquals(html.includes(`id="od-menu"`), true);
+  assertEquals(html.includes(`class="od-embed"`), false);
+  assertEquals(html.includes(`class="od-layout"`), true);
+});
+
+Deno.test("shell with ?embed=1 sends no assistant markup and the compact bar", async () => {
+  const html = await get("/e/plate?embed=1");
+  // No assistant panel, no toggle, no agent wiring targets at all.
+  for (const absent of [`id="od-aside"`, `id="od-toggle-agent"`, `id="od-form"`, `id="od-prompt"`, `id="od-log"`, `id="od-suggestions"`, `id="od-menu"`, `id="od-switch"`, `class="od-sub"`, `id="od-new"`, `id="od-sample"`, "Assistant"]) {
+    assertEquals(html.includes(absent), false, `expected no ${absent} in embed mode`);
+  }
+  // Compact bar: engine name, doc name, Open/Sample/Export, metrics chip.
+  assertEquals(html.includes(`class="od-embed"`), true);
+  assertEquals(html.includes(`class="od-engine"`), true);
+  assertEquals(html.includes(`id="od-docname"`), true);
+  assertEquals(html.includes(`id="od-import"`), true);
+  assertEquals(html.includes(`id="od-showcase"`), true);
+  assertEquals(html.includes(`id="od-export"`), true);
+  assertEquals(html.includes(`id="od-metrics"`), true);
+  // The editor takes the freed space: single-column layout.
+  assertEquals(html.includes(`class="od-layout no-agent"`), true);
+  // What embed mode must keep: the stage, the loading overlay, the file input.
+  assertEquals(html.includes(`id="od-stage"`), true);
+  assertEquals(html.includes(`id="od-loading"`), true);
+  assertEquals(html.includes(`id="od-file"`), true);
+});
+
+Deno.test("shell with any other embed value is the full chrome", async () => {
+  const html = await get("/e/plate?embed=0");
+  assertEquals(html.includes(`id="od-aside"`), true);
+  assertEquals(html.includes(`class="od-embed"`), false);
+});
