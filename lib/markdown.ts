@@ -45,6 +45,10 @@ export type Block = {
   kind: "p" | "title" | "heading" | "li" | "quote" | "code" | "hr" | "table";
   level?: number;
   ordered?: boolean;
+  /** List items: the list's identity (a .docx numId), so separate lists number separately. */
+  list?: string;
+  /** List items: the number this list's level starts at (default 1). */
+  start?: number;
   align?: "left" | "center" | "right" | "justify";
   runs: Run[];
   rows?: Run[][][];
@@ -267,16 +271,35 @@ export function tableToMarkdown(rows: Run[][][]): string {
 
 export function blocksToMarkdown(blocks: Block[]): string {
   const out: string[] = [];
-  let counters: number[] = [];
+  // The open list run: per level, which list it is and its last number. A list
+  // is its id (a .docx numId) or, for markdown-origin items, bullets vs numbers.
+  let levels: { key: string; n: number }[] = [];
+  // Per list id, its counters by level: a Word list keeps counting across an
+  // interrupting paragraph, and a deeper level restarts under each new parent.
+  const lists = new Map<string, number[]>();
   blocks.forEach((b, i) => {
     const prev = blocks[i - 1];
     // Headings are bold by style; echoing that as **…** adds noise.
     const raw = runsToMarkdown(b.kind === "title" || b.kind === "heading" ? b.runs.map((r) => ({ ...r, bold: false })) : b.runs);
     const text = b.kind === "title" || b.kind === "heading" ? raw : escapeLineStart(raw);
-    if (b.kind !== "li") counters = [];
-    // A top-level switch between bullets and numbers starts a new list.
-    const newList = b.kind === "li" && prev?.kind === "li" && (b.level ?? 0) === 0 &&
-      (prev.level ?? 0) === 0 && !!prev.ordered !== !!b.ordered;
+    let n = 0;
+    let newList = false;
+    if (b.kind !== "li") levels = [];
+    else {
+      const lvl = b.level ?? 0;
+      const key = b.list ?? `md:${!!b.ordered}`;
+      levels = levels.slice(0, lvl + 1);
+      // A different list at the top level starts a new list, wherever the
+      // previous item was nested.
+      newList = lvl === 0 && prev?.kind === "li" && levels[0]?.key !== key;
+      if (b.list !== undefined) {
+        const c = (lists.get(b.list) ?? []).slice(0, lvl + 1);
+        c[lvl] = (c[lvl] ?? (b.start ?? 1) - 1) + 1;
+        lists.set(b.list, c);
+        n = c[lvl];
+      } else n = levels[lvl]?.key === key ? levels[lvl].n + 1 : b.start ?? 1;
+      levels[lvl] = { key, n };
+    }
     // Separate blocks with a blank line, except consecutive items of one list.
     if (i > 0 && (newList || !(b.kind === "li" && prev?.kind === "li"))) out.push("");
     switch (b.kind) {
@@ -286,15 +309,9 @@ export function blocksToMarkdown(blocks: Block[]): string {
       case "heading":
         out.push(`${"#".repeat(b.level ?? 1)} ${text}`);
         break;
-      case "li": {
-        const lvl = b.level ?? 0;
-        counters = counters.slice(0, lvl + 1);
-        const sameList = prev?.kind === "li" && (prev.level ?? 0) >= lvl && !newList &&
-          !(prev.level === lvl && !!prev.ordered !== !!b.ordered);
-        counters[lvl] = sameList ? (counters[lvl] ?? 0) + 1 : 1;
-        out.push(`${"   ".repeat(lvl)}${b.ordered ? `${counters[lvl]}.` : "-"} ${text}`);
+      case "li":
+        out.push(`${"   ".repeat(b.level ?? 0)}${b.ordered ? `${n}.` : "-"} ${text}`);
         break;
-      }
       case "quote":
         out.push(`> ${text}`);
         break;
