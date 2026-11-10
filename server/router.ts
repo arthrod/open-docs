@@ -54,8 +54,10 @@ const esc = (s: string) =>
 
 /**
  * The editor page. `embed` (from ?embed=1): editors-arena loads the page in an
- * iframe: compact bar, no assistant markup at all, and a postMessage channel
- * driven by lib/ui.ts (lib/embed.ts holds the message shapes).
+ * iframe with no bar at all (the arena's slot header is the only one). The
+ * stage, the file input, and the metrics dialog stay, because lib/ui.ts looks
+ * them up. The postMessage channel lives in lib/ui.ts; lib/embed.ts holds the
+ * message shapes.
  */
 function shell(o: EditorShell, embed = false): string {
   const meta = editors.find((e) => e.slug === o.slug);
@@ -95,24 +97,11 @@ ${o.head ?? ""}
 <script type="module" src="/lib/boot.ts"></script>
 </head>
 <body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}"${embed ? ' class="od-embed"' : ""}>
-  ${embed ? `<header class="od-bar">
-    <span class="od-engine" title="${esc(meta?.name ?? o.title)}">${esc(meta?.name ?? o.title)}</span>
-    <input id="od-docname" class="od-docname" value="Untitled document" spellcheck="false" aria-label="Document name" />
-    <span class="od-spacer"></span>
-    ${opensFiles ? `<button class="od-btn" id="od-import" title="Open a .docx from your computer (⌘O)">Open .docx</button>` : ""}
-    <button class="od-btn" id="od-showcase" title="Load the rich sample (tables, lists, image, styles)">Sample</button>
-    ${viewer ? "" : `<button class="od-btn" id="od-export" title="Export this document as .docx (⌘S)">Export .docx ↓</button>`}
-    <button class="od-metrics" id="od-metrics" title="Measured on this page load. Click for details." aria-haspopup="dialog">
-      <span class="m"><i class="dot"></i><b id="od-m-time">—</b><small>startup</small></span>
-      <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
-      <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
-    </button>
-  </header>
-  ` : `<header class="od-bar">
-    <a class="od-brand od-wm" href="/" title="All editors" aria-label="open-docs, all editors">
-      <span class="del">DOC</span><span class="ins">OPEN</span><span class="od-wm-tail">-DOCS</span>
+  ${embed ? "" : `<header class="site-nav od-bar">
+    <a class="wm" href="/" title="All editors">
+      <span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH
     </a>
-    <span class="od-sep"></span>
+    <span class="crumb">/ open-docs</span>
     <label class="od-switch" title="Switch editor">
       <select id="od-switch" aria-label="Editor">${switcher}</select>
     </label>
@@ -125,8 +114,8 @@ ${o.head ?? ""}
     </button>
     ${viewer ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
     <div class="od-menu-wrap">
-      <button class="od-btn od-menu-btn" id="od-more" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
-        <span class="od-glyph" aria-hidden="true">+</span><span>Menu</span>
+      <button class="od-btn od-menu-btn" id="od-more" type="button" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
+        <span class="od-burger" aria-hidden="true"><i></i><i></i><i></i></span><span>MENU</span>
       </button>
       <div class="od-menu" id="od-menu" role="menu" hidden>
         <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Document</div>
@@ -144,6 +133,7 @@ ${o.head ?? ""}
         <button role="menuitem" id="od-reload">Reload editor</button>
         <hr />
         <a role="menuitem" href="/">All editors &amp; measurements</a>
+        <a role="menuitem" href="https://editors-arena.val.run" target="_blank" rel="noopener">Editors arena →</a>
         <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub →</a>
         <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
       </div>

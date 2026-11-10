@@ -1,6 +1,7 @@
 import { assertEquals } from "jsr:@std/assert@1.0.13";
 import {
   childError,
+  childExported,
   childOpened,
   childReady,
   embedFileName,
@@ -27,10 +28,14 @@ Deno.test("embedFileName: importFile only takes .docx names", () => {
   assertEquals(embedFileName(""), "document.docx");
 });
 
-Deno.test("parseArenaMessage: accepts well-formed open and sample payloads", () => {
+Deno.test("parseArenaMessage: accepts well-formed open, sample, and export payloads", () => {
   assertEquals(
     parseArenaMessage({ source: "editors-arena", type: "sample" }),
     { type: "sample" },
+  );
+  assertEquals(
+    parseArenaMessage({ source: "editors-arena", type: "export" }),
+    { type: "export" },
   );
   const bytes = new ArrayBuffer(8);
   assertEquals(
@@ -64,6 +69,7 @@ Deno.test("parseArenaMessage: rejects anything else", () => {
   );
   // The child's own messages are never parent messages.
   assertEquals(parseArenaMessage(childOpened("plate", "a.docx")), null);
+  assertEquals(parseArenaMessage(childExported("plate", "Report", new ArrayBuffer(4))), null);
 });
 
 Deno.test("child messages carry the exact protocol shape", () => {
@@ -92,10 +98,40 @@ Deno.test("child messages carry the exact protocol shape", () => {
     slug: "plate",
     message: "boom",
   });
+  assertEquals(childError("plate", "boom", "mount"), {
+    source: "open-docs",
+    type: "error",
+    slug: "plate",
+    message: "boom",
+    during: "mount",
+  });
+  assertEquals(childError("plate", "nope", "open"), {
+    source: "open-docs",
+    type: "error",
+    slug: "plate",
+    message: "nope",
+    during: "open",
+  });
+  assertEquals(childError("plate", "nope", "export"), {
+    source: "open-docs",
+    type: "error",
+    slug: "plate",
+    message: "nope",
+    during: "export",
+  });
   assertEquals(childOpened("plate", "Report"), {
     source: "open-docs",
     type: "opened",
     slug: "plate",
     name: "Report",
   });
+  const bytes = new Uint8Array([80, 75, 3, 4]).buffer;
+  assertEquals(childExported("plate", "Report.docx", bytes), {
+    source: "open-docs",
+    type: "exported",
+    slug: "plate",
+    name: "Report",
+    bytes,
+  });
+  assertEquals(childExported("plate", "   ", new ArrayBuffer(0)).name, "Untitled document");
 });

@@ -25,7 +25,36 @@ export const DS_ROOT = `
 }
 `;
 
-export const SHELL_CSS = DS_ROOT + `
+/** SiteNav wordmark and crumb. Scoped under `.site-nav` so it cannot reach a vendor editor. */
+export const WORDMARK_CSS = `
+.site-nav .wm {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  font-family: var(--font-mono); font-weight: 700; font-size: 13px; line-height: 1.4;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink);
+  text-decoration: none; white-space: nowrap;
+}
+.site-nav .wm:hover .ins {
+  background-image: linear-gradient(var(--mark), var(--mark));
+  background-repeat: no-repeat; background-size: 100% 0.55em; background-position: 0 78%;
+}
+.site-nav .wm:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.site-nav .logo { display: inline-flex; align-items: center; gap: 6px; }
+.site-nav .wm .dot { color: color-mix(in srgb, var(--ink) 35%, transparent); }
+.site-nav .del {
+  color: var(--del); text-decoration: line-through; text-decoration-thickness: 2px;
+  text-decoration-color: var(--del);
+}
+.site-nav .ins {
+  color: var(--ins); text-decoration: underline double; text-decoration-color: var(--ins);
+  text-underline-offset: 3px;
+}
+.site-nav .crumb {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap; flex: none;
+}
+`;
+
+export const SHELL_CSS = DS_ROOT + WORDMARK_CSS + `
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body {
@@ -48,31 +77,12 @@ body {
 
 /* ------------------------------ top bar ------------------------------ */
 .od-bar {
-  position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px;
-  height: 52px; padding: 0 12px; min-width: 0;
+  position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 10px 14px;
+  flex: none; flex-wrap: nowrap; min-height: 52px; height: auto; padding: 8px 12px; min-width: 0;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   -webkit-backdrop-filter: saturate(140%) blur(10px); backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--ink);
 }
-.od-wm {
-  display: inline-flex; align-items: baseline; gap: 0; flex: none;
-  font-family: var(--font-mono); font-weight: 700; font-size: 13px; line-height: 1.4;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); text-decoration: none;
-  white-space: nowrap;
-}
-.od-wm .del {
-  color: var(--del); text-decoration: line-through; text-decoration-thickness: 2px;
-  text-decoration-color: var(--del); margin-right: 6px;
-}
-.od-wm .ins {
-  color: var(--ins); text-decoration: underline double; text-decoration-color: var(--ins);
-  text-underline-offset: 3px;
-}
-.od-wm:hover .ins {
-  background-image: linear-gradient(var(--mark), var(--mark)); background-repeat: no-repeat;
-  background-size: 100% 0.55em; background-position: 0 78%;
-}
-.od-sep { width: 1px; height: 22px; background: var(--faint); margin: 0 2px; flex: none; }
 .od-spacer { flex: 1; min-width: 4px; }
 .od-switch { position: relative; display: inline-flex; align-items: center; flex: none; min-width: 0; }
 .od-switch::after {
@@ -80,9 +90,9 @@ body {
   font-family: var(--font-mono); font-size: 11px; color: var(--muted);
 }
 .od-switch select {
-  font-family: var(--font-sans); font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
-  color: var(--ink); max-width: 220px; padding: 6px 28px 6px 10px;
-  border: 1px solid var(--ink); border-radius: var(--radius-0); background: var(--surface);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--ink); max-width: 180px; height: 32px; padding: 0 28px 0 10px;
+  border: 1px solid var(--ink); border-radius: 0; background: var(--surface);
   appearance: none; cursor: pointer;
 }
 .od-switch select:hover { background: var(--hover); }
@@ -90,7 +100,7 @@ body {
 .od-docname {
   font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
   color: var(--ink); border: 1px solid transparent; background: transparent; border-radius: var(--radius-0);
-  padding: 5px 8px; flex: 0 1 260px; width: 260px; min-width: 70px; text-overflow: ellipsis;
+  padding: 5px 8px; flex: 1 1 200px; width: auto; min-width: 60px; text-overflow: ellipsis;
 }
 .od-docname:hover { border-color: var(--ink); }
 .od-docname:focus, .od-docname:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-color: var(--ink); background: var(--surface); }
@@ -113,6 +123,12 @@ body {
 #od-toggle-agent[aria-pressed="true"], .od-menu-btn[aria-expanded="true"] {
   background: var(--mark); color: var(--ink); border-color: var(--ink);
 }
+.od-menu-btn { flex: none; }
+.od-burger {
+  display: inline-flex; flex-direction: column; justify-content: space-between;
+  width: 14px; height: 11px; flex: none;
+}
+.od-burger i { display: block; height: 1px; background: currentColor; width: 100%; }
 .od-menu-wrap { position: relative; }
 .od-menu {
   position: absolute; right: 0; top: 40px; min-width: 290px; max-height: calc(100dvh - 64px);
@@ -211,15 +227,15 @@ body {
   .od-aside-close { display: inline-flex; height: 28px; width: 28px; }
   .od-pkg { display: none; }
 }
-@media (max-width: 760px) { .od-metrics { display: none; } .od-sep { display: none; } }
+/* One row always: the crumb goes first, then the metrics; the document name absorbs the rest. */
+@media (max-width: 1180px) { .od-bar .crumb { display: none; } }
+@media (max-width: 760px) { .od-metrics { display: none; } }
 @media (max-width: 640px) {
-  .od-bar { gap: 6px; padding: 0 8px; }
-  .od-wm .del, .od-wm .od-wm-tail { display: none; }
-  .od-menu-btn span:not(.od-glyph) { display: none; }
-  .od-menu-btn { width: 32px; padding: 0; }
+  .od-bar { gap: 6px; padding: 6px 8px; }
   .od-switch select { max-width: 130px; text-overflow: ellipsis; }
   .od-docname { flex: 1 1 auto; width: auto; }
-  .od-menu { position: fixed; left: 8px; right: 8px; top: 52px; min-width: 0; }
+  .od-menu-wrap { position: static; }
+  .od-menu { position: absolute; left: 8px; right: 8px; top: 100%; min-width: 0; width: auto; }
   .od-sub { padding: 4px 10px; min-height: 0; }
   .od-sub .od-lic { display: none; }
 }
@@ -382,13 +398,8 @@ body {
 }
 
 /* ---- embed mode ---- */
-/* editors-arena loads /e/<slug>?embed=1 in an iframe: compact bar (engine name,
-   doc name, Open/Sample/Export, metrics chip), no assistant, editor takes the
-   freed space. Scoped to body.od-embed so nothing else changes. */
-body.od-embed .od-bar { height: 40px; gap: 6px; padding: 0 8px; flex-wrap: nowrap; overflow: hidden; }
-/* The arena's slot header already names the engine and shows its startup time. */
-body.od-embed .od-engine, body.od-embed .od-metrics { display: none; }
-body.od-embed .od-docname { flex: 1 1 60px; width: auto; min-width: 0; }
-body.od-embed .od-bar .od-btn { flex: none; height: 28px; padding: 0 8px; font-size: 10.5px; }
+/* ?embed=1 renders no header and no .od-sub. The stage fills the iframe.
+   The arena's slot header is the only bar. Scoped to body.od-embed. */
 body.od-embed .od-layout, body.od-embed .od-layout.no-agent { gap: 0; padding: 0; }
+body.od-embed .od-stage { border: 0; }
 `;
