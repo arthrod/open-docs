@@ -39,7 +39,7 @@ const key = (path: string) => `od_wordcraft_${WORDCRAFT_VERSION}_${path.replaceA
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+  const stream = new Blob([new Uint8Array(bytes)]).stream().pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
@@ -59,7 +59,7 @@ function install(): Promise<void> {
     for (const path of Object.keys(FILES)) {
       const bytes = files[root + path];
       if (!bytes) throw new Error(`wordcraft release is missing ${path}`);
-      await blob.set(key(path), await gzip(bytes));
+      await blob.set(key(path), new Uint8Array(await gzip(bytes)));
     }
   })().catch((err) => {
     installing = undefined; // let the next request retry

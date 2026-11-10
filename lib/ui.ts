@@ -8,11 +8,30 @@
  */
 import { mdToBlocks } from "./md.ts";
 import type { EditorAdapter } from "./kit.ts";
+import {
+  childError,
+  childOpened,
+  childReady,
+  type ChildMessage,
+  embedFileName,
+  isEmbedUrl,
+  parseArenaMessage,
+} from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
 
 const slug = document.body.dataset.slug ?? "";
 const editorName = document.body.dataset.name ?? slug;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
+
+/** Embed mode (?embed=1): editors-arena drives this page from an iframe. */
+const embed = isEmbedUrl(location.href);
+if (embed) document.body.classList.add("od-embed");
+/** Only embed mode ever posts, and only to the embedding parent. */
+const postChild = (msg: ChildMessage) => {
+  if (embed) window.parent.postMessage(msg, "*");
+};
+/** A parent message that arrived before the adapter mounted; run after. */
+let pendingEmbedAction: (() => void) | undefined;
 
 let current: EditorAdapter | undefined;
 let mounted = false;
@@ -222,6 +241,11 @@ async function start(adapter: EditorAdapter) {
     // Viewers open on the rich sample (a blank page shows nothing about them).
     if (adapter.viewOnly) setDocName("Coastal Wind Farm — Spring Field Report");
     setStatus(`${adapter.name} ready`, "ok");
+    postChild(childReady(slug, adapter.name, mountEnd));
+    // The parent may have asked for a document while mount() was still running.
+    const pending = pendingEmbedAction;
+    pendingEmbedAction = undefined;
+    pending?.();
     (window as unknown as { __odlog?: (k: string, m: string) => void }).__odlog?.(
       "ready",
       `${adapter.name} mounted in ${Math.round(mountEnd - mountStart)}ms (startup ${Math.round(mountEnd)}ms)`,
@@ -230,6 +254,8 @@ async function start(adapter: EditorAdapter) {
     watchFit(adapter);
   } catch (err) {
     paintChip(undefined, "err");
+    const e = err as Error;
+    postChild(childError(slug, `${adapter.name} failed to start: ${e?.message ?? String(err)}`));
     fail(`${adapter.name} failed to start`, err);
   }
 }
@@ -289,6 +315,7 @@ const newDoc = () =>
     await a.load(await window.od.blankDocx());
     newDocument();
     setDocName("Untitled document");
+    postChild(childOpened(slug, docName()));
     setStatus("New blank document", "ok");
   });
 
@@ -302,6 +329,7 @@ const openShowcase = () =>
     }
     newDocument();
     setDocName("Coastal Wind Farm — Spring Field Report");
+    postChild(childOpened(slug, docName()));
     fitNow();
     setStatus("Loaded the rich sample .docx", "ok");
   });
@@ -312,6 +340,7 @@ const openSample = () =>
     else await a.load(await window.od.sampleDocx());
     newDocument();
     setDocName("Quarterly Report — Acme Robotics");
+    postChild(childOpened(slug, docName()));
     fitNow();
     setStatus("Loaded the sample .docx", "ok");
   });
@@ -329,10 +358,31 @@ async function importFile(file: File) {
     await a.load(new Uint8Array(await file.arrayBuffer()));
     newDocument();
     setDocName(file.name);
+    postChild(childOpened(slug, docName()));
     fitNow();
     setStatus(`Imported ${file.name}`, "ok");
   });
 }
+
+/* ---------------------------- embed channel ---------------------------- */
+
+/**
+ * Parent (editors-arena) → child. Only messages from window.parent, only in
+ * embed mode, only through the same paths the buttons use. Anything the page
+ * itself might post is filtered out by parseArenaMessage.
+ */
+function onParentMessage(e: MessageEvent) {
+  if (e.source !== window.parent) return;
+  const msg = parseArenaMessage(e.data);
+  if (!msg) return;
+  const act = msg.type === "sample"
+    ? () => void openShowcase()
+    : () => void importFile(new File([msg.bytes], embedFileName(msg.name)));
+  if (!current || !mounted) pendingEmbedAction = act;
+  else act();
+}
+
+if (embed) window.addEventListener("message", onParentMessage);
 
 /** The document as .docx, written by the engine's own exporter (never by us). */
 async function currentDocx(a: EditorAdapter): Promise<Uint8Array> {
@@ -361,15 +411,18 @@ const SUGGESTIONS = [
 ];
 
 function log(role: "user" | "bot", text: string, extra = ""): HTMLDivElement {
-  const el = $("od-log")!;
+  const el = $("od-log");
   const div = document.createElement("div");
   div.className = `od-msg ${role} ${extra}`.trim();
   const who = document.createElement("span");
   who.className = "who";
   who.textContent = role === "user" ? "You" : "Assistant";
   div.append(who, document.createTextNode(text));
-  el.append(div);
-  el.scrollTop = el.scrollHeight;
+  // Embed mode renders no assistant panel; od.log() must not throw there.
+  if (el) {
+    el.append(div);
+    el.scrollTop = el.scrollHeight;
+  }
   return div;
 }
 
@@ -731,6 +784,7 @@ addEventListener("error", (e) => {
   if (current || !(e as ErrorEvent).message) return;
   const msg = (e as ErrorEvent).message;
   if (/module|specifier|import|fetch/i.test(msg)) {
+    postChild(childError(slug, `${editorName} could not load: ${msg}`));
     fail(`${editorName} could not load`, (e as ErrorEvent).error ?? new Error(msg));
     paintChip(undefined, "err");
   }
@@ -739,6 +793,7 @@ addEventListener("error", (e) => {
 // If nothing registered after a generous wait, say so loudly.
 setTimeout(() => {
   if (!current) {
+    postChild(childError(slug, `${editorName} never loaded: the adapter module never called window.od.register()`));
     fail(
       `${editorName} never loaded`,
       new Error(

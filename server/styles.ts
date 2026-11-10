@@ -380,4 +380,15 @@ body {
   .od-loading .spinner, .od-metrics.loading .dot, .od-msg.thinking span.dots::after { animation: none; }
   .od-dialog footer a { transition: none; }
 }
+
+/* ---- embed mode ---- */
+/* editors-arena loads /e/<slug>?embed=1 in an iframe: compact bar (engine name,
+   doc name, Open/Sample/Export, metrics chip), no assistant, editor takes the
+   freed space. Scoped to body.od-embed so nothing else changes. */
+body.od-embed .od-bar { height: 40px; gap: 6px; padding: 0 8px; flex-wrap: nowrap; overflow: hidden; }
+/* The arena's slot header already names the engine and shows its startup time. */
+body.od-embed .od-engine, body.od-embed .od-metrics { display: none; }
+body.od-embed .od-docname { flex: 1 1 60px; width: auto; min-width: 0; }
+body.od-embed .od-bar .od-btn { flex: none; height: 28px; padding: 0 8px; font-size: 10.5px; }
+body.od-embed .od-layout, body.od-embed .od-layout.no-agent { gap: 0; padding: 0; }
 `;

@@ -24,11 +24,11 @@ mountShared(app);
 // built server-side (same writer as /api/sample.docx).
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 app.get("/api/cite-check/appellate-brief.docx", (c) =>
-  new Response(fixtureBriefDocx(), {
+  new Response(new Uint8Array(fixtureBriefDocx()), {
     headers: { "content-type": DOCX_MIME, "cache-control": "public, max-age=300" },
   }));
 app.get("/api/cite-check/marker-free.docx", (c) =>
-  new Response(fixtureMarkerFreeDocx(), {
+  new Response(new Uint8Array(fixtureMarkerFreeDocx()), {
     headers: { "content-type": DOCX_MIME, "cache-control": "public, max-age=300" },
   }));
 app.get("/api/cite-check/sources.txt", (c) =>
