@@ -46,6 +46,10 @@ export default {
   .pl-content table.pl-table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; table-layout: fixed; }
   .pl-content .pl-table td, .pl-content .pl-table th { border: 1px solid #a0a0a0; padding: 3pt 6pt; vertical-align: top; }
   .pl-content .pl-table th { background: #f3f5f8; text-align: left; }
+  .pl-content figure.pl-img { margin: 6pt 0; }
+  .pl-content .pl-img img { display: block; max-width: 100%; height: auto; }
+  .pl-content .pl-img-center img { margin: 0 auto; }
+  .pl-content .pl-img-right img { margin-left: auto; }
   .pl-content .pl-table p { margin: 0; }
   .pl-content blockquote { margin: 8pt 0; padding-left: 12pt; border-left: 3px solid #c9ced8; color: #475467; }
 </style>`,

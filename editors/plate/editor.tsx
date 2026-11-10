@@ -10,6 +10,7 @@
  *   @platejs/link          links
  *   @platejs/code-block    code blocks
  *   @platejs/table         tables (rows, cells, header cells)
+ *   @platejs/media         pictures (imported at Word's width and alignment)
  *   @platejs/markdown      markdown ⇄ nodes (remark + GFM) — the assistant path
  *
  * Plate's polished UI kit is shadcn source copied into apps, not an npm
@@ -28,12 +29,13 @@ import {
   LINK_CORE,
   LIST,
   MARKDOWN,
+  MEDIA,
   PLATE_REACT,
   REMARK_GFM,
   TABLE,
 } from "./deps.ts";
 
-const [P, B, S, SCore, CB, CBCore, Lk, LkCore, L, Md, gfm, T] = await Promise.all([
+const [P, B, S, SCore, CB, CBCore, Lk, LkCore, L, Md, gfm, T, M] = await Promise.all([
   import(PLATE_REACT),
   import(BASIC_NODES),
   import(BASIC_STYLES),
@@ -46,6 +48,7 @@ const [P, B, S, SCore, CB, CBCore, Lk, LkCore, L, Md, gfm, T] = await Promise.al
   import(MARKDOWN),
   import(REMARK_GFM),
   import(TABLE),
+  import(MEDIA),
 ]);
 const { Plate, PlateContent, PlateElement, ParagraphPlugin, usePlateEditor } = P;
 
@@ -83,6 +86,22 @@ function Paragraph(props: any) {
 function Link(props: any) {
   return (
     <PlateElement {...props} as="a" attributes={{ ...props.attributes, href: props.element.url, title: props.element.url }}>
+      {props.children}
+    </PlateElement>
+  );
+}
+
+/**
+ * A picture: a block void. The <img> sits in a non-editable box at the width
+ * Word shows it (never wider than the page), aligned like its paragraph.
+ */
+function Image(props: any) {
+  const { url, width, align, alt } = props.element;
+  return (
+    <PlateElement {...props} as="figure" className={`pl-img${align ? ` pl-img-${align}` : ""}`}>
+      <div contentEditable={false}>
+        <img src={url} alt={alt ?? ""} width={width} draggable={false} />
+      </div>
       {props.children}
     </PlateElement>
   );
@@ -132,6 +151,7 @@ const PLUGINS = [
   Lk.LinkPlugin.withComponent(Link),
   CB.CodeBlockPlugin,
   CB.CodeLinePlugin,
+  M.ImagePlugin?.withComponent(Image),
   T.TablePlugin.withComponent(Table),
   T.TableRowPlugin.withComponent(Row),
   T.TableCellPlugin.withComponent(Cell),

@@ -27,7 +27,7 @@ type Ribbon = {
 };
 
 let ribbon: Ribbon | undefined;
-/** On view-only pages: Docxodus's read-only viewer (createViewer), not the ribbon. */
+/** On view-only pages: Docxodus's paginated read-only view (convertDocxToHtml + paginateHtml), not the ribbon. */
 let viewer: { reload(bytes: Uint8Array): Promise<void> } | undefined;
 
 function saveBytes(): Uint8Array | undefined {
@@ -51,10 +51,29 @@ window.od.register({
     const mod = await import(BUNDLE_URL);
     const v = window.od.viewer;
     if (v) {
-      if (typeof mod.createViewer !== "function") throw new Error("docxodus bundle has no createViewer()");
+      // Read-only and paginated, the way Docxodus documents its page view:
+      // convertDocxToHtml in Paginated mode (headers, footers, notes), then its
+      // own paginateHtml flows the result into page boxes. (createViewer only
+      // injects the HTML; it never paginates.)
+      for (const f of ["initialize", "convertDocxToHtml", "paginateHtml"]) {
+        if (typeof mod[f] !== "function") throw new Error(`docxodus bundle has no ${f}()`);
+      }
       target.style.overflow = "auto";
       target.style.background = "#eef1f5";
-      viewer = await mod.createViewer(target, await v.initialDocx(), { wasmBasePath: WASM_BASE });
+      target.style.padding = "24px 0";
+      await mod.initialize(WASM_BASE);
+      const render = async (bytes: Uint8Array) => {
+        const html: string = await mod.convertDocxToHtml(bytes, {
+          paginationMode: mod.PaginationMode.Paginated,
+          renderHeadersAndFooters: true,
+          renderFootnotesAndEndnotes: true,
+        });
+        target.innerHTML = "";
+        await document.fonts.ready;
+        mod.paginateHtml(html, target, { scale: 1 });
+      };
+      viewer = { reload: render };
+      await render(await v.initialDocx());
       return;
     }
     if (typeof mod.createRibbonEditor !== "function") {

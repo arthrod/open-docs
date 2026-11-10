@@ -16,6 +16,10 @@ export const CODE_BLOCK = `https://esm.sh/@platejs/code-block@53.0.0/react${Q}`;
 export const CODE_BLOCK_CORE = `https://esm.sh/@platejs/code-block@53.0.0${Q}`;
 export const TABLE = `https://esm.sh/@platejs/table@53.0.9/react${Q}`;
 export const LIST = `https://esm.sh/@platejs/list@53.3.13/react${Q}`;
+/** Pictures (ImagePlugin). */
+export const MEDIA = `https://esm.sh/@platejs/media@53.1.4/react${Q}`;
+/** Reads word/document.xml for picture sizes (mammoth drops them). */
+export const FFLATE = "https://esm.sh/fflate@0.8.2?target=es2022";
 /** Plate's own markdown ⇄ nodes (remark under the hood). */
 export const MARKDOWN = `https://esm.sh/@platejs/markdown@53.5.3${Q}`;
 export const REMARK_GFM = "https://esm.sh/remark-gfm@4.0.1?target=es2022";
