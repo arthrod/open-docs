@@ -23,7 +23,7 @@ step. Each one opens on a **blank document**, imports and exports real
 | [docen](https://open-docs.val.run/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | its own `openMarkdown` | its .docx → `lib/docx-markdown.ts` |
 | [docx-editor.dev](https://open-docs.val.run/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → `ref.load` | its .docx → `lib/docx-markdown.ts` |
 | [folio](https://open-docs.val.run/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | markdown → Plate → docx-io .docx → `renderAsync` | its .docx (`save()`) → `lib/docx-markdown.ts` |
-| [WordCraft](https://open-docs.val.run/e/wordcraft) | `wordcraft-web` 0.16.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | native | its own `.md` reader, then Save As .docx | its .docx → `lib/docx-markdown.ts` |
+| [WordCraft](https://open-docs.val.run/e/wordcraft) | `wordcraft-web` 0.17.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
 ships one (Docxodus, SuperDoc, docen, docx-editor.dev, folio, WordCraft), and a
@@ -189,7 +189,7 @@ What is the vendors' (written down, worked around fairly, reportable upstream):
 | Docxodus | no markdown importer; `convertWmlToMarkdown` is an anchor-annotated projection for patching | .docx in, .docx read back |
 | docx-editor.dev | no markdown importer or exporter on the ref | .docx in, .docx read back |
 | folio | `@stll/folio-vue@0.28.0` `fromMarkdown` turns a fenced code block into unstyled Courier paragraphs (one per line); `toMarkdown` drops backticks from code in an opened .docx and escapes `<br>` in table cells | .docx in, .docx read back (every element survives) |
-| WordCraft | the released web build (v0.16.0) has no scripting API (`window.wordcraft` is on `main`, unreleased); its markdown importer keeps links but doesn't style them; Save writes the opened file's format | Save As (F12) → .docx in host mode |
+| WordCraft | v0.17.0's `window.wordcraft` drives apply/undo/redo; its HTML paste turns a quote into an indented Normal paragraph (by design, `paste.rs`); Save writes the opened file's format | Save As (F12) → .docx in host mode |
 
 Measured with [`lib/probes/md-mapping.js`](lib/probes/md-mapping.js): it applies
 a fixed markdown sample, exports the .docx, checks styles/marks/numbering/links
@@ -291,7 +291,7 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   Word opens the file without a repair prompt, in Compatibility Mode). It
   ignores a picture's width and writes its natural size.
 - **WordCraft**: val files are text-only and nothing mirrors release assets with
-  CORS, so `/vendor/wordcraft/0.16.0/*` installs itself on first request:
+  CORS, so `/vendor/wordcraft/0.17.0/*` installs itself on first request:
   it downloads the pinned release zip from GitHub, checks its SHA-256, stores
   the three runtime files gzipped in the val's blob storage, and from then on
   streams them with `content-encoding: gzip` (22 MB on the wire for a 60 MB

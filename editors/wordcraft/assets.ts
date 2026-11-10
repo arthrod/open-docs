@@ -18,14 +18,14 @@
 import { blob } from "https://esm.town/v/std/blob/main.ts";
 import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 
-export const WORDCRAFT_VERSION = "0.16.0";
+export const WORDCRAFT_VERSION = "0.17.0";
 const ZIP_URL =
   `https://github.com/storytold/wordcraft/releases/download/v${WORDCRAFT_VERSION}/wordcraft-web-${WORDCRAFT_VERSION}.zip`;
-const ZIP_SHA256 = "612fcbe9c4fd8c8a2538e4b711dd78eb448859bbdb7f0f4517b26e99511d6f0e";
+const ZIP_SHA256 = "713f5e4b01427eb262c70e280e55d1354fa530e5a351b9751ebbe37398ea2ed0";
 
 /** Runtime files (paths relative to the zip's site folder). */
-export const WORDCRAFT_GLUE = "wordcraft-web-9242e10ddc86b8c1.js";
-export const WORDCRAFT_WASM = "wordcraft-web-9242e10ddc86b8c1_bg.wasm";
+export const WORDCRAFT_GLUE = "wordcraft-web-d5f8e062bd3e686e.js";
+export const WORDCRAFT_WASM = "wordcraft-web-d5f8e062bd3e686e_bg.wasm";
 const FILES: Record<string, string> = {
   [WORDCRAFT_GLUE]: "text/javascript; charset=utf-8",
   [WORDCRAFT_WASM]: "application/wasm",

@@ -11,24 +11,29 @@
  *                would otherwise download
  *   app → page   `wordcraft:ready` / `wordcraft:failed`
  *
- * The released build (v0.16.0) has no scripting API (`window.wordcraft` lands
- * after it), so saving is driven the way a user does it, with WordCraft's own
- * shortcuts on its canvas: F12 is Save As, which in host mode hands back the
- * document as .docx (the format that keeps everything) and makes it the
- * document's file from then on.
- *
- *   applyMarkdown  WordCraft's own markdown reader (`<title>.md`), then F12 so
- *                  the document is a .docx again
- *   exportDocx     F12 → the .docx WordCraft writes
- *   getMarkdown    that .docx read by lib/docx-markdown.ts (the release can't
- *                  save markdown without its Save As dialog)
+ * v0.17.0 exposes window.wordcraft: assistant edits select the whole story
+ * and paste HTML in one native history command. Undo/redo use that API too.
+ * Export still uses host-mode F12 / Save As to obtain WordCraft's own .docx;
+ * getMarkdown reads that file through lib/docx-markdown.ts. WordCraft's
+ * Markdown export is lossy, so it does not replace that route.
  */
+import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { waitFor } from "/lib/kit.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-const BASE = "/vendor/wordcraft/0.16.0/";
-const GLUE = BASE + "wordcraft-web-9242e10ddc86b8c1.js";
-const WASM = BASE + "wordcraft-web-9242e10ddc86b8c1_bg.wasm";
+const BASE = "/vendor/wordcraft/0.17.0/";
+const GLUE = BASE + "wordcraft-web-d5f8e062bd3e686e.js";
+const WASM = BASE + "wordcraft-web-d5f8e062bd3e686e_bg.wasm";
+
+interface WordcraftApi {
+  execute(command: string, params?: Record<string, unknown>): Promise<unknown>;
+}
+
+declare global {
+  interface Window {
+    wordcraft: WordcraftApi;
+  }
+}
 
 let canvas: HTMLCanvasElement;
 /** Name WordCraft knows the document by (without extension). */
@@ -95,15 +100,13 @@ function saveAsDocx(timeoutMs = 15_000): Promise<Uint8Array> {
   });
 }
 
-/** The platform's command modifier (egui maps ⌘ on macOS, Ctrl elsewhere). */
-const MOD: KeyboardEventInit = /Mac/.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
-
 /** WordCraft reads an opened file on its next frames; give it a moment. */
 const settle = () => new Promise((r) => setTimeout(r, 400));
 
 window.od.register({
   name: "WordCraft",
-  mergeQuality: "native",
+  mergeQuality: "html-paste",
+  applyInHistory: true,
 
   async mount() {
     canvas = await waitFor<HTMLCanvasElement>("#wordcraft_canvas");
@@ -123,8 +126,8 @@ window.od.register({
     await glue.default({ module_or_path: new URL(WASM, import.meta.url).href });
     await ready;
     // In host mode WordCraft waits for the page's document: hand it a blank one.
-    // View-only pages hand the real document straight in. WordCraft 0.16.0
-    // has no read-only mode, so there it stays editable.
+    // View-only pages hand the real document straight in. This adapter does
+    // not enable a read-only mode, so there it stays editable.
     const v = window.od.viewer;
     open(`${docName}.docx`, v ? await v.initialDocx() : await window.od.blankDocx());
     await settle();
@@ -138,23 +141,27 @@ window.od.register({
 
   applyMarkdown: (markdown) =>
     driving(async () => {
-      open(`${docName}.md`, new TextEncoder().encode(markdown));
-      await settle();
-      // Back to a .docx-backed document, so Save keeps writing Word files.
-      await saveAsDocx();
+      // Parse before selecting: conversion failure must not disturb selection.
+      const html = await marked.parse(markdown);
+      if (!markdown.trim()) throw new Error("WordCraft HTML paste requires non-empty Markdown");
+      if (new TextEncoder().encode(html).byteLength > 16 * 1024 * 1024) {
+        throw new Error("WordCraft HTML paste exceeds its 16 MiB limit");
+      }
+      // `whole` avoids select-all stopping at a table cell. Explicit text avoids
+      // the UI's system clipboard path. Empty text also prevents a matching
+      // internal clipboard from overriding our HTML or a raw Markdown fallback.
+      await window.wordcraft.execute("select.all", { whole: true });
+      await window.wordcraft.execute("edit.paste", { html, text: "" });
     }),
 
   getMarkdown: () => driving(async () => docxToMarkdown(await saveAsDocx())),
 
   exportDocx: () => driving(() => saveAsDocx()),
 
-  // The released build has no scripting API: its own Undo / Redo shortcuts.
   undo: () => driving(async () => {
-    press({ key: "z", code: "KeyZ", ...MOD });
-    await settle();
+    await window.wordcraft.execute("edit.undo");
   }),
   redo: () => driving(async () => {
-    press({ key: "z", code: "KeyZ", shiftKey: true, ...MOD });
-    await settle();
+    await window.wordcraft.execute("edit.redo");
   }),
 });
