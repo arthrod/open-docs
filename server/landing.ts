@@ -114,8 +114,12 @@ html { scroll-behavior: smooth; }
   width: 14px; height: 11px; flex: none;
 }
 .nav-burger i { display: block; height: 1px; background: currentColor; width: 100%; }
+/* One row on phones: the crumb drops and MENU is the boxed burger alone, like the editor bar. */
+@media (max-width: 1180px) { .site-nav .crumb { display: none; } }
+@media (max-width: 760px) { .site-nav .nav-menu { width: 32px; padding: 0; } .site-nav .nav-menu-lbl { display: none; } }
 @media (max-width: 820px) {
-  .site-nav .nav-menu { display: inline-flex; }
+  .site-nav { flex-wrap: nowrap; }
+  .site-nav .nav-menu { display: inline-flex; flex: none; }
   .site-nav nav {
     display: none; position: absolute; top: 100%; right: 0; margin: 0;
     flex-direction: column; align-items: stretch; gap: 0; min-width: 220px;
@@ -272,8 +276,8 @@ html { scroll-behavior: smooth; }
     <span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH
   </a>
   <span class="crumb">/ editors</span>
-  <button class="nav-menu" id="od-land-menu" type="button" aria-expanded="false" aria-controls="od-land-nav">
-    <span class="nav-burger" aria-hidden="true"><i></i><i></i><i></i></span> MENU
+  <button class="nav-menu" id="od-land-menu" type="button" aria-label="Menu" aria-expanded="false" aria-controls="od-land-nav">
+    <span class="nav-burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="nav-menu-lbl">MENU</span>
   </button>
   <nav id="od-land-nav" aria-label="Site">
     <a href="#editors">Editors</a>

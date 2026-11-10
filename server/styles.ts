@@ -123,7 +123,7 @@ body {
   width: 14px; height: 11px; flex: none;
 }
 .od-burger i { display: block; height: 1px; background: currentColor; width: 100%; }
-.od-menu-wrap { position: relative; }
+.od-menu-wrap { position: relative; display: flex; align-items: center; flex: none; }
 .od-menu {
   position: absolute; right: 0; top: 40px; min-width: 290px; max-height: calc(100dvh - 64px);
   overflow: auto; background: var(--surface); border: 1px solid var(--ink); border-radius: var(--radius-0);
@@ -152,7 +152,7 @@ body {
 .od-menu-note { font-size: 12.5px; color: var(--ink-quiet); padding: 4px 10px 8px; max-width: 290px; line-height: 1.45; }
 
 .od-metrics {
-  display: flex; align-items: stretch; gap: 0; height: 36px; border: 1px solid var(--ink);
+  display: flex; align-items: stretch; gap: 0; height: 32px; box-sizing: border-box; border: 1px solid var(--ink);
   border-radius: var(--radius-0); background: var(--surface); padding: 0; cursor: pointer; color: var(--ink);
   overflow: hidden; font: inherit; box-shadow: inset 3px 0 0 var(--faint);
 }
