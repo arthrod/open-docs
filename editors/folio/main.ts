@@ -6,10 +6,9 @@
  *   createEmptyDocument(), fromMarkdown(md) → Document, toMarkdown(Document)
  *   createDocx(Document) → ArrayBuffer
  *
- * Assistant Markdown is pasted through folio's own HTML parser so it stays
- * in the mounted editor's history. Readback uses its DOCX export. This path
- * preserves headings, emphasis, links and tables, but readback loses code
- * and quote markers and may continue ordered numbering after a bullet list.
+ * Assistant Markdown goes through folio's own fromMarkdown + toProseDoc and
+ * lands as one transaction in the mounted editor's history. Readback uses its
+ * DOCX export.
  */
 import { waitFor } from "/lib/kit.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
@@ -18,6 +17,10 @@ import { docxToMarkdown } from "/lib/docx-markdown.ts";
 // browser can't resolve. `?bundle&target=es2022` inlines Vue + ProseMirror and
 // has zero bare specifiers.
 const CDN = "https://esm.sh/@stll/folio-vue@0.28.0?bundle&target=es2022";
+// folio-vue 0.28.0 depends on folio-core ^0.68.0 but does not re-export
+// toProseDoc; the converter subpath is loaded on the first assistant apply.
+const CORE_CONVERSION =
+  "https://esm.sh/@stll/folio-core@0.68.0/prosemirror/conversion?bundle&target=es2022";
 
 type Handle = {
   save(): Promise<Blob | null>;
@@ -30,11 +33,8 @@ type Handle = {
 type FolioView = {
   dom: HTMLElement;
   focus(): void;
-  pasteHTML(html: string): boolean;
-  state: {
-    selection: { from: number; to: number };
-    doc: { content: { size: number } };
-  };
+  state: any;
+  dispatch(tr: unknown): void;
 };
 
 let api: any;
@@ -114,7 +114,7 @@ async function exportBytes(): Promise<Uint8Array> {
 
 window.od.register({
   name: "folio",
-  // Mod-A + ProseMirror pasteHTML: one step of its history.
+  // fromMarkdown → toProseDoc → one replaceWith transaction: one history step.
   applyInHistory: true,
   mergeQuality: "native",
 
@@ -146,36 +146,17 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
-    const { marked } = await import(
-      "https://esm.sh/marked@18.1.3?target=es2022"
-    );
-    const html = marked.parse(markdown, { gfm: true, async: false }) ||
-      "<p></p>";
     const view = pmView;
-    if (!view || typeof view.pasteHTML !== "function") {
-      throw new Error("folio pm view or pasteHTML missing");
-    }
-    view.focus();
-    // folio's BaseKeymapExtension selects the entire document via Mod-a.
-    view.dom.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "a",
-        code: "KeyA",
-        bubbles: true,
-        cancelable: true,
-        ...MOD,
-      }),
-    );
-    const sel = view.state.selection;
-    if (!(sel.from === 0 && sel.to === view.state.doc.content.size)) {
-      throw new Error(
-        "select-all failed: " + sel.from + ".." + sel.to + " of " +
-          view.state.doc.content.size,
-      );
-    }
-    // EditorView.pasteHTML runs folio's paste parser and dispatches a normal
-    // replacement transaction, retained by its own undo/redo history.
-    if (!view.pasteHTML(html)) throw new Error("folio paste failed");
+    if (!view) throw new Error("folio pm view missing");
+    const [f, { toProseDoc }] = await Promise.all([folio(), import(CORE_CONVERSION)]);
+    // folio's own Markdown compiler → its own Document → ProseMirror converter
+    // (styles, numbering, quote style, code font). The node comes from a
+    // separately loaded folio-core, so it is re-read through the mounted
+    // view's schema before the one replacing transaction.
+    const content = view.state.schema.nodeFromJSON(
+      toProseDoc(f.fromMarkdown(markdown)).toJSON(),
+    ).content;
+    view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, content));
   },
 
   exportDocx: () => exportBytes(),
