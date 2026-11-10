@@ -132,10 +132,10 @@ html { scroll-behavior: smooth; }
   text-decoration: none; display: inline-flex; align-items: center; gap: 9px; padding: 14px 18px;
   border-radius: 0; cursor: pointer; border: 1px solid transparent;
 }
-.btn-primary { background: var(--ink); color: var(--bg); }
-.btn-primary .arr { color: var(--mark); }
-.btn-primary:hover { background: var(--mark); color: var(--ink); }
-.btn-primary:hover .arr { color: var(--ink); }
+.od-land .btn-primary { background: var(--ink); color: var(--bg); }
+.od-land .btn-primary .arr { color: var(--mark); }
+.od-land .btn-primary:hover { background: var(--mark); color: var(--ink); }
+.od-land .btn-primary:hover .arr { color: var(--ink); }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
 .btn-ghost:hover { background: var(--mark); border-color: var(--ink); }
 .stats {
