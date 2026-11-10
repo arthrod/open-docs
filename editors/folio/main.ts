@@ -21,6 +21,10 @@ const CDN = "https://esm.sh/@stll/folio-vue@0.28.0?bundle&target=es2022";
 // toProseDoc; the converter subpath is loaded on the first assistant apply.
 const CORE_CONVERSION =
   "https://esm.sh/@stll/folio-core@0.68.0/prosemirror/conversion?bundle&target=es2022";
+// mergeDocumentContent is only exported from folio-core's root; this deep
+// path is its own 12 KB module.
+const CORE_MERGE =
+  "https://esm.sh/@stll/folio-core@0.68.0/dist/utils/mergeDocumentContent.js?bundle&target=es2022";
 
 type Handle = {
   save(): Promise<Blob | null>;
@@ -147,15 +151,26 @@ window.od.register({
 
   async applyMarkdown(markdown: string) {
     const view = pmView;
-    if (!view) throw new Error("folio pm view missing");
-    const [f, { toProseDoc }] = await Promise.all([folio(), import(CORE_CONVERSION)]);
-    // folio's own Markdown compiler → its own Document → ProseMirror converter
-    // (styles, numbering, quote style, code font). The node comes from a
+    if (!view || !handle) throw new Error("folio not mounted");
+    const [f, { toProseDoc }, { mergeDocumentContent }] = await Promise.all([
+      folio(),
+      import(CORE_CONVERSION),
+      import(CORE_MERGE),
+    ]);
+    // folio's own Markdown compiler → its Document. fromMarkdown always mints
+    // its lists at numId 1, which the open document usually already uses (a
+    // collision the open document wins: the assistant's bullets would come
+    // back numbered). folio's mergeDocumentContent, into the open document
+    // with its body emptied, moves the new lists to fresh ids and keeps the
+    // open document's styles, theme and settings.
+    const live = handle.getDocument() as any;
+    const empty = { ...live, package: { ...live.package, document: { ...live.package.document, content: [] } } };
+    const merged = mergeDocumentContent(empty, f.fromMarkdown(markdown));
+    // folio's Document → ProseMirror converter. The node comes from a
     // separately loaded folio-core, so it is re-read through the mounted
     // view's schema before the one replacing transaction.
-    const content = view.state.schema.nodeFromJSON(
-      toProseDoc(f.fromMarkdown(markdown)).toJSON(),
-    ).content;
+    const content = view.state.schema.nodeFromJSON(toProseDoc(merged).toJSON()).content;
+    view.focus();
     view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, content));
   },
 

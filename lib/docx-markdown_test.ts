@@ -105,3 +105,12 @@ Deno.test("docx: a level with lvlRestart=0 keeps counting under every parent", (
   ));
   assertEquals(md.trim(), "1. p1\n   1. x\n2. p2\n   2. y");
 });
+
+Deno.test("docx: a full <w:lvl> override without numFmt replaces a bullet level with decimal", () => {
+  // The override's <w:lvl> replaces the abstract level; numFmt defaults to decimal.
+  const numbering =
+    `<w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/></w:lvl></w:abstractNum>` +
+    `<w:num w:numId="2"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:lvl w:ilvl="0"><w:start w:val="1"/></w:lvl></w:lvlOverride></w:num>`;
+  const md = docxToMarkdown(docxWith(p("a", "2") + p("b", "2"), numbering));
+  assertEquals(md.trim(), "1. a\n2. b");
+});

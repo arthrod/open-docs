@@ -108,8 +108,8 @@ function readNumbering(doc: Document | undefined): Map<string, Map<number, Level
       const base = lvls.get(ilvl) ?? { bullet: true };
       const own = kid(o, "lvl");
       const fmt = wAttr(kid(own, "numFmt"), "val");
-      // A whole <w:lvl> replaces the level (its start defaults to 1).
-      const lv = own ? { ...level(own), bullet: fmt ? fmt === "bullet" : base.bullet } : base;
+      // A whole <w:lvl> replaces the level (start defaults to 1, numFmt to decimal).
+      const lv = own ? { ...level(own), bullet: fmt === "bullet" } : base;
       lvls.set(ilvl, { ...lv, start: start(kid(o, "startOverride")) ?? lv.start });
     }
     out.set(wAttr(n, "numId") ?? "", lvls);
