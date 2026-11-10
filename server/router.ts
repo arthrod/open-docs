@@ -20,7 +20,7 @@ import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
 import { DOCX_IO_SRI, DOCX_IO_URL } from "../lib/plate-docx-pin.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
 import { recordMetric, summarizeMetrics } from "./metrics.ts";
-import { SHELL_CSS } from "./styles.ts";
+import { FONT_MONO_URL, FONT_SANS_URL, SHELL_CSS } from "./styles.ts";
 
 export interface EditorShell {
   slug: string;
@@ -75,13 +75,15 @@ function shell(o: EditorShell): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${esc(o.title)} · open-docs</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a8a'/><path d='M10 8h9l5 5v11H10z' fill='white'/><path d='M19 8v5h5' fill='%2393c5fd'/></svg>" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230A0A0A'/><rect x='4' y='20' width='24' height='7' fill='%23FFD400'/></svg>" />
 ${importMap}
 <script>window.__OD_T0 = performance.now();</script>
 <!-- First thing on the page: reports browser errors to /api/log. -->
 <script src="/lib/report.ts"></script>
 <link rel="preconnect" href="https://esm.sh" crossorigin />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="preload" href="${FONT_SANS_URL}" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="${FONT_MONO_URL}" as="font" type="font/woff2" crossorigin />
 ${o.head ?? ""}
 <style>${SHELL_CSS}</style>
 <!-- The kit must exist before any adapter module runs. -->
@@ -89,8 +91,8 @@ ${o.head ?? ""}
 </head>
 <body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}">
   <header class="od-bar">
-    <a class="od-brand" href="/" title="All editors">
-      <span class="od-logo" aria-hidden="true"></span><span>open-docs</span>
+    <a class="od-brand od-wm" href="/" title="All editors" aria-label="open-docs, all editors">
+      <span class="del">DOC</span><span class="ins">OPEN</span><span class="od-wm-tail">-DOCS</span>
     </a>
     <span class="od-sep"></span>
     <label class="od-switch" title="Switch editor">
@@ -98,43 +100,41 @@ ${o.head ?? ""}
     </label>
     <input id="od-docname" class="od-docname" value="Untitled document" spellcheck="false" aria-label="Document name" />
     <span class="od-spacer"></span>
-    <button class="od-metrics" id="od-metrics" title="Measured on this page load — click for details" aria-haspopup="dialog">
+    <button class="od-metrics" id="od-metrics" title="Measured on this page load. Click for details." aria-haspopup="dialog">
       <span class="m"><i class="dot"></i><b id="od-m-time">—</b><small>startup</small></span>
       <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
       <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
     </button>
-    ${viewer ? "" : `<button class="od-btn icon" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">
-      <svg class="ic" viewBox="0 0 20 20"><path d="M10 2.5l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z M15.5 13l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
-    </button>`}
+    ${viewer ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
     <div class="od-menu-wrap">
       <button class="od-btn od-menu-btn" id="od-more" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
-        <svg class="ic" viewBox="0 0 20 20"><path d="M3.5 5.5h13 M3.5 10h13 M3.5 14.5h13"/></svg><span>Menu</span>
+        <span class="od-glyph" aria-hidden="true">+</span><span>Menu</span>
       </button>
       <div class="od-menu" id="od-menu" role="menu" hidden>
-        <div class="od-menu-label">Document</div>
-        ${viewer ? "" : `<button role="menuitem" id="od-new"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h6.5L16 7v10.5H5z M11.5 2.5V7H16" /></svg>New blank document<kbd>⌥N</kbd></button>`}
-        ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import"><svg class="ic" viewBox="0 0 20 20"><path d="M10 13V3 M6 7l4-4 4 4 M3.5 12.5v4h13v-4" /></svg>Open .docx from your computer…<kbd>⌘O</kbd></button>`}
-        ${viewer ? "" : `<button role="menuitem" id="od-export"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Export this document as .docx<kbd>⌘S</kbd></button>`}
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Document</div>
+        ${viewer ? "" : `<button role="menuitem" id="od-new">New blank document<kbd>⌥N</kbd></button>`}
+        ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import">Open .docx from your computer…<kbd>⌘O</kbd></button>`}
+        ${viewer ? "" : `<button role="menuitem" id="od-export">Export this document as .docx<kbd>⌘S</kbd></button>`}
         <hr />
-        <div class="od-menu-label">Samples</div>
-        <button role="menuitem" id="od-showcase"><svg class="ic" viewBox="0 0 20 20"><path d="M3 4.5h14v11H3z M3 12l4-3.5 3 2.5 3-3 4 3.5"/></svg>Load the rich sample<small>tables, lists, image, styles</small></button>
-        <button role="menuitem" id="od-sample"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h10v15H5z M8 6.5h4 M8 9.5h4 M8 12.5h2"/></svg>Load the short sample</button>
-        <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Download the rich sample</a>
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Samples</div>
+        <button role="menuitem" id="od-showcase">Load the rich sample<small>tables, lists, image, styles</small></button>
+        <button role="menuitem" id="od-sample">Load the short sample</button>
+        <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx">Download the rich sample ↓</a>
         <hr />
-        <div class="od-menu-label">View</div>
-        <button role="menuitem" id="od-metrics-item"><svg class="ic" viewBox="0 0 20 20"><path d="M3.5 16.5v-5 M8 16.5v-9 M12.5 16.5v-6 M17 16.5V3.5"/></svg>Performance of this load</button>
-        <button role="menuitem" id="od-reload"><svg class="ic" viewBox="0 0 20 20"><path d="M16 10a6 6 0 1 1-1.8-4.3 M16 3.5v3.5h-3.5"/></svg>Reload editor</button>
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / View</div>
+        <button role="menuitem" id="od-metrics-item">Performance of this load</button>
+        <button role="menuitem" id="od-reload">Reload editor</button>
         <hr />
         <a role="menuitem" href="/">All editors &amp; measurements</a>
-        <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub ↗</a>
-        <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo ↗</a>
+        <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub →</a>
+        <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
       </div>
     </div>
   </header>
   <div class="od-sub">
     <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
     ${meta?.license ? `<span class="od-lic">${esc(meta.license)}</span>` : ""}
-    ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer — not an editor</span>` : ""}
+    ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer, not an editor</span>` : ""}
     <span class="od-blurb">${esc(meta?.blurb ?? "")}</span>
     <span class="od-spacer"></span>
     <span class="od-status" id="od-status" role="status" aria-live="polite"></span>
@@ -150,29 +150,27 @@ ${o.head ?? ""}
     ${viewer ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
       <div class="od-aside-head">
         <div>
-          <h2>Assistant</h2>
+          <h2><span class="sq" aria-hidden="true"></span> / Assistant</h2>
           <span class="od-model">${esc(AGENT_MODEL)} · via Val Town</span>
         </div>
         <label class="od-auto" title="Apply edits as soon as the assistant proposes them (you can still undo)">
           <input type="checkbox" id="od-autoapply" checked /> Auto-apply
         </label>
-        <button class="od-btn icon od-aside-close" id="od-aside-close" type="button" aria-label="Close the assistant">✕</button>
+        <button class="od-btn icon od-aside-close" id="od-aside-close" type="button" aria-label="Close the assistant">×</button>
       </div>
       <div class="od-log" id="od-log">
-        <div class="od-msg bot"><span class="who">Assistant</span>I can read and edit the document open in <b>${esc(meta?.name ?? o.title)}</b>. Ask me to draft, rewrite, restructure or summarise — every change can be undone.</div>
+        <div class="od-msg bot"><span class="who">Assistant</span>I can read and edit the document open in <b>${esc(meta?.name ?? o.title)}</b>. Ask me to draft, rewrite, restructure or summarise. Every change can be undone.</div>
       </div>
       <div class="od-suggestions" id="od-suggestions"></div>
       <form class="od-input" id="od-form">
-        <textarea id="od-prompt" rows="2" placeholder="Ask the assistant to write or edit… (⌘↵ to send)"></textarea>
-        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)">
-          <svg class="ic" viewBox="0 0 20 20"><path d="M3 10l14-6-5 14-2.5-5.5z"/></svg>
-        </button>
+        <textarea id="od-prompt" rows="2" placeholder="Ask the assistant to write or edit (⌘↵ to send)"></textarea>
+        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)"><span class="arr">→</span></button>
       </form>
     </aside>`}
   </div>
   <dialog class="od-dialog" id="od-metrics-dialog">
     <form method="dialog">
-      <header><h3>Performance of ${esc(meta?.name ?? o.title)}</h3><button class="od-btn icon" value="close" aria-label="Close">✕</button></header>
+      <header><h3>Performance of ${esc(meta?.name ?? o.title)}</h3><button class="od-btn icon" value="close" aria-label="Close">×</button></header>
       <div id="od-metrics-body"></div>
       ${meta?.metricsNote ? `<p class="od-note" style="padding:0 18px 12px">${esc(meta.metricsNote)}</p>` : ""}
       <footer><a href="/#metrics">Compare all editors →</a></footer>
