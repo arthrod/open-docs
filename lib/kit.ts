@@ -17,14 +17,17 @@ export interface EditorAdapter {
   mount(): Promise<void>;
   /** Load real .docx bytes. The chrome's Import button calls this. */
   load(bytes: Uint8Array): Promise<void>;
-  /** Current document as markdown (agent prompt + fallback export). */
+  /** Current document as markdown (the agent's prompt). */
   getMarkdown(): Promise<string>;
   /**
    * Replace the document from markdown, through the editor's own model where
    * possible so the user can undo it.
    */
   applyMarkdown(markdown: string): Promise<void>;
-  /** Current document as real .docx bytes. Omit to use POST /api/export. */
+  /**
+   * Current document as .docx bytes from the engine's own exporter. Omitted
+   * by engines that have none; Export then says so instead of writing one.
+   */
   exportDocx?(): Promise<Uint8Array>;
   /** Human note about how faithful `applyMarkdown` is. */
   mergeQuality?: "native" | "html-paste" | "rebuild";

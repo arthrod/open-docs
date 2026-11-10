@@ -22,6 +22,7 @@ export default {
   importMap: {
     "@hufe921/canvas-editor": CE,
     "@hufe921/canvas-editor-plugin-docx": plugin("docx", "1.0.0"),
+    "@hufe921/canvas-editor-plugin-markdown": plugin("markdown", "0.0.1"),
     "@hufe921/canvas-editor-plugin-floating-toolbar": plugin("floating-toolbar", "0.0.4"),
   },
   head: `<style>

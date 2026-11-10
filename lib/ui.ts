@@ -7,7 +7,7 @@
  * adapter entirely (the original "nothing mounts" bug).
  */
 import { mdToBlocks } from "./md.ts";
-import { b64decode, type EditorAdapter } from "./kit.ts";
+import type { EditorAdapter } from "./kit.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
 
 const slug = document.body.dataset.slug ?? "";
@@ -305,20 +305,12 @@ async function importFile(file: File) {
   });
 }
 
+/** The document as .docx, written by the engine's own exporter (never by us). */
 async function currentDocx(a: EditorAdapter): Promise<Uint8Array> {
-  if (a.exportDocx) {
-    const bytes = await a.exportDocx();
-    if (!(bytes instanceof Uint8Array) || bytes.length < 4) throw new Error("the editor returned no bytes");
-    return bytes;
-  }
-  const res = await fetch("/api/export", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ markdown: await a.getMarkdown(), title: docName() }),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? "export failed");
-  return b64decode(json.base64);
+  if (!a.exportDocx) throw new Error(`${a.name} has no .docx exporter of its own`);
+  const bytes = await a.exportDocx();
+  if (!(bytes instanceof Uint8Array) || bytes.length < 4) throw new Error("the editor returned no bytes");
+  return bytes;
 }
 
 const exportDocx = () =>

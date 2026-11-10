@@ -14,7 +14,7 @@
  * `s.endsWith("/")` — passing anything else was the original crash).
  */
 import { waitFor } from "/lib/kit.ts";
-import { markdownToDocx } from "/lib/markdown.ts";
+import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 import { BUNDLE_URL, WASM_BASE } from "./assets.ts";
 
@@ -105,10 +105,10 @@ window.od.register({
 
   async applyMarkdown(markdown) {
     if (!ribbon) throw new Error("Docxodus not mounted");
-    // Docxodus has no markdown importer (only WmlToMarkdown export), so the
-    // markdown becomes a complete Word document (headings, marks, lists, quotes,
-    // links, code) that Docxodus opens through its own .docx reader.
-    ribbon.open(markdownToDocx(markdown), "document.docx");
+    // Docxodus has no markdown importer (only WmlToMarkdown export): the
+    // markdown becomes a Word document through Plate's own markdown reader and
+    // .docx exporter (lib/plate-docx.ts), which Docxodus opens with its reader.
+    ribbon.open(await markdownToDocx(markdown), "document.docx");
   },
 
   async exportDocx() {

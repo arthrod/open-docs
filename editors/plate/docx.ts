@@ -3,7 +3,7 @@
  *
  * Plate has no DOCX engine; edits round-trip through a conversion:
  *   in:  mammoth (.docx → HTML) → our walker → Plate nodes
- *   out: Plate nodes → paragraph blocks → lib/ooxml.ts (.docx)
+ *   out: Plate's own exporter (@platejs/docx-io exportToDocx, lib/plate-docx.ts)
  * Markdown (the assistant's path) is NOT here: it goes through Plate's own
  * @platejs/markdown (see editor.tsx). Word-specific constructs (fields,
  * content controls, footnotes, comments) are not preserved the way Docxodus
@@ -12,7 +12,6 @@
 import { FFLATE, MAMMOTH } from "./deps.ts";
 import { imageNode, type Picture, pictureLayout } from "./pictures.ts";
 import { safeUrl } from "./safe-url.ts";
-import { type Block, blocksToDocx, type Run } from "/lib/ooxml.ts";
 
 type Descendant = any;
 
@@ -141,62 +140,6 @@ export async function importDocxToNodes(_editor: any, bytes: Uint8Array): Promis
     } else nodes.push(...blocks(el, "p"));
   }
   return nodes.length ? nodes : emptyValue();
-}
-
-/**
- * Plate nodes → real DOCX bytes.
- *
- * Not docx-io's exporter: its static HTML render drops heading styles (no
- * element components registered) and it writes <w:sectPr> as the FIRST body
- * child, which Word treats as a damaged file. lib/ooxml.ts writes a clean one.
- */
-export function nodesToDocx(value: Descendant[]): Uint8Array {
-  const blocks: Block[] = [];
-  const pt = (v: unknown) => {
-    const m = /^([\d.]+)\s*(pt|px)?$/.exec(String(v ?? ""));
-    return m ? (m[2] === "px" ? +m[1] * 0.75 : +m[1]) : undefined;
-  };
-  const runs = (n: any, href?: string): Run[] =>
-    (n.children ?? []).flatMap((c: any): Run[] => {
-      if (c.type === "a") return runs(c, c.url);
-      if (c.text === undefined) return runs(c, href);
-      return [{
-        text: c.text,
-        bold: !!c.bold,
-        italic: !!c.italic,
-        underline: !!c.underline,
-        strike: !!c.strikethrough,
-        code: !!c.code,
-        ...(href ? { href } : {}),
-        ...(c.fontFamily ? { font: String(c.fontFamily) } : {}),
-        ...(pt(c.fontSize) ? { sizePt: pt(c.fontSize) } : {}),
-        ...(c.color ? { color: String(c.color) } : {}),
-        ...(c.backgroundColor ? { background: String(c.backgroundColor) } : c.highlight ? { background: "#ffff00" } : {}),
-        ...(c.superscript ? { vertAlign: "superscript" as const } : c.subscript ? { vertAlign: "subscript" as const } : {}),
-      }];
-    });
-  for (const n of value as any[]) {
-    const align = ["center", "right", "justify"].includes(n.align) ? n.align : undefined;
-    const h = /^h([1-6])$/.exec(n.type ?? "");
-    if (h) blocks.push({ kind: "heading", level: +h[1], align, runs: runs(n) });
-    else if (n.listStyleType) {
-      blocks.push({ kind: "li", level: Math.max((n.indent ?? 1) - 1, 0), ordered: n.listStyleType === "decimal", align, runs: runs(n) });
-    } else if (n.type === "blockquote") blocks.push({ kind: "quote", align, runs: runs(n) });
-    else if (n.type === "code_block") {
-      const text = (n.children ?? []).map((l: any) => runs(l).map((r) => r.text).join("")).join("\n");
-      blocks.push({ kind: "code", runs: [{ text }] });
-    } else if (n.type === "hr") blocks.push({ kind: "hr", runs: [] });
-    else if (n.type === "table") {
-      // table → tr → td/th → paragraphs; paragraphs in a cell become line breaks.
-      const rows = (n.children ?? []).map((tr: any) =>
-        (tr.children ?? []).map((td: any) =>
-          (td.children ?? []).flatMap((p: any, i: number): Run[] => [...(i ? [{ text: "\n" }] : []), ...runs(p)])
-        )
-      );
-      blocks.push({ kind: "table", runs: [], rows });
-    } else blocks.push({ kind: "p", align, runs: runs(n) });
-  }
-  return blocksToDocx(blocks);
 }
 
 /** A blank document: one empty paragraph. */

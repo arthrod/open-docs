@@ -3,7 +3,7 @@
  *
  * Editors with no markdown export of their own (docx-editor.dev, Docxodus,
  * WordCraft's release build) hand the assistant their document through this, so
- * it must keep what `markdownToDocx` writes: Title / Heading 1–6 (style name,
+ * it must keep what Word documents commonly carry: Title / Heading 1–6 (style name,
  * style id or outline level, through `basedOn`), bold / italic / strike,
  * inline code (a code character style or a monospace font), hyperlinks
  * (relationships and HYPERLINK fields), bullet vs numbered lists from
@@ -14,8 +14,7 @@
  * never inferred from numbering text.
  */
 import { strFromU8, unzipSync } from "https://esm.sh/fflate@0.8.2?target=es2022";
-import type { Block, Run } from "./ooxml.ts";
-import { blocksToMarkdown, tableToMarkdown } from "./markdown.ts";
+import { type Block, blocksToMarkdown, type Run, tableToMarkdown } from "./markdown.ts";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";

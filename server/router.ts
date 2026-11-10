@@ -7,7 +7,6 @@
  *   GET  /api/showcase.docx    the rich sample (scripts/make_showcase.py)
  *   GET  /api/blank.docx       a valid empty .docx
  *   POST /api/import           .docx → { title, markdown }
- *   POST /api/export           markdown → .docx (base64)
  *   POST /api/agent            { document, prompt, history } → { reply, edit? }
  *   POST /api/metrics          one page-load measurement (startup/memory/bytes)
  *   GET  /api/metrics          per-editor medians, for the landing page
@@ -18,7 +17,7 @@ import { editors } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
 import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
-import { markdownToDocx } from "../lib/markdown.ts";
+import { DOCX_IO_SRI, DOCX_IO_URL } from "../lib/plate-docx-pin.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
 import { recordMetric, summarizeMetrics } from "./metrics.ts";
 import { SHELL_CSS } from "./styles.ts";
@@ -56,9 +55,13 @@ const esc = (s: string) =>
 function shell(o: EditorShell): string {
   const meta = editors.find((e) => e.slug === o.slug);
   const packages = meta?.packages ?? [];
-  const importMap = o.importMap && Object.keys(o.importMap).length
-    ? `<script type="importmap">${JSON.stringify({ imports: o.importMap })}</script>`
-    : "";
+  // Every page: React (Plate's esm.sh modules leave it bare) and the SRI hash
+  // of Plate's .docx exporter, which lib/plate-docx.ts loads on any page that
+  // writes .docx (Plate, and the markdown path of Docxodus, docx-editor.dev, folio).
+  const importMap = `<script type="importmap">${JSON.stringify({
+    imports: { ...REACT_IMPORTS, ...(o.importMap ?? {}) },
+    integrity: { [DOCX_IO_URL]: DOCX_IO_SRI },
+  })}</script>`;
   const viewer = meta?.kind === "viewer";
   const opensFiles = meta?.opensFiles !== false;
   const option = (e: typeof editors[number]) =>
@@ -234,14 +237,6 @@ export function mountShared(app: Hono) {
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
     }
-  });
-
-  app.post("/api/export", async (c) => {
-    const { markdown } = await c.req.json();
-    if (typeof markdown !== "string") return c.json({ error: "markdown required" }, 400);
-    // Same converter the browser adapters use (lib/markdown.ts → lib/ooxml.ts).
-    const bytes = markdownToDocx(markdown);
-    return c.json({ base64: bytesToBase64(bytes) });
   });
 
   /** Browser error sink — see lib/report.ts. Shows up in the val's logs. */

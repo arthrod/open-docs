@@ -19,7 +19,7 @@ import { waitFor } from "/lib/kit.ts";
 // Liberation for Arial/Times/Courier…). Loaded from jsDelivr, not esm.sh: the
 // package finds its .ttf files relative to import.meta.url.
 import { packagedFonts } from "https://cdn.jsdelivr.net/npm/@docx-editor.dev/fonts@2.35.0/dist/index.js";
-import { markdownToDocx } from "/lib/markdown.ts";
+import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 type EditorRef = {
@@ -89,9 +89,10 @@ window.od.register({
 
   async applyMarkdown(markdown: string) {
     if (!ref) throw new Error("docx-editor.dev not mounted");
-    // docx-editor.dev imports only .docx (markdown is export-only), so the
-    // markdown becomes a complete Word document it opens with its own parser.
-    ref.load(markdownToDocx(markdown));
+    // docx-editor.dev imports only .docx (markdown is export-only): the markdown
+    // becomes a Word document through Plate's own markdown reader and .docx
+    // exporter (lib/plate-docx.ts), opened with docx-editor.dev's own parser.
+    ref.load(await markdownToDocx(markdown));
   },
 
   async exportDocx() {

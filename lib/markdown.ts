@@ -1,21 +1,54 @@
 /**
- * Markdown ⇄ paragraph blocks, the lingua franca between the assistant and the
- * editors that have no markdown importer of their own.
+ * Markdown ⇄ paragraph blocks, read with `marked`'s CommonMark lexer (not
+ * regexes), so nesting, escapes and inline code behave the way the assistant
+ * expects.
  *
- * Parsing goes through `marked`'s CommonMark lexer (not regexes), so nesting,
- * escapes and inline code behave the way the assistant expects. Every markdown
- * element maps to a Word equivalent in lib/ooxml.ts:
+ *   markdownToBlocks  markdown → blocks (SuperDoc compares the assistant's
+ *                     markdown with what it applied)
+ *   blocksToMarkdown  blocks → markdown (the writing half of
+ *                     lib/docx-markdown.ts)
  *
- *   # … ######   → Heading 1 … Heading 6      **x** → bold       *x* → italic
- *   - / 1.       → bullet / decimal numbering ~~x~~ → strike     `x` → code (Courier New)
- *   > quote      → Quote style                [x](u) → hyperlink
- *   ``` block    → Code style                 ---   → bottom-border paragraph
- *
- * Runs in the browser and on the server (no Deno APIs), so `/api/export` and the
- * editor adapters produce the same document from the same markdown.
+ * No .docx is written here: every engine writes Word files with its own
+ * exporter (Plate's docx-io for engines with no markdown importer, see
+ * lib/plate-docx.ts).
  */
 import { Lexer } from "https://esm.sh/marked@18.1.3?target=es2022";
-import { type Block, blocksToDocx, type Run } from "./ooxml.ts";
+
+export type Run = {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+  /** Inline code. */
+  code?: boolean;
+  /** External hyperlink target. */
+  href?: string;
+  /** Font family name. */
+  font?: string;
+  /** Size in points. */
+  sizePt?: number;
+  /** Text colour, #rrggbb. */
+  color?: string;
+  /** Background (shading) colour, #rrggbb. */
+  background?: string;
+  vertAlign?: "superscript" | "subscript";
+};
+
+/**
+ * `title`: a document title. `heading` level: 1–6.
+ * `li` level: 0-based nesting depth. `code`: a code block.
+ * `hr`: a thematic break.
+ * `table`: `rows` of cells of runs; the first row is the header; `runs` is unused.
+ */
+export type Block = {
+  kind: "p" | "title" | "heading" | "li" | "quote" | "code" | "hr" | "table";
+  level?: number;
+  ordered?: boolean;
+  align?: "left" | "center" | "right" | "justify";
+  runs: Run[];
+  rows?: Run[][][];
+};
 
 // deno-lint-ignore no-explicit-any
 type Tok = any;
@@ -140,19 +173,13 @@ function blocks(tokens: Tok[], ctx: Ctx, out: Block[]) {
 }
 
 /**
- * `tables`: emit GFM tables as `table` blocks (lib/ooxml.ts writes them as
- * Word tables); otherwise, for block models without tables, as tab-separated
- * rows.
+ * `tables`: emit GFM tables as `table` blocks; otherwise, for block models
+ * without tables, as tab-separated rows.
  */
 export function markdownToBlocks(markdown: string, opts: { tables?: boolean } = {}): Block[] {
   const out: Block[] = [];
   blocks(new Lexer({ gfm: true }).lex(markdown ?? ""), { level: 0, quote: false, tables: !!opts.tables }, out);
   return out;
-}
-
-/** Markdown straight to a Word-valid .docx (lib/ooxml.ts). */
-export function markdownToDocx(markdown: string): Uint8Array {
-  return blocksToDocx(markdownToBlocks(markdown, { tables: true }));
 }
 
 /* ------------------------------ blocks → md ------------------------------ */

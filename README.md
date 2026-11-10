@@ -16,13 +16,13 @@ step. Each one opens on a **blank document**, imports and exports real
 
 | Editor | Package | Renders | .docx in / out | Assistant writes through | Assistant reads |
 | --- | --- | --- | --- | --- | --- |
-| [canvas-editor](https://open-docs.val.run/e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` + `plugin-docx` | Canvas | vendor `plugin-docx` in, `lib/ooxml.ts` out | `executeSetValue` (element model) | element model → markdown |
-| [Docxodus](https://open-docs.val.run/e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | markdown → .docx → `ribbon.open` | its .docx → `lib/docx-markdown.ts` |
+| [canvas-editor](https://open-docs.val.run/e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` + `plugin-docx` | Canvas | vendor `plugin-docx` both ways | vendor `plugin-markdown` (`executeImportMarkdown`) | vendor `plugin-markdown` (`executeExportMarkdown`) |
+| [Docxodus](https://open-docs.val.run/e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | markdown → Plate → docx-io .docx → `ribbon.open` | its .docx → `lib/docx-markdown.ts` |
 | [SuperDoc](https://open-docs.val.run/e/superdoc) | `superdoc@2.29.0` | Vue + own layout engine | native | `doc.insert({type:"markdown"})` + Quote/Code styles via its document API (undoable) | its .docx → `lib/docx-markdown.ts` |
-| [Plate](https://open-docs.val.run/e/plate) | `platejs@53.5.2` + plugins | Slate / DOM | mammoth in, `lib/ooxml.ts` out | `@platejs/markdown` deserialize (undoable) | `@platejs/markdown` serialize |
-| [docen](https://open-docs.val.run/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | markdown → .docx → `openDOCX` | its .docx → `lib/docx-markdown.ts` |
-| [docx-editor.dev](https://open-docs.val.run/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → .docx → `ref.load` | its .docx → `lib/docx-markdown.ts` |
-| [folio](https://open-docs.val.run/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | markdown → .docx → `renderAsync` | its .docx (`save()`) → `lib/docx-markdown.ts` |
+| [Plate](https://open-docs.val.run/e/plate) | `platejs@53.5.2` + plugins | Slate / DOM | mammoth in, `@platejs/docx-io` out | `@platejs/markdown` deserialize (undoable) | `@platejs/markdown` serialize |
+| [docen](https://open-docs.val.run/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | its own `openMarkdown` | its .docx → `lib/docx-markdown.ts` |
+| [docx-editor.dev](https://open-docs.val.run/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → `ref.load` | its .docx → `lib/docx-markdown.ts` |
+| [folio](https://open-docs.val.run/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | markdown → Plate → docx-io .docx → `renderAsync` | its .docx (`save()`) → `lib/docx-markdown.ts` |
 | [WordCraft](https://open-docs.val.run/e/wordcraft) | `wordcraft-web` 0.16.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | native | its own `.md` reader, then Save As .docx | its .docx → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
@@ -117,8 +117,9 @@ It is a reasoning model and the proxy rejects function tools unless
 `reasoning_effort` is `"none"`, so `complete()` always sends that.
 
 The browser hands the markdown to the editor's `applyMarkdown`, and reads the
-document back with `getMarkdown` for the next turn. Both directions use one
-mapping, everywhere:
+document back with `getMarkdown` for the next turn. The mapping the bench asks
+for is below; what each engine actually produces is decided by its own
+importer/exporter, and the losses are listed under the vendors:
 
 | Markdown | Word |
 | --- | --- |
@@ -136,12 +137,15 @@ mapping, everywhere:
 1. If the vendor has a markdown **importer** that maps every element, the
    assistant writes through it (Plate, WordCraft; SuperDoc after its quote and
    code-block gaps are filled with its own API).
-2. Otherwise the markdown becomes a complete Word document
-   ([`lib/markdown.ts`](lib/markdown.ts) → [`lib/ooxml.ts`](lib/ooxml.ts)) and
-   goes through the vendor's own **.docx importer**, its strongest path
-   (Docxodus, docen, docx-editor.dev, folio).
-3. Reading back uses the vendor's markdown **exporter** when it is faithful
-   (Plate); otherwise the vendor's own .docx export is read by
+2. If the vendor has a markdown importer that loses some elements, it is still
+   used, losses included (docen `openMarkdown`, canvas-editor `plugin-markdown`).
+3. Otherwise the markdown becomes a Word document through Plate's own
+   converters (`@platejs/markdown` → `@platejs/docx-io`,
+   [`lib/plate-docx.ts`](lib/plate-docx.ts)) and goes through the vendor's own
+   **.docx importer** (Docxodus, docx-editor.dev, folio). Nothing in the bench
+   writes .docx by hand.
+4. Reading back uses the vendor's markdown **exporter** when it has one
+   (Plate, canvas-editor); otherwise the vendor's own .docx export is read by
    [`lib/docx-markdown.ts`](lib/docx-markdown.ts), the inverse of the writer.
 
 ### Assessment (2026-11-09): harness or editor?
@@ -181,7 +185,7 @@ What is the vendors' (written down, worked around fairly, reportable upstream):
 | --- | --- | --- |
 | docen | `@docen/docx@0.7.0` markdown import drops bold / italic / inline-code text; `saveMarkdown` drops marks, writes bullets as numbers, loses quotes; blank documents ignore `docDefaults` fonts (Calibri renders as a serif fallback) | .docx in, .docx read back |
 | SuperDoc | markdown and HTML importers map `>` quotes to plain paragraphs and fenced code to an unstyled monospace paragraph, and drop `<br>` inside table cells; `getMarkdown`/`projectMarkdown` write lists as raw HTML (`<ul data-superdoc-list-labels><li>•&#9;…`) and bold headings | Quote / Code styles applied with `styles.create` + `styles.paragraph.setStyle`; .docx read back; a line break inside a table cell is lost (vendor) |
-| canvas-editor | `plugin-markdown@0.0.1` merges consecutive headings and loses code; `plugin-docx@1.0.0` export writes lists as literal text and drops hyperlinks | element model both ways; `lib/ooxml.ts` export |
+| canvas-editor | `plugin-markdown@0.0.1` merges consecutive headings and loses code; `plugin-docx@1.0.0` export writes lists as literal text and drops hyperlinks | vendor plugins both ways, losses included |
 | Docxodus | no markdown importer; `convertWmlToMarkdown` is an anchor-annotated projection for patching | .docx in, .docx read back |
 | docx-editor.dev | no markdown importer or exporter on the ref | .docx in, .docx read back |
 | folio | `@stll/folio-vue@0.28.0` `fromMarkdown` turns a fenced code block into unstyled Courier paragraphs (one per line); `toMarkdown` drops backticks from code in an opened .docx and escapes `<br>` in table cells | .docx in, .docx read back (every element survives) |
@@ -238,15 +242,16 @@ JS heap leaves out WebAssembly memory, so WordCraft and Docxodus read low.
 index.ts                  Hono app: editor routes, /editors/* /lib/* (served + transpiled),
                           /api/svg-raw/*, /vendor/wordcraft/<v>/*
 server/router.ts          shared shell (top bar, stage, assistant) + /api/{sample,blank}.docx,
-                          import, export, agent, metrics, log
+                          import, agent, metrics, log
 server/agent.ts           the assistant (std/openai, gpt-5.6-luna)
 server/metrics.ts         sqlite storage + medians
 server/landing.ts         the comparison page
 lib/boot.ts, lib/ui.ts    window.od kit + all shell behaviour
 lib/metrics.ts            in-browser measurement
-lib/markdown.ts           markdown ⇄ blocks (marked), markdownToDocx
-lib/ooxml.ts              small Word-valid .docx writer (Heading 1–6, Quote, Code, lists, links)
-lib/docx-markdown.ts      .docx → markdown reader (inverse of the writer)
+lib/markdown.ts           markdown ⇄ blocks (marked)
+lib/plate-docx.ts         .docx out through Plate's docx-io (Plate export; markdown → .docx)
+lib/plate-docx-pin.ts     pinned URL + SRI of the docx-io browser bundle (tools/plate-docx-io)
+lib/docx-markdown.ts      .docx → markdown reader
 lib/probes/md-mapping.js  the markdown → Word probe
 editors/<slug>/           shell.ts (server: markup, import map) + main.ts (browser: adapter)
 ```
@@ -280,9 +285,11 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
 - **canvas-editor**: the browser's default mousedown focus stole focus from the
   hidden input, so typing went nowhere; the adapter cancels it. Its docx and
   floating-toolbar plugins load with `external=@hufe921/canvas-editor`.
-- **Plate**: `@platejs/docx-io`'s exporter wrote `<w:sectPr>` first and dropped
-  heading styles (Word treats that as damaged), and its importer lost list
-  markers. Import walks mammoth's HTML; export uses `lib/ooxml.ts`.
+- **Plate**: `@platejs/docx-io@53.5.5`'s importer loses list markers and
+  pictures, so import walks mammoth's HTML. Export is docx-io's own
+  `exportToDocx` with Plate's static components (headings keep their styles;
+  Word opens the file without a repair prompt, in Compatibility Mode). It
+  ignores a picture's width and writes its natural size.
 - **WordCraft**: val files are text-only and nothing mirrors release assets with
   CORS, so `/vendor/wordcraft/0.16.0/*` installs itself on first request:
   it downloads the pinned release zip from GitHub, checks its SHA-256, stores

@@ -16,7 +16,7 @@
  * (lib/docx-markdown.ts). Both keep every element.
  */
 import { waitFor } from "/lib/kit.ts";
-import { markdownToDocx } from "/lib/markdown.ts";
+import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 // DO NOT pass ?external=: esm.sh leaves every external as a bare import the
@@ -109,7 +109,7 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
-    await open(markdownToDocx(markdown));
+    await open(await markdownToDocx(markdown));
   },
 
   exportDocx: () => exportBytes(),

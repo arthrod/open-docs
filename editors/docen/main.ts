@@ -9,7 +9,6 @@
  */
 import { waitFor } from "/lib/kit.ts";
 import { DOCEN } from "./assets.ts";
-import { markdownToDocx } from "/lib/markdown.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 type DocenEl = HTMLElement & {
@@ -78,11 +77,11 @@ window.od.register({
 
   async applyMarkdown(markdown) {
     if (!el) throw new Error("docen not mounted");
-    // NOT el.openMarkdown(): in @docen/docx@0.7.0 the Bold/Italic/Code marks
-    // have no markdown token handlers, so @tiptap/markdown drops bold, italic
-    // and the TEXT of inline code. docen's .docx reader is complete, so the
-    // markdown goes in as a Word document instead.
-    await el.openDOCX(markdownToDocx(markdown));
+    // docen's own markdown import. Known loss in @docen/docx@0.7.0: its
+    // Bold/Italic/Code marks have no markdown token handlers, so @tiptap/markdown
+    // drops bold, italic and the TEXT of inline code. That is docen's behavior,
+    // shown as is.
+    await el.openMarkdown(markdown);
   },
 
   async exportDocx() {

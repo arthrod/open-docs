@@ -4,12 +4,13 @@
  *
  * Plate is a Slate framework, so "the document" is `editor.children`.
  *   markdown ⇄ nodes: Plate's own @platejs/markdown (editor.api.markdown)
- *   .docx in: mammoth → HTML → nodes;  .docx out: nodes → lib/ooxml.ts
+ *   .docx in: mammoth → HTML → nodes;  .docx out: Plate's own exporter (@platejs/docx-io)
  * See docx.ts for why the DOCX path is not @platejs/docx-io.
  */
 import { waitFor } from "/lib/kit.ts";
 import { mountPlate, type PlateHandle } from "./editor.tsx";
-import { emptyValue, importDocxToNodes, nodesToDocx } from "./docx.ts";
+import { emptyValue, importDocxToNodes } from "./docx.ts";
+import { plateValueToDocx } from "/lib/plate-docx.ts";
 
 let handle: PlateHandle | undefined;
 
@@ -47,6 +48,6 @@ window.od.register({
 
   async exportDocx() {
     if (!handle) throw new Error("Plate not mounted");
-    return nodesToDocx(handle.getValue());
+    return plateValueToDocx(handle.getValue());
   },
 });

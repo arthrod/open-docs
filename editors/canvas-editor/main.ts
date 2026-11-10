@@ -2,20 +2,21 @@
  * canvas-editor demo.
  *
  * @hufe921/canvas-editor draws the page on <canvas>; "the document" is an
- * `IElement[]`. The vendor publishes plugins, used here as its README shows:
+ * `IElement[]`. Every conversion goes through the vendor's own plugins, used as
+ * their READMEs show; nothing here translates the element model by hand:
  *
  *   @hufe921/canvas-editor-plugin-docx      .docx import (executeImportDocx)
+ *                                           and export (executeExportDocx)
+ *   @hufe921/canvas-editor-plugin-markdown  markdown in and out
+ *                                           (executeImportMarkdown / executeExportMarkdown)
  *   @hufe921/canvas-editor-plugin-floating-toolbar  the selection bubble
  *
- * Measured against lib/probes/md-mapping.js (2026-11-09), two vendor plugins
- * lose content, so they are NOT used for those directions:
- *   - plugin-markdown@0.0.1 import: consecutive headings merge into one line
- *     (no "\n" between TITLE elements) and inline code loses its formatting.
- *     Markdown goes through lib/markdown.ts → canvas-editor's own elements
- *     instead (TITLE 1–6, LIST, HYPERLINK, SEPARATOR, monospace code).
+ * Known vendor losses, measured with lib/probes/md-mapping.js (2026-11-09) and
+ * accepted rather than patched over:
+ *   - plugin-markdown@0.0.1 import: consecutive headings merge into one line and
+ *     inline code loses its formatting.
  *   - plugin-docx@1.0.0 export: lists come out as literal "• "/"1. " text, not
- *     Word lists, and HYPERLINK elements are dropped with their text. Export
- *     reads the element model into lib/ooxml.ts instead.
+ *     Word lists, and hyperlinks are dropped with their text.
  *
  * The plugins import "@hufe921/canvas-editor"; the page import map (shell.ts)
  * points that at the same build, so editor and plugins share one copy.
@@ -26,208 +27,13 @@
 import Editor, { ElementType, ListStyle, ListType, RowFlex, TitleLevel } from "@hufe921/canvas-editor";
 import docxPlugin from "@hufe921/canvas-editor-plugin-docx";
 import floatingToolbarPlugin from "@hufe921/canvas-editor-plugin-floating-toolbar";
+import markdownPlugin from "@hufe921/canvas-editor-plugin-markdown";
 import { waitFor } from "/lib/kit.ts";
-import { blocksToMarkdown, markdownToBlocks } from "/lib/markdown.ts";
-import { type Block, blocksToDocx, type Run } from "/lib/ooxml.ts";
 
 // deno-lint-ignore no-explicit-any
 let editor: any;
 // Exposed for the test probes in /lib/probes (read-only use).
 (window as any).__canvasEditor = () => editor;
-
-const LEVELS = [TitleLevel.FIRST, TitleLevel.SECOND, TitleLevel.THIRD, TitleLevel.FOURTH, TitleLevel.FIFTH, TitleLevel.SIXTH];
-const MONO = "Courier New";
-/** Inline code and code blocks are both monospace; their shading tells them apart. */
-const CODE_BG = "#eef0f3";
-const CODE_BLOCK_BG = "#f2f3f5";
-/** Text width of the page set up in mount(): 794 − 2 × 96 px. */
-const TEXT_WIDTH = 602;
-const QUOTE_COLOR = "#404040";
-const ZWSP = /\u200B/g;
-
-/* --------------------------- Block[] ⇄ IElement[] --------------------------- */
-
-// deno-lint-ignore no-explicit-any
-type El = any;
-
-const runEl = (r: Run, extra: Record<string, unknown> = {}): El => ({
-  value: r.text,
-  ...(r.bold ? { bold: true } : {}),
-  ...(r.italic ? { italic: true } : {}),
-  ...(r.underline ? { underline: true } : {}),
-  ...(r.strike ? { strikeout: true } : {}),
-  ...(r.code ? { font: MONO, highlight: CODE_BG } : {}),
-  ...extra,
-});
-
-/** Runs → elements; consecutive runs sharing an href become one HYPERLINK. */
-function runsToEls(runs: Run[], extra: Record<string, unknown> = {}): El[] {
-  const out: El[] = [];
-  for (let i = 0; i < runs.length;) {
-    const href = runs[i].href;
-    if (!href) {
-      out.push(runEl(runs[i++], extra));
-      continue;
-    }
-    const valueList: El[] = [];
-    while (i < runs.length && runs[i].href === href) valueList.push(runEl(runs[i++], extra));
-    out.push({ type: ElementType.HYPERLINK, value: "", url: href, valueList });
-  }
-  return out;
-}
-
-function blocksToElements(blocks: Block[]): El[] {
-  const out: El[] = [];
-  for (let i = 0; i < blocks.length; i++) {
-    const b = blocks[i];
-    if (i > 0) out.push({ value: "\n" });
-    if (b.kind === "title" || b.kind === "heading") {
-      const level = LEVELS[Math.min(Math.max((b.kind === "title" ? 1 : b.level ?? 1) - 1, 0), 5)];
-      out.push({ type: ElementType.TITLE, value: "", level, valueList: runsToEls(b.runs) });
-    } else if (b.kind === "li") {
-      // Consecutive items of the same kind become one list; "\n" splits items.
-      const ordered = !!b.ordered;
-      const items: Block[] = [b];
-      while (blocks[i + 1]?.kind === "li" && !!blocks[i + 1].ordered === ordered) items.push(blocks[++i]);
-      const valueList: El[] = [];
-      items.forEach((it, k) => {
-        if (k > 0) valueList.push({ value: "\n" });
-        valueList.push(...runsToEls(it.runs));
-      });
-      out.push({
-        type: ElementType.LIST,
-        value: "",
-        listType: ordered ? ListType.OL : ListType.UL,
-        ...(ordered ? {} : { listStyle: ListStyle.DISC }),
-        valueList,
-      });
-    } else if (b.kind === "hr") {
-      out.push({ type: ElementType.SEPARATOR, value: "\n", dashArray: [] });
-    } else if (b.kind === "code") {
-      out.push(...runsToEls(b.runs.map((r) => ({ ...r, code: true })), { highlight: CODE_BLOCK_BG }));
-    } else if (b.kind === "table") {
-      // canvas-editor's own table: header row bold, columns share the width.
-      const rows = (b.rows ?? []).filter((r) => r.length);
-      const cols = Math.max(1, ...rows.map((r) => r.length));
-      const width = Math.floor(TEXT_WIDTH / cols);
-      out.push({
-        type: ElementType.TABLE,
-        value: "",
-        colgroup: Array.from({ length: cols }, () => ({ width })),
-        trList: rows.map((cells, ri) => ({
-          height: 42,
-          tdList: Array.from({ length: cols }, (_, ci) => {
-            const runs = (cells[ci] ?? []).map((r) => (ri === 0 ? { ...r, bold: true } : r));
-            return { colspan: 1, rowspan: 1, value: runs.length ? runsToEls(runs) : [{ value: "" }] };
-          }),
-        })),
-      });
-    } else if (b.kind === "quote") {
-      // No quote element in canvas-editor: an italic, grey paragraph.
-      out.push(...runsToEls(b.runs.map((r) => ({ ...r, italic: true })), { color: QUOTE_COLOR }));
-    } else {
-      out.push(...runsToEls(b.runs));
-    }
-  }
-  return out.length ? out : [{ value: "\n" }];
-}
-
-type QRun = Run & { quote?: boolean; block?: boolean };
-
-function elToRun(el: El, text: string, href?: string): QRun {
-  return {
-    ...(el.italic && String(el.color ?? "").toLowerCase() === QUOTE_COLOR ? { quote: true } : {}),
-    text,
-    bold: !!el.bold,
-    italic: !!el.italic,
-    underline: !!el.underline,
-    strike: !!el.strikeout,
-    ...(el.font && /courier|mono|consol/i.test(el.font) ? { code: true } : {}),
-    ...(String(el.highlight ?? "").toLowerCase() === CODE_BLOCK_BG ? { block: true } : {}),
-    ...(href ? { href } : {}),
-  };
-}
-
-const stripFlags = ({ quote: _q, block: _b, ...r }: QRun): Run => r;
-
-function elementsToBlocks(list: El[]): Block[] {
-  const blocks: Block[] = [];
-  let cur: Block = { kind: "p", runs: [] };
-  const flush = () => {
-    blocks.push(cur);
-    cur = { kind: "p", runs: [] };
-  };
-  const push = (el: El, b: Partial<Block>, href?: string) => {
-    const parts = String(el.value ?? "").replace(ZWSP, "").split("\n");
-    parts.forEach((part, k) => {
-      if (k > 0) flush();
-      Object.assign(cur, b);
-      if (part) cur.runs.push(elToRun(el, part, href));
-    });
-  };
-  const pushInline = (el: El, b: Partial<Block>) => {
-    if (el.type === ElementType.HYPERLINK) for (const c of el.valueList ?? []) push(c, b, el.url);
-    else push(el, b);
-  };
-  for (const el of list) {
-    if (el.type === ElementType.TITLE) {
-      if (cur.runs.length) flush();
-      const level = Math.max(0, LEVELS.indexOf(el.level)) + 1;
-      for (const c of el.valueList ?? []) pushInline(c, { kind: "heading", level });
-      flush();
-    } else if (el.type === ElementType.LIST) {
-      if (cur.runs.length) flush();
-      const ordered = el.listType === ListType.OL;
-      for (const c of el.valueList ?? []) pushInline(c, { kind: "li", ordered });
-      flush();
-    } else if (el.type === ElementType.SEPARATOR) {
-      if (cur.runs.length) flush();
-      blocks.push({ kind: "hr", runs: [] });
-    } else if (el.type === ElementType.TABLE) {
-      if (cur.runs.length) flush();
-      const rows = (el.trList ?? []).map((tr: El) =>
-        (tr.tdList ?? []).map((td: El) => {
-          const runs: Run[] = [];
-          const add = (v: El, href?: string) => {
-            const text = String(v.value ?? "").replace(ZWSP, "");
-            // A "\n" inside a cell is a line break within it.
-            text.split(/(\n)/).forEach((t) => t && runs.push(stripFlags(elToRun(v, t, href))));
-          };
-          for (const v of td.value ?? []) {
-            if (v.type === ElementType.HYPERLINK) for (const c of v.valueList ?? []) add(c, v.url);
-            else add(v);
-          }
-          // Cells start on a line of their own: drop leading/trailing breaks.
-          while (runs[0]?.text === "\n") runs.shift();
-          while (runs.at(-1)?.text === "\n") runs.pop();
-          return runs;
-        })
-      );
-      blocks.push({ kind: "table", runs: [], rows });
-    } else if (!el.type || el.type === ElementType.TEXT || el.type === ElementType.HYPERLINK) {
-      pushInline(el, {});
-    }
-  }
-  if (cur.runs.length) flush();
-  // Title/list flushes leave empty paragraphs behind the "\n" separators.
-  return blocks
-    .filter((b) => b.kind === "hr" || b.kind === "table" || b.runs.some((r) => r.text.trim()))
-    .map((b) => {
-      // A paragraph in code-block shading is a code block (inline code alone
-      // in a paragraph stays inline code).
-      if (b.kind === "p" && b.runs.every((r: QRun) => r.block)) return { kind: "code", runs: b.runs.map((r) => ({ text: r.text })) };
-      // …and one that is entirely our italic grey is a quote.
-      if (b.kind === "p" && b.runs.every((r: QRun) => r.quote)) {
-        return { kind: "quote", runs: b.runs.map(({ quote: _q, italic: _i, ...r }: QRun) => r) };
-      }
-      return { ...b, runs: b.runs.map(stripFlags) };
-    });
-}
-
-function currentBlocks(): Block[] {
-  const { data } = editor.command.getValue();
-  return elementsToBlocks(Array.isArray(data) ? data : data.main);
-}
 
 const TITLES: Record<string, TitleLevel | null> = {
   p: null,
@@ -256,6 +62,7 @@ window.od.register({
       pageGap: 24,
     });
     editor.use(docxPlugin);
+    editor.use(markdownPlugin);
     editor.use(floatingToolbarPlugin);
     // canvas-editor focuses its hidden <textarea> inside its mousedown
     // handler; the browser's default action for that same mousedown then moves
@@ -278,11 +85,11 @@ window.od.register({
 
   async applyMarkdown(markdown) {
     if (!editor) throw new Error("editor not ready");
-    editor.command.executeSetValue({ main: blocksToElements(markdownToBlocks(markdown, { tables: true })) });
+    editor.command.executeImportMarkdown({ value: markdown });
   },
 
   async getMarkdown() {
-    return editor ? blocksToMarkdown(currentBlocks()) : "";
+    return editor ? editor.command.executeExportMarkdown() : "";
   },
 
   // The page is 794 px wide; on a narrower stage, canvas-editor's own page
@@ -294,7 +101,20 @@ window.od.register({
 
   async exportDocx() {
     if (!editor) throw new Error("editor not ready");
-    return blocksToDocx(currentBlocks());
+    // plugin-docx builds the file and then always clicks a hidden
+    // <a download> to save it. We only want the bytes, so that one click is
+    // cancelled (capture phase, blob: link) while the export runs.
+    const noDownload = (e: MouseEvent) => {
+      const a = e.target as HTMLAnchorElement | null;
+      if (a?.tagName === "A" && a.hasAttribute("download") && a.href.startsWith("blob:")) e.preventDefault();
+    };
+    document.addEventListener("click", noDownload, true);
+    try {
+      const blob: Blob = await editor.command.executeExportDocx({ fileName: "document.docx" });
+      return new Uint8Array(await blob.arrayBuffer());
+    } finally {
+      document.removeEventListener("click", noDownload, true);
+    }
   },
 });
 
