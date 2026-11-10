@@ -13,20 +13,16 @@
  */
 import React, { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { DocxEditor } from "https://esm.sh/@docx-editor.dev/react@2.35.0?external=react,react-dom";
+import { DocxEditor, type DocxEditorRef } from "https://esm.sh/@docx-editor.dev/react@2.35.0?external=react,react-dom";
 import { waitFor } from "/lib/kit.ts";
 // The vendor's open-licensed substitutes for Word's fonts (Carlito for Calibri,
 // Liberation for Arial/Times/Courier…). Loaded from jsDelivr, not esm.sh: the
 // package finds its .ttf files relative to import.meta.url.
 import { packagedFonts } from "https://cdn.jsdelivr.net/npm/@docx-editor.dev/fonts@2.35.0/dist/index.js";
-import { markdownToDocx } from "/lib/plate-docx.ts";
+import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-type EditorRef = {
-  load(doc: Uint8Array | "blank"): void;
-  save(): Promise<ArrayBuffer | null>;
-  getEditor(): unknown;
-};
+type EditorRef = DocxEditorRef;
 
 let ref: EditorRef | null = null;
 // Exposed for the probes in /lib/probes (read-only use).
@@ -65,6 +61,8 @@ function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "b
 
 window.od.register({
   name: "docx-editor.dev",
+  // selectAll + its own paste command: one entry in its history.
+  applyInHistory: true,
   mergeQuality: "rebuild",
 
   async mount() {
@@ -90,19 +88,25 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
+    const html = await marked.parse(markdown);
     if (!ref) throw new Error("docx-editor.dev not mounted");
-    // docx-editor.dev imports only .docx (markdown is export-only): the markdown
-    // becomes a Word document through Plate's own markdown reader and .docx
-    // exporter (lib/plate-docx.ts), opened with docx-editor.dev's own parser.
-    ref.load(await markdownToDocx(markdown));
+    // Vendor selectAll + paste uses its rich-HTML converter and guarded mutation
+    // path: replacement is one native history entry, unlike load(newDocument).
+    ref.focus();
+    const selected = ref.exec({ type: "selectAll" });
+    if (!selected.ok) throw new Error(`Select all failed: ${JSON.stringify(selected)}`);
+    const pasted = ref.exec(html.trim()
+      ? { type: "paste", text: markdown, html }
+      : { type: "deleteText" });
+    if (!pasted.ok) throw new Error(`Paste failed: ${JSON.stringify(pasted)}`);
   },
 
   // docx-editor.dev's own history commands.
   undo() {
-    ref?.exec({ type: "undo" } as never);
+    ref?.exec({ type: "undo" });
   },
   redo() {
-    ref?.exec({ type: "redo" } as never);
+    ref?.exec({ type: "redo" });
   },
 
   async exportDocx() {
