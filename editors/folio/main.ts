@@ -6,17 +6,12 @@
  *   createEmptyDocument(), fromMarkdown(md) → Document, toMarkdown(Document)
  *   createDocx(Document) → ArrayBuffer
  *
- * Its markdown pair is not complete (measured 2026-11-09 with
- * lib/probes/md-edge.js): `fromMarkdown` turns a fenced code block into
- * unstyled Courier paragraphs, one per line, and `toMarkdown` writes those —
- * and inline code in an opened .docx — without backticks, and escapes `<br>`
- * in table cells. So, like the other .docx-native editors, the assistant's
- * markdown becomes a Word document (lib/markdown.ts) opened by folio's own
- * .docx importer, and is read back from folio's own .docx export
- * (lib/docx-markdown.ts). Both keep every element.
+ * Assistant Markdown is pasted through folio's own HTML parser so it stays
+ * in the mounted editor's history. Readback uses its DOCX export. This path
+ * preserves headings, emphasis, links and tables, but readback loses code
+ * and quote markers and may continue ordered numbering after a bullet list.
  */
 import { waitFor } from "/lib/kit.ts";
-import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 // DO NOT pass ?external=: esm.sh leaves every external as a bare import the
@@ -30,6 +25,16 @@ type Handle = {
   destroy?(): void;
   setZoom?(zoom: number): void;
   focus?(): void;
+};
+
+type FolioView = {
+  dom: HTMLElement;
+  focus(): void;
+  pasteHTML(html: string): boolean;
+  state: {
+    selection: { from: number; to: number };
+    doc: { content: { size: number } };
+  };
 };
 
 let api: any;
@@ -62,24 +67,39 @@ async function open(input: Uint8Array | ArrayBuffer): Promise<void> {
     initialZoom: fitZoom,
     author: "open-docs",
     colorMode: "light",
-    onEditorViewReady: (v: { dom: HTMLElement } | null) => {
+    onEditorViewReady: (v: FolioView | null) => {
       pmView = v ?? undefined;
     },
   }) as Handle;
 }
 
 /** folio's ProseMirror view: its own keymap binds Mod-Z / Mod-Shift-Z to its history. */
-let pmView: { dom: HTMLElement } | undefined;
+let pmView: FolioView | undefined;
 // Exposed for the probes in /lib/probes (read-only use).
 (window as any).__folio = () => ({ api, handle, view: pmView });
-const MOD: KeyboardEventInit = /Mac/.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+const MOD: KeyboardEventInit = /Mac/.test(navigator.platform)
+  ? { metaKey: true }
+  : { ctrlKey: true };
 function historyKey(shiftKey: boolean) {
-  pmView?.dom.dispatchEvent(new KeyboardEvent("keydown", { key: shiftKey ? "Z" : "z", code: "KeyZ", shiftKey, bubbles: true, cancelable: true, ...MOD }));
+  // folio's keymap expects lowercase z, including its Mod-Shift-z redo binding.
+  pmView?.dom.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "z",
+      code: "KeyZ",
+      shiftKey,
+      bubbles: true,
+      cancelable: true,
+      ...MOD,
+    }),
+  );
 }
 
 async function blank(): Promise<ArrayBuffer> {
   const f = await folio();
-  if (typeof f.createEmptyDocument === "function" && typeof f.createDocx === "function") {
+  if (
+    typeof f.createEmptyDocument === "function" &&
+    typeof f.createDocx === "function"
+  ) {
     return await f.createDocx(f.createEmptyDocument());
   }
   return (await window.od.blankDocx()).slice().buffer;
@@ -94,6 +114,8 @@ async function exportBytes(): Promise<Uint8Array> {
 
 window.od.register({
   name: "folio",
+  // Mod-A + ProseMirror pasteHTML: one step of its history.
+  applyInHistory: true,
   mergeQuality: "native",
 
   async mount() {
@@ -106,7 +128,10 @@ window.od.register({
   // A Letter page is 816 px plus folio's vertical ruler and margins: on a
   // narrower stage, folio's own zoom shrinks the page to fit (never above 100%).
   fit(width: number) {
-    const z = Math.max(0.3, Math.min(1, Math.floor(((width - 72) / 816) * 100) / 100));
+    const z = Math.max(
+      0.3,
+      Math.min(1, Math.floor(((width - 72) / 816) * 100) / 100),
+    );
     if (Math.abs(z - fitZoom) < 0.01) return;
     fitZoom = z;
     handle?.setZoom?.(z);
@@ -121,7 +146,36 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
-    await open(await markdownToDocx(markdown));
+    const { marked } = await import(
+      "https://esm.sh/marked@18.1.3?target=es2022"
+    );
+    const html = marked.parse(markdown, { gfm: true, async: false }) ||
+      "<p></p>";
+    const view = pmView;
+    if (!view || typeof view.pasteHTML !== "function") {
+      throw new Error("folio pm view or pasteHTML missing");
+    }
+    view.focus();
+    // folio's BaseKeymapExtension selects the entire document via Mod-a.
+    view.dom.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "a",
+        code: "KeyA",
+        bubbles: true,
+        cancelable: true,
+        ...MOD,
+      }),
+    );
+    const sel = view.state.selection;
+    if (!(sel.from === 0 && sel.to === view.state.doc.content.size)) {
+      throw new Error(
+        "select-all failed: " + sel.from + ".." + sel.to + " of " +
+          view.state.doc.content.size,
+      );
+    }
+    // EditorView.pasteHTML runs folio's paste parser and dispatches a normal
+    // replacement transaction, retained by its own undo/redo history.
+    if (!view.pasteHTML(html)) throw new Error("folio paste failed");
   },
 
   exportDocx: () => exportBytes(),
