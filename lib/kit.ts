@@ -29,6 +29,12 @@ export interface EditorAdapter {
    * by engines that have none; Export then says so instead of writing one.
    */
   exportDocx?(): Promise<Uint8Array>;
+  /**
+   * The editor's own undo / redo, one step of its own history. The assistant's
+   * Undo / Redo buttons drive these; nothing is restored by hand.
+   */
+  undo?(): Promise<void> | void;
+  redo?(): Promise<void> | void;
   /** Human note about how faithful `applyMarkdown` is. */
   mergeQuality?: "native" | "html-paste" | "rebuild";
   /**

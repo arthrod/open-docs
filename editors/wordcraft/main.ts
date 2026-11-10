@@ -95,6 +95,9 @@ function saveAsDocx(timeoutMs = 15_000): Promise<Uint8Array> {
   });
 }
 
+/** The platform's command modifier (egui maps ⌘ on macOS, Ctrl elsewhere). */
+const MOD: KeyboardEventInit = /Mac/.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+
 /** WordCraft reads an opened file on its next frames; give it a moment. */
 const settle = () => new Promise((r) => setTimeout(r, 400));
 
@@ -144,4 +147,14 @@ window.od.register({
   getMarkdown: () => driving(async () => docxToMarkdown(await saveAsDocx())),
 
   exportDocx: () => driving(() => saveAsDocx()),
+
+  // The released build has no scripting API: its own Undo / Redo shortcuts.
+  undo: () => driving(async () => {
+    press({ key: "z", code: "KeyZ", ...MOD });
+    await settle();
+  }),
+  redo: () => driving(async () => {
+    press({ key: "z", code: "KeyZ", shiftKey: true, ...MOD });
+    await settle();
+  }),
 });

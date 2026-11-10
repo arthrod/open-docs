@@ -27,6 +27,8 @@ type Ribbon = {
 };
 
 let ribbon: Ribbon | undefined;
+// Exposed for the probes in /lib/probes (read-only use).
+(window as any).__docxodus = () => ribbon;
 /** On view-only pages: Docxodus's paginated read-only view (convertDocxToHtml + paginateHtml), not the ribbon. */
 let viewer: { reload(bytes: Uint8Array): Promise<void> } | undefined;
 
@@ -109,6 +111,14 @@ window.od.register({
     // markdown becomes a Word document through Plate's own markdown reader and
     // .docx exporter (lib/plate-docx.ts), which Docxodus opens with its reader.
     ribbon.open(await markdownToDocx(markdown), "document.docx");
+  },
+
+  // Docxodus's editor history (incremental repaint).
+  undo() {
+    (ribbon?.editor as { undo?(): void } | undefined)?.undo?.();
+  },
+  redo() {
+    (ribbon?.editor as { redo?(): void } | undefined)?.redo?.();
   },
 
   async exportDocx() {
