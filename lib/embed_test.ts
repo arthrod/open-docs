@@ -2,6 +2,7 @@ import { assertEquals } from "jsr:@std/assert@1.0.13";
 import {
   childError,
   childExported,
+  childMenu,
   childOpened,
   childReady,
   embedFileName,
@@ -42,6 +43,10 @@ Deno.test("parseArenaMessage: accepts well-formed open, sample, and export paylo
     parseArenaMessage({ source: "editors-arena", type: "open", name: "a.docx", bytes }),
     { type: "open", name: "a.docx", bytes },
   );
+  assertEquals(
+    parseArenaMessage({ source: "editors-arena", type: "menu" }),
+    { type: "menu" },
+  );
 });
 
 Deno.test("parseArenaMessage: rejects anything else", () => {
@@ -70,6 +75,7 @@ Deno.test("parseArenaMessage: rejects anything else", () => {
   // The child's own messages are never parent messages.
   assertEquals(parseArenaMessage(childOpened("plate", "a.docx")), null);
   assertEquals(parseArenaMessage(childExported("plate", "Report", new ArrayBuffer(4))), null);
+  assertEquals(parseArenaMessage(childMenu("plate", true)), null);
 });
 
 Deno.test("child messages carry the exact protocol shape", () => {
@@ -134,4 +140,16 @@ Deno.test("child messages carry the exact protocol shape", () => {
     bytes,
   });
   assertEquals(childExported("plate", "   ", new ArrayBuffer(0)).name, "Untitled document");
+  assertEquals(childMenu("plate", true), {
+    source: "open-docs",
+    type: "menu",
+    slug: "plate",
+    open: true,
+  });
+  assertEquals(childMenu("superdoc", false), {
+    source: "open-docs",
+    type: "menu",
+    slug: "superdoc",
+    open: false,
+  });
 });

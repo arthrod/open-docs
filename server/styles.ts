@@ -399,7 +399,13 @@ body {
 
 /* ---- embed mode ---- */
 /* ?embed=1 renders no header and no .od-sub. The stage fills the iframe.
-   The arena's slot header is the only bar. Scoped to body.od-embed. */
+   The arena's slot header is the only bar. Scoped to body.od-embed.
+   The menu panel hangs from the top-right; the arena's MENU button toggles it. */
 body.od-embed .od-layout, body.od-embed .od-layout.no-agent { gap: 0; padding: 0; }
 body.od-embed .od-stage { border: 0; }
+.od-embed .od-embed-menu { position: fixed; top: 6px; right: 8px; z-index: 50; }
+.od-embed .od-embed-menu #od-menu {
+  top: 0; right: 0; left: auto; width: auto; min-width: 290px;
+  max-height: calc(100vh - 12px); overflow: auto;
+}
 `;

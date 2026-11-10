@@ -11,6 +11,7 @@ import type { EditorAdapter } from "./kit.ts";
 import {
   childError,
   childExported,
+  childMenu,
   childOpened,
   childReady,
   type ChildMessage,
@@ -396,6 +397,14 @@ function onParentMessage(e: MessageEvent) {
   if (e.source !== window.parent) return;
   const msg = parseArenaMessage(e.data);
   if (!msg) return;
+  // The menu is chrome. It works before the engine mounts, so it is not queued.
+  if (msg.type === "menu") {
+    const menu = $("od-menu");
+    if (!menu) return;
+    if (menu.hidden) openMenu();
+    else closeMenu();
+    return;
+  }
   const act = msg.type === "sample"
     ? () => void openShowcase()
     : msg.type === "export"
@@ -746,6 +755,12 @@ function wire() {
       $("od-more")?.focus();
     }
   });
+  // A click in the arena blurs this iframe. Close so the panel does not stay up.
+  if (embed) {
+    window.addEventListener("blur", () => {
+      if (menu && !menu.hidden) closeMenu();
+    });
+  }
 
   // Metrics dialog (the chip, or the menu item on phones where the chip is hidden).
   const showMetrics = () => {
@@ -808,16 +823,19 @@ function wire() {
 
 function openMenu() {
   const menu = $("od-menu");
-  if (!menu) return;
+  if (!menu || !menu.hidden) return;
   menu.hidden = false;
   $("od-more")?.setAttribute("aria-expanded", "true");
   (menu.querySelector("button, a") as HTMLElement | null)?.focus({ preventScroll: true });
+  postChild(childMenu(slug, true));
 }
 
 function closeMenu() {
   const menu = $("od-menu");
+  const wasOpen = !!menu && !menu.hidden;
   if (menu) menu.hidden = true;
   $("od-more")?.setAttribute("aria-expanded", "false");
+  if (wasOpen) postChild(childMenu(slug, false));
 }
 
 wire();
