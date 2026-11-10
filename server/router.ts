@@ -80,7 +80,7 @@ function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: s
     : `<a role="menuitem" href="/">All editors &amp; measurements</a>`;
   const arena = embed
     ? ""
-    : `\n        <a role="menuitem" href="https://editors-arena.val.run" target="_blank" rel="noopener">Editors arena →</a>`;
+    : `\n        <a role="menuitem" href="https://arena.benchmarks.law" target="_blank" rel="noopener">Editors arena →</a>`;
   return `      <div class="od-menu" id="od-menu" role="menu" hidden>
         <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Document</div>
         ${viewer ? "" : `<button role="menuitem" id="od-rename">Rename document…</button>`}

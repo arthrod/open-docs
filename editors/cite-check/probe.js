@@ -7,7 +7,7 @@
  *
  * Run (from the repo root, with playwright-core available):
  *   node editors/cite-check/probe.js http://127.0.0.1:8788
- * (works unchanged against the live https://open-docs.val.run)
+ * (works unchanged against the live https://editors.benchmarks.law)
  */
 import { chromium } from "playwright-core";
 

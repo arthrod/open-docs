@@ -79,7 +79,7 @@ r = p.add_run("small caps"); r.font.small_caps = True; p.add_run(", ")
 r = p.add_run("Georgia serif"); r.font.name = "Georgia"; p.add_run(", ")
 r = p.add_run("inline code"); r.font.name = "Courier New"; p.add_run(", and ")
 r = p.add_run("a larger size"); r.font.size = Pt(15); p.add_run(". The full data set lives at ")
-hyperlink(p, "https://open-docs.val.run/", "open-docs.val.run"); p.add_run(".")
+hyperlink(p, "https://editors.benchmarks.law/", "editors.benchmarks.law"); p.add_run(".")
 
 doc.add_heading("1. Summary", level=1)
 p = doc.add_paragraph("Output across the twelve turbines rose ", style="Normal")

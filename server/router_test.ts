@@ -54,7 +54,7 @@ Deno.test("shell without ?embed=1 is the full chrome: assistant, sub-bar, switch
   assertEquals(html.includes(`<header class="site-nav od-bar">`), true);
   assertEquals(html.includes(">CHILL<"), true);
   assertEquals(html.includes(">NEUROTIC<"), true);
-  assertEquals(html.includes(`href="https://editors-arena.val.run"`), true);
+  assertEquals(html.includes(`href="https://arena.benchmarks.law"`), true);
   assertEquals(html.includes("Editors arena"), true);
   assertEquals(html.includes("Editors arena →"), true);
   // The in-page link stays in this tab. Embed mode is the one that adds target=_blank.

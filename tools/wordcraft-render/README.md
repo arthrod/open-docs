@@ -1,7 +1,7 @@
 # wordcraft-render (wasm)
 
 WordCraft's own `.docx` reader, page layout and rasteriser as one WebAssembly
-function, so a Deno server (the [open-docs viewer](https://open-docs-viewer.val.run)
+function, so a Deno server (the [open-docs viewer](https://viewers.benchmarks.law)
 on Val Town) renders `.docx` pages the way `wordcraft-cli convert x.docx x.png`
 does: no browser, no GPU, no filesystem, no subprocess.
 
