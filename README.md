@@ -16,13 +16,13 @@ step. Each one opens on a **blank document**, imports and exports real
 
 | Editor | Package | Renders | .docx in / out | Assistant writes through | Assistant reads |
 | --- | --- | --- | --- | --- | --- |
-| [canvas-editor](https://open-docs.val.run/e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` + `plugin-docx` | Canvas | vendor `plugin-docx` both ways | vendor `plugin-markdown` (`executeImportMarkdown`) | vendor `plugin-markdown` (`executeExportMarkdown`) |
-| [Docxodus](https://open-docs.val.run/e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | markdown → Plate → docx-io .docx → `ribbon.open` | its .docx → `lib/docx-markdown.ts` |
+| [canvas-editor](https://open-docs.val.run/e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` + `plugin-docx` | Canvas | vendor `plugin-docx` both ways | marked HTML → its `getElementListByHTML` → `executeInsertElementList` (undoable) | vendor `plugin-markdown` (`executeExportMarkdown`) |
+| [Docxodus](https://open-docs.val.run/e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | its session `insertParagraph(markdown)` / `insertTable` in one atomic `executeBatch` (undoable) | its .docx → `lib/docx-markdown.ts` |
 | [SuperDoc](https://open-docs.val.run/e/superdoc) | `superdoc@2.29.0` | Vue + own layout engine | native | `doc.insert({type:"markdown"})` + Quote/Code styles via its document API (undoable) | its .docx → `lib/docx-markdown.ts` |
 | [Plate](https://open-docs.val.run/e/plate) | `platejs@53.5.2` + plugins | Slate / DOM | mammoth in, `@platejs/docx-io` out | `@platejs/markdown` deserialize (undoable) | `@platejs/markdown` serialize |
-| [docen](https://open-docs.val.run/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | its own `openMarkdown` | its .docx → `lib/docx-markdown.ts` |
-| [docx-editor.dev](https://open-docs.val.run/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → `ref.load` | its .docx → `lib/docx-markdown.ts` |
-| [folio](https://open-docs.val.run/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | markdown → Plate → docx-io .docx → `renderAsync` | its .docx (`save()`) → `lib/docx-markdown.ts` |
+| [docen](https://open-docs.val.run/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | marked HTML → its paste parser (`parseHTMLBody`) → `setContent` (undoable) | its .docx → `lib/docx-markdown.ts` |
+| [docx-editor.dev](https://open-docs.val.run/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → its own DOCX clipboard-fragment paste (undoable) | its .docx → `lib/docx-markdown.ts` |
+| [folio](https://open-docs.val.run/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | its `fromMarkdown` → `mergeDocumentContent` → `toProseDoc`, one transaction (undoable) | its .docx (`save()`) → `lib/docx-markdown.ts` |
 | [WordCraft](https://open-docs.val.run/e/wordcraft) | `wordcraft-web` 0.17.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
@@ -134,16 +134,19 @@ importer/exporter, and the losses are listed under the vendors:
 
 ### How fairness to each vendor is decided
 
-1. If the vendor has a markdown **importer** that maps every element, the
-   assistant writes through it (Plate, WordCraft; SuperDoc after its quote and
-   code-block gaps are filled with its own API).
-2. If the vendor has a markdown importer that loses some elements, it is still
-   used, losses included (docen `openMarkdown`, canvas-editor `plugin-markdown`).
-3. Otherwise the markdown becomes a Word document through Plate's own
+1. The assistant's edit lands in the engine's **own undo history** as one
+   edit, so the edit card's Undo/Redo drive the engine's native undo/redo. A
+   path that rebuilds the document or resets the history (`openMarkdown`,
+   `load`, `renderAsync`, `file.open`) is not used for applying.
+2. Among the engine's own importers that can do that, the one that keeps the
+   most is used: its markdown importer (Plate, SuperDoc, folio, Docxodus'
+   session), its own HTML paste pipeline fed by `marked` (docen,
+   canvas-editor, WordCraft), or its own .docx clipboard format fed by Plate's
    converters (`@platejs/markdown` → `@platejs/docx-io`,
-   [`lib/plate-docx.ts`](lib/plate-docx.ts)) and goes through the vendor's own
-   **.docx importer** (Docxodus, docx-editor.dev, folio). Nothing in the bench
-   writes .docx by hand.
+   [`lib/plate-docx.ts`](lib/plate-docx.ts); docx-editor.dev). Nothing in the
+   bench writes .docx or a document model by hand.
+3. What that importer still loses is the engine's, and is listed below
+   (docen's and WordCraft's HTML paste drop the Quote style).
 4. Reading back uses the vendor's markdown **exporter** when it has one
    (Plate, canvas-editor); otherwise the vendor's own .docx export is read by
    [`lib/docx-markdown.ts`](lib/docx-markdown.ts), the inverse of the writer.
@@ -183,7 +186,7 @@ What is the vendors' (written down, worked around fairly, reportable upstream):
 
 | Vendor | Limitation (version tested) | What the bench does |
 | --- | --- | --- |
-| docen | `@docen/docx@0.7.0` markdown import drops bold / italic / inline-code text; `saveMarkdown` drops marks, writes bullets as numbers, loses quotes; blank documents ignore `docDefaults` fonts (Calibri renders as a serif fallback) | .docx in, .docx read back |
+| docen | `@docen/docx@0.7.0` markdown import drops bold / italic / inline-code text and tables, so the assistant goes through its HTML paste parser, whose rules have no `<blockquote>` (a quote lands as a plain paragraph); `saveMarkdown` drops marks, writes bullets as numbers, loses quotes; blank documents ignore `docDefaults` fonts (Calibri renders as a serif fallback) | .docx in, .docx read back |
 | SuperDoc | markdown and HTML importers map `>` quotes to plain paragraphs and fenced code to an unstyled monospace paragraph, and drop `<br>` inside table cells; `getMarkdown`/`projectMarkdown` write lists as raw HTML (`<ul data-superdoc-list-labels><li>•&#9;…`) and bold headings | Quote / Code styles applied with `styles.create` + `styles.paragraph.setStyle`; .docx read back; a line break inside a table cell is lost (vendor) |
 | canvas-editor | `plugin-markdown@0.0.1` merges consecutive headings and loses code; `plugin-docx@1.0.0` export writes lists as literal text and drops hyperlinks | vendor plugins both ways, losses included |
 | Docxodus | no markdown importer; `convertWmlToMarkdown` is an anchor-annotated projection for patching | .docx in, .docx read back |

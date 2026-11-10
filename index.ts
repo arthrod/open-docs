@@ -11,6 +11,7 @@ import { editors } from "./server/registry.ts";
 import { mountShared, registerEditor } from "./server/router.ts";
 import { landingPage } from "./server/landing.ts";
 import { editorMounts } from "./editors/index.ts";
+import { fixtureMarkerFreeDocx, fixtureBriefDocx, fixtureSourcesText } from "./editors/cite-check/fixture.ts";
 import { ICONS_VERSION } from "./editors/docen/assets.ts";
 import { serveWordcraft, WORDCRAFT_BASE } from "./editors/wordcraft/assets.ts";
 
@@ -18,6 +19,20 @@ const app = new Hono();
 
 // Shared API: sample docx, import, export, agent, metrics.
 mountShared(app);
+
+// cite-check fixtures: Val Town files are text-only, so the .docx bytes are
+// built server-side (same writer as /api/sample.docx).
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+app.get("/api/cite-check/appellate-brief.docx", (c) =>
+  new Response(fixtureBriefDocx(), {
+    headers: { "content-type": DOCX_MIME, "cache-control": "public, max-age=300" },
+  }));
+app.get("/api/cite-check/marker-free.docx", (c) =>
+  new Response(fixtureMarkerFreeDocx(), {
+    headers: { "content-type": DOCX_MIME, "cache-control": "public, max-age=300" },
+  }));
+app.get("/api/cite-check/sources.txt", (c) =>
+  c.text(fixtureSourcesText));
 
 // Each editor folder registers its own shell + asset route. A folder that
 // isn't written yet must not take the whole app down.
