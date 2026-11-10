@@ -11,12 +11,12 @@ import {
 } from "./embed.ts";
 
 Deno.test("isEmbedUrl: only ?embed=1 (exact) is embed mode", () => {
-  assertEquals(isEmbedUrl("https://open-docs.val.run/e/plate?embed=1"), true);
-  assertEquals(isEmbedUrl("https://open-docs.val.run/e/plate?embed=1&x=2"), true);
-  assertEquals(isEmbedUrl("https://open-docs.val.run/e/plate"), false);
-  assertEquals(isEmbedUrl("https://open-docs.val.run/e/plate?embed=0"), false);
-  assertEquals(isEmbedUrl("https://open-docs.val.run/e/plate?embed=true"), false);
-  assertEquals(isEmbedUrl("https://open-docs.val.run/e/plate?embedded=1"), false);
+  assertEquals(isEmbedUrl("https://editors.benchmarks.law/e/plate?embed=1"), true);
+  assertEquals(isEmbedUrl("https://editors.benchmarks.law/e/plate?embed=1&x=2"), true);
+  assertEquals(isEmbedUrl("https://editors.benchmarks.law/e/plate"), false);
+  assertEquals(isEmbedUrl("https://editors.benchmarks.law/e/plate?embed=0"), false);
+  assertEquals(isEmbedUrl("https://editors.benchmarks.law/e/plate?embed=true"), false);
+  assertEquals(isEmbedUrl("https://editors.benchmarks.law/e/plate?embedded=1"), false);
   // Not a URL at all: never embed.
   assertEquals(isEmbedUrl("/e/plate?embed=1"), false);
 });

@@ -1,6 +1,6 @@
 # open-docs
 
-[![Live on Val Town](https://img.shields.io/badge/live-open--docs.val.run-2557d6)](https://open-docs.val.run)
+[![Live on Val Town](https://img.shields.io/badge/live-editors.benchmarks.law-2557d6)](https://editors.benchmarks.law)
 [![Val Town](https://img.shields.io/badge/runs%20on-Val%20Town-111)](https://www.val.town/x/arthrod/open-docs)
 [![Release](https://img.shields.io/github/v/tag/arthrod/open-docs?label=release)](https://github.com/arthrod/open-docs/tags)
 [![Editors](https://img.shields.io/badge/editors-8-informational)](#the-editors)
@@ -10,20 +10,20 @@ step. Each one opens on a **blank document**, imports and exports real
 **.docx** files, has an **AI assistant** that edits the open document, and is
 **measured on every visit**: startup time, JS memory and download size.
 
-**Live:** <https://open-docs.val.run> · **Source:** <https://open-docs.val.run/source>
+**Live:** <https://editors.benchmarks.law> · **Source:** <https://editors.benchmarks.law/source>
 
 ## The editors
 
 | Editor | Package | Renders | .docx in / out | Assistant writes through | Assistant reads |
 | --- | --- | --- | --- | --- | --- |
-| [canvas-editor](https://open-docs.val.run/e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` + `plugin-docx` | Canvas | vendor `plugin-docx` both ways | marked HTML → its `getElementListByHTML` → `executeInsertElementList` (undoable) | vendor `plugin-markdown` (`executeExportMarkdown`) |
-| [Docxodus](https://open-docs.val.run/e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | its session `insertParagraph(markdown)` / `insertTable` in one atomic `executeBatch` (undoable) | its .docx → `lib/docx-markdown.ts` |
-| [SuperDoc](https://open-docs.val.run/e/superdoc) | `superdoc@2.29.0` | Vue + own layout engine | native | `doc.insert({type:"markdown"})` + Quote/Code styles via its document API (undoable) | its .docx → `lib/docx-markdown.ts` |
-| [Plate](https://open-docs.val.run/e/plate) | `platejs@53.5.2` + plugins | Slate / DOM | mammoth in, `@platejs/docx-io` out | `@platejs/markdown` deserialize (undoable) | `@platejs/markdown` serialize |
-| [docen](https://open-docs.val.run/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | marked HTML → its paste parser (`parseHTMLBody`) → `setContent` (undoable) | its .docx → `lib/docx-markdown.ts` |
-| [docx-editor.dev](https://open-docs.val.run/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → its own DOCX clipboard-fragment paste (undoable) | its .docx → `lib/docx-markdown.ts` |
-| [folio](https://open-docs.val.run/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | its `fromMarkdown` → `mergeDocumentContent` → `toProseDoc`, one transaction (undoable) | its .docx (`save()`) → `lib/docx-markdown.ts` |
-| [WordCraft](https://open-docs.val.run/e/wordcraft) | `wordcraft-web` 0.17.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
+| [canvas-editor](https://editors.benchmarks.law/e/canvas-editor) | `@hufe921/canvas-editor@1.1.0` + `plugin-docx` | Canvas | vendor `plugin-docx` both ways | marked HTML → its `getElementListByHTML` → `executeInsertElementList` (undoable) | vendor `plugin-markdown` (`executeExportMarkdown`) |
+| [Docxodus](https://editors.benchmarks.law/e/docxodus) | `docxodus@15.1.0` | .NET/WASM → HTML | native, lossless | its session `insertParagraph(markdown)` / `insertTable` in one atomic `executeBatch` (undoable) | its .docx → `lib/docx-markdown.ts` |
+| [SuperDoc](https://editors.benchmarks.law/e/superdoc) | `superdoc@2.29.0` | Vue + own layout engine | native | `doc.insert({type:"markdown"})` + Quote/Code styles via its document API (undoable) | its .docx → `lib/docx-markdown.ts` |
+| [Plate](https://editors.benchmarks.law/e/plate) | `platejs@53.5.2` + plugins | Slate / DOM | mammoth in, `@platejs/docx-io` out | `@platejs/markdown` deserialize (undoable) | `@platejs/markdown` serialize |
+| [docen](https://editors.benchmarks.law/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | marked HTML → its paste parser (`parseHTMLBody`) → `setContent` (undoable) | its .docx → `lib/docx-markdown.ts` |
+| [docx-editor.dev](https://editors.benchmarks.law/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → its own DOCX clipboard-fragment paste (undoable) | its .docx → `lib/docx-markdown.ts` |
+| [folio](https://editors.benchmarks.law/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | its `fromMarkdown` → `mergeDocumentContent` → `toProseDoc`, one transaction (undoable) | its .docx (`save()`) → `lib/docx-markdown.ts` |
+| [WordCraft](https://editors.benchmarks.law/e/wordcraft) | `wordcraft-web` 0.17.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
 ships one (Docxodus, SuperDoc, docen, docx-editor.dev, folio, WordCraft), and a
@@ -43,10 +43,10 @@ in a separate group.
 
 | Viewer | How it runs | Key | Opens your file? | Measured (2026-11-09, desktop Chrome) |
 | --- | --- | --- | --- | --- |
-| [Microsoft Word viewer](https://open-docs.val.run/e/word-online) | `view.officeapps.live.com/op/embed.aspx`, rendered on Microsoft's servers | none | no: it fetches a public URL, so only this site's samples | ~1.2 s to the frame's load event |
-| [Google Docs viewer](https://open-docs.val.run/e/google-viewer) | `docs.google.com/gview?embedded=true`, rendered on Google's servers | none | no: same reason | ~1.9 s; occasionally never answers, so it retries once after 20 s |
-| [Apryse WebViewer](https://open-docs.val.run/e/apryse) | `@pdftron/webviewer@12.2.1` from jsDelivr; WASM office engine in a worker | none: **demo mode**, watermarked | yes, in the browser | 3.7–5.6 s warm, 48 MB heap, 13.6 MB loaded |
-| [Nutrient Web SDK](https://open-docs.val.run/e/nutrient) | `nutrient-viewer` 1.25.0 from Nutrient's CDN; .NET (GdPicture) WASM turns the .docx into a PDF, then shows the PDF | none: **trial mode**, "For Evaluation Purposes Only" watermark | yes, in the browser | 15–28 s, 111 MB heap, 105 MB loaded (a 68 MB `dotnet.native.wasm`) |
+| [Microsoft Word viewer](https://editors.benchmarks.law/e/word-online) | `view.officeapps.live.com/op/embed.aspx`, rendered on Microsoft's servers | none | no: it fetches a public URL, so only this site's samples | ~1.2 s to the frame's load event |
+| [Google Docs viewer](https://editors.benchmarks.law/e/google-viewer) | `docs.google.com/gview?embedded=true`, rendered on Google's servers | none | no: same reason | ~1.9 s; occasionally never answers, so it retries once after 20 s |
+| [Apryse WebViewer](https://editors.benchmarks.law/e/apryse) | `@pdftron/webviewer@12.2.1` from jsDelivr; WASM office engine in a worker | none: **demo mode**, watermarked | yes, in the browser | 3.7–5.6 s warm, 48 MB heap, 13.6 MB loaded |
+| [Nutrient Web SDK](https://editors.benchmarks.law/e/nutrient) | `nutrient-viewer` 1.25.0 from Nutrient's CDN; .NET (GdPicture) WASM turns the .docx into a PDF, then shows the PDF | none: **trial mode**, "For Evaluation Purposes Only" watermark | yes, in the browser | 15–28 s, 111 MB heap, 105 MB loaded (a 68 MB `dotnet.native.wasm`) |
 
 What the numbers can and can't say:
 
@@ -76,7 +76,7 @@ public site may fall outside those terms. Check the terms, or remove
 
 ## Using it
 
-Open <https://open-docs.val.run>, pick an editor. Every editor page has the same
+Open <https://editors.benchmarks.law>, pick an editor. Every editor page has the same
 compact top bar — editor dropdown, metrics chip, assistant toggle — and a
 **Menu** on the right with every document action:
 
@@ -344,8 +344,8 @@ There's no build. Edit a file, `vt push`, refresh. The git repository is
 
 ```bash
 vt push                                         # deploy
-curl -s https://open-docs.val.run/api/metrics | jq                     # current medians
-curl -s -X POST https://open-docs.val.run/api/agent -H 'content-type: application/json' \
+curl -s https://editors.benchmarks.law/api/metrics | jq                     # current medians
+curl -s -X POST https://editors.benchmarks.law/api/agent -H 'content-type: application/json' \
   -d '{"slug":"folio","document":"","prompt":"Write a two-line memo","history":[]}'
 ```
 

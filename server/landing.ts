@@ -296,9 +296,9 @@ html { scroll-behavior: smooth; }
   <nav id="od-land-nav" aria-label="Site">
     <div class="nav-label" aria-hidden="true"><span class="sq"></span> / Site</div>
     <a href="#editors">Editors</a>
-    <a href="#viewers">Viewers</a>
+    <a href="https://viewers.benchmarks.law" target="_blank" rel="noopener">Viewers →</a>
     <a href="#metrics">Measurements</a>
-    <a href="https://editors-arena.val.run" target="_blank" rel="noopener">Arena →</a>
+    <a href="https://arena.benchmarks.law" target="_blank" rel="noopener">Arena →</a>
     <a href="/source" target="_blank" rel="noopener">Source →</a>
     <a href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
   </nav>
