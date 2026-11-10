@@ -385,9 +385,10 @@ body {
 /* editors-arena loads /e/<slug>?embed=1 in an iframe: compact bar (engine name,
    doc name, Open/Sample/Export, metrics chip), no assistant, editor takes the
    freed space. Scoped to body.od-embed so nothing else changes. */
-body.od-embed .od-bar { height: 44px; gap: 8px; padding: 0 10px; }
-body.od-embed .od-engine { font-family: var(--font-mono); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 6px; background: var(--mark); color: var(--ink); }
-body.od-embed .od-docname { flex: 1 1 120px; width: auto; min-width: 60px; }
-body.od-embed .od-layout, body.od-embed .od-layout.no-agent { gap: 0; padding: 8px; }
+body.od-embed .od-bar { height: 40px; gap: 6px; padding: 0 8px; flex-wrap: nowrap; overflow: hidden; }
+/* The arena's slot header already names the engine and shows its startup time. */
+body.od-embed .od-engine, body.od-embed .od-metrics { display: none; }
+body.od-embed .od-docname { flex: 1 1 60px; width: auto; min-width: 0; }
+body.od-embed .od-bar .od-btn { flex: none; height: 28px; padding: 0 8px; font-size: 10.5px; }
+body.od-embed .od-layout, body.od-embed .od-layout.no-agent { gap: 0; padding: 0; }
 `;
