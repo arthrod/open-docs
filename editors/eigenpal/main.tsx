@@ -19,6 +19,7 @@ import { waitFor } from "/lib/kit.ts";
 // Liberation for Arial/Times/Courier…). Loaded from jsDelivr, not esm.sh: the
 // package finds its .ttf files relative to import.meta.url.
 import { packagedFonts } from "https://cdn.jsdelivr.net/npm/@docx-editor.dev/fonts@2.35.0/dist/index.js";
+import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
@@ -101,16 +102,21 @@ window.od.register({
       for (let i = 0; i < bytes.length; i += 32768) {
         binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
       }
-      html = `<div data-docx-fragment="${btoa(binary)}" data-docx-fragment-end="covered"></div>`;
+      // The vendor's own copy format: the package plus its rendered HTML inside
+      // the div, so a refused fragment falls back to the engine's HTML import
+      // (and then to the text) instead of to nothing.
+      const rendered = await marked.parse(markdown);
+      html = `<div data-docx-fragment="${btoa(binary)}" data-docx-fragment-end="covered">${rendered}</div>`;
     }
     ref.focus();
     const selected = ref.exec({ type: "selectAll" });
     if (!selected.ok) throw new Error(`Select all failed: ${JSON.stringify(selected)}`);
-    // No plain-text fallback: a refused fragment must not silently lose fidelity.
     const pasted = ref.exec(html
-      ? { type: "paste", text: "", html }
+      ? { type: "paste", text: markdown, html }
       : { type: "deleteText" });
-    if (!pasted.ok) throw new Error(`Paste failed: ${JSON.stringify(pasted)}`);
+    // `ok` only means the command ran: a paste every lane declined (view mode,
+    // a header story, a cell selection) answers {ok: true, changed: false}.
+    if (!pasted.ok || !pasted.changed) throw new Error(`Paste did not change the document: ${JSON.stringify(pasted)}`);
   },
 
   // docx-editor.dev's own history commands.
