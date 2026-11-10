@@ -147,3 +147,17 @@ Deno.test("navbar crumb reads / editors and Contact is the last menu item, embed
   }
   assertEquals((await get("/e/plate")).includes(`<span class="crumb">/ editors</span>`), true);
 });
+
+Deno.test("menu credits the makers under / Made by, Contact still last, embed too (#44)", async () => {
+  for (const path of ["/e/plate", "/e/plate?embed=1"]) {
+    const html = await get(path);
+    const menu = html.slice(html.indexOf(`id="od-menu"`));
+    assertEquals(menu.includes("/ Made by"), true, path);
+    assertEquals(menu.includes(`href="https://www.linkedin.com/in/zbeyens/"`), true, path);
+    assertEquals(menu.includes(`href="https://www.linkedin.com/company/udecode/"`), true, path);
+    const items = [...menu.slice(0, menu.indexOf("</div>\n    </div>") === -1 ? undefined : menu.indexOf("</div>\n    </div>")).matchAll(/role="menuitem"[^>]*>([^<]*)</g)].map((m) => m[1].trim());
+    assertEquals(items.at(-1), "Contact →", path);
+  }
+  const full = await get("/e/plate");
+  assertEquals(full.includes(`class="od-makers"`), true);
+});

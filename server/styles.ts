@@ -210,6 +210,10 @@ body {
 .od-layout.no-agent { grid-template-columns: minmax(0, 1fr); }
 .od-layout.no-agent .od-aside { display: none; }
 .od-aside-close { display: none; }
+.od-makers { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.od-makers a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.od-makers a:hover { background: var(--mark); }
+@media (max-width: 760px) { .od-makers { display: none; } }
 @media (max-width: 1100px) { .od-blurb { display: none; } }
 @media (max-width: 900px) {
   .od-layout, .od-layout.no-agent { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 6px; }
