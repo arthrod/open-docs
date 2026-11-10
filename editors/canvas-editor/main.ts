@@ -7,14 +7,23 @@
  *
  *   @hufe921/canvas-editor-plugin-docx      .docx import (executeImportDocx)
  *                                           and export (executeExportDocx)
- *   @hufe921/canvas-editor-plugin-markdown  markdown in and out
- *                                           (executeImportMarkdown / executeExportMarkdown)
+ *   @hufe921/canvas-editor-plugin-markdown  markdown out
+ *                                           (executeExportMarkdown); markdown in
+ *                                           is no longer its executeImportMarkdown,
+ *                                           which routes through executeSetValue →
+ *                                           draw.setValue → historyManager.recovery()
+ *                                           and wipes the undo stack (issue #3)
  *   @hufe921/canvas-editor-plugin-floating-toolbar  the selection bubble
  *
  * Known vendor losses, measured with lib/probes/md-mapping.js (2026-11-09) and
- * accepted rather than patched over:
- *   - plugin-markdown@0.0.1 import: consecutive headings merge into one line and
- *     inline code loses its formatting.
+ * on the live page (2026-11-10), accepted rather than patched over:
+ *   - getElementListByHTML import (applyMarkdown): inline code loses its
+ *     formatting, blockquote text is kept but plain (the token-based plugin
+ *     import used to italicise it), and images without width/height attributes
+ *     in the HTML are dropped. Consecutive headings, which plugin-markdown's
+ *     import merged into one line, stay separate now.
+ *   - plugin-markdown@0.0.1 export: hyperlink text is dropped on the way out
+ *     (the link element itself is kept in the document).
  *   - plugin-docx@1.0.0 export: lists come out as literal "• "/"1. " text, not
  *     Word lists, and hyperlinks are dropped with their text.
  *
@@ -24,10 +33,11 @@
  * canvas-editor ships no toolbar UI (its demo builds one in the repo, not the
  * package), so shell.ts provides one wired to the editor's command API below.
  */
-import Editor, { ElementType, ListStyle, ListType, RowFlex, TitleLevel } from "@hufe921/canvas-editor";
+import Editor, { ElementType, getElementListByHTML, ListStyle, ListType, RowFlex, TitleLevel } from "@hufe921/canvas-editor";
 import docxPlugin from "@hufe921/canvas-editor-plugin-docx";
 import floatingToolbarPlugin from "@hufe921/canvas-editor-plugin-floating-toolbar";
 import markdownPlugin from "@hufe921/canvas-editor-plugin-markdown";
+import { marked } from "marked";
 import { waitFor } from "/lib/kit.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -47,6 +57,8 @@ const TITLES: Record<string, TitleLevel | null> = {
 
 window.od.register({
   name: "canvas-editor",
+  // select all + executeInsertElementList: one record in its history.
+  applyInHistory: true,
   mergeQuality: "native",
 
   async mount() {
@@ -85,7 +97,28 @@ window.od.register({
 
   async applyMarkdown(markdown) {
     if (!editor) throw new Error("editor not ready");
-    editor.command.executeImportMarkdown({ value: markdown });
+    // In-history apply (issue #3). executeImportMarkdown runs through
+    // executeSetValue → historyManager.recovery(), erasing undo; instead use
+    // the engine's own HTML pipeline — the same one its paste handler uses
+    // (draw.paste → getElementListByHTML → insertElementList):
+    //   marked.parse (md → HTML) → getElementListByHTML (HTML → IElement[],
+    //   exported by @hufe921/canvas-editor) → executeSelectAll() +
+    //   executeInsertElementList(), which replaces the selection and submits
+    //   to the history manager (Draw.insertElementList renders with
+    //   isSubmitHistory, unlike setValue which recovers/clears it).
+    // executeSetRange first places the cursor the way a click does: after an
+    // import the undo stack is empty, and this render is what makes the engine
+    // snapshot the pre-edit document as the undo base record — without it the
+    // lone insert would be the only record and undo() would be a no-op.
+    const options = editor.command.getOptions();
+    const elementList = getElementListByHTML(await marked.parse(markdown), {
+      // Same width the paste path passes (draw.getOriginalInnerWidth()) so
+      // imported tables get sensible column widths.
+      innerWidth: options.width - options.margins[1] - options.margins[3],
+    });
+    editor.command.executeSetRange(0, 0);
+    editor.command.executeSelectAll();
+    editor.command.executeInsertElementList(elementList);
   },
 
   undo() {
