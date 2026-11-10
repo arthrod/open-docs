@@ -19,7 +19,7 @@ import { waitFor } from "/lib/kit.ts";
 // Liberation for Arial/Times/Courier…). Loaded from jsDelivr, not esm.sh: the
 // package finds its .ttf files relative to import.meta.url.
 import { packagedFonts } from "https://cdn.jsdelivr.net/npm/@docx-editor.dev/fonts@2.35.0/dist/index.js";
-import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
+import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 type EditorRef = DocxEditorRef;
@@ -61,7 +61,8 @@ function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "b
 
 window.od.register({
   name: "docx-editor.dev",
-  // selectAll + its own paste command: one entry in its history.
+  // selectAll + its own paste of its own DOCX clipboard fragment: one entry
+  // in its history, with the styles/numbering of the .docx it was given.
   applyInHistory: true,
   mergeQuality: "rebuild",
 
@@ -88,15 +89,26 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
-    const html = await marked.parse(markdown);
     if (!ref) throw new Error("docx-editor.dev not mounted");
-    // Vendor selectAll + paste uses its rich-HTML converter and guarded mutation
-    // path: replacement is one native history entry, unlike load(newDocument).
+    let html = "";
+    if (markdown.trim()) {
+      const bytes = await markdownToDocx(markdown);
+      // 2.35.0's native clipboard codec accepts a base64 DOCX package. Its paste
+      // transaction imports styles/numbering and replaces the selection atomically.
+      // Keep the old DOCX conversion, but never load it over the live document.
+      if (bytes.byteLength > 16 * 1024 * 1024) throw new Error("Edit exceeds the engine's 16 MiB clipboard limit");
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 32768) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+      }
+      html = `<div data-docx-fragment="${btoa(binary)}" data-docx-fragment-end="covered"></div>`;
+    }
     ref.focus();
     const selected = ref.exec({ type: "selectAll" });
     if (!selected.ok) throw new Error(`Select all failed: ${JSON.stringify(selected)}`);
-    const pasted = ref.exec(html.trim()
-      ? { type: "paste", text: markdown, html }
+    // No plain-text fallback: a refused fragment must not silently lose fidelity.
+    const pasted = ref.exec(html
+      ? { type: "paste", text: "", html }
       : { type: "deleteText" });
     if (!pasted.ok) throw new Error(`Paste failed: ${JSON.stringify(pasted)}`);
   },
