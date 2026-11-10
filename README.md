@@ -77,9 +77,10 @@ public site may fall outside those terms. Check the terms, or remove
 ## Using it
 
 Open <https://open-docs.val.run>, pick an editor. Every editor page has the same
-compact top bar — editor, document name, metrics chip, assistant toggle — and a
+compact top bar — editor dropdown, metrics chip, assistant toggle — and a
 **Menu** on the right with every document action:
 
+- **Rename document…** sets the name used when you export (default: Untitled document).
 - **New blank document** (⌥N). Pages also *open* blank.
 - **Open .docx from your computer…** (⌘O), or drag a .docx onto the page.
 - **Export this document as .docx** (⌘S): the document you are editing, in the

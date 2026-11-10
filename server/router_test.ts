@@ -28,7 +28,24 @@ Deno.test("shell without ?embed=1 is the full chrome: assistant, sub-bar, switch
   assertEquals(html.includes(`id="od-toggle-agent"`), true);
   assertEquals(html.includes(`id="od-switch"`), true);
   assertEquals(html.includes(`id="od-more"`), true);
-  assertEquals(html.includes(`id="od-docname"`), true);
+  assertEquals(html.includes(`id="od-docname"`), false);
+  assertEquals(html.includes(`id="od-rename"`), true);
+  assertEquals(html.includes(`id="od-rename-dialog"`), true);
+  const bar = html.slice(html.indexOf(`<header class="site-nav od-bar">`), html.indexOf(`</header>`));
+  const spacerAt = bar.indexOf(`class="od-spacer"`);
+  const switchAt = bar.indexOf(`class="od-switch"`);
+  const metricsAt = bar.indexOf(`id="od-metrics"`);
+  const agentAt = bar.indexOf(`id="od-toggle-agent"`);
+  const menuAt = bar.indexOf(`id="od-more"`);
+  assertEquals(spacerAt !== -1 && switchAt > spacerAt, true);
+  assertEquals(switchAt < metricsAt && metricsAt < agentAt && agentAt < menuAt, true);
+  const documentAt = html.indexOf("/ Document");
+  const renameAt = html.indexOf(`id="od-rename"`);
+  assertEquals(documentAt !== -1 && renameAt > documentAt, true);
+  assertEquals(
+    html.includes(`<button role="menuitem" id="od-rename">Rename document…</button>`),
+    true,
+  );
   assertEquals(html.includes(`id="od-metrics"`), true);
   assertEquals(html.includes(`class="od-sub"`), true);
   assertEquals(html.includes(`id="od-menu"`), true);
@@ -70,6 +87,15 @@ Deno.test("shell with ?embed=1 sends no bar and no assistant", async () => {
     assertEquals(html.includes(absent), false, `expected no ${absent} in embed mode`);
   }
   assertEquals(html.includes(`id="od-menu"`), true);
+  assertEquals(html.includes(`id="od-rename"`), true);
+  assertEquals(html.includes(`id="od-rename-dialog"`), true);
+  assertEquals(
+    html.includes(`<button role="menuitem" id="od-rename">Rename document…</button>`),
+    true,
+  );
+  const documentAt = html.indexOf("/ Document");
+  const renameAt = html.indexOf(`id="od-rename"`);
+  assertEquals(documentAt !== -1 && renameAt > documentAt, true);
   assertEquals(html.includes("Editors arena"), false);
   assertEquals(html.includes(`class="site-nav"`), false);
   assertEquals(html.includes(`class="od-menu-wrap od-embed-menu"`), true);
@@ -93,4 +119,20 @@ Deno.test("shell with any other embed value is the full chrome", async () => {
   const html = await get("/e/plate?embed=0");
   assertEquals(html.includes(`id="od-aside"`), true);
   assertEquals(html.includes(`class="od-embed"`), false);
+});
+
+Deno.test("viewer page has no rename item", async () => {
+  const viewer: EditorShell = {
+    slug: "word-online",
+    entry: "/editors/word-online/main.ts",
+    body: "<div id=\"app\"></div>",
+    title: "Microsoft Word viewer",
+  };
+  for (const path of ["/e/word-online", "/e/word-online?embed=1"]) {
+    const app = new Hono();
+    registerEditor(app, viewer);
+    const html = await (await app.request(path)).text();
+    assertEquals(html.includes("od-rename"), false, path);
+    assertEquals(html.includes(`id="od-docname"`), false, path);
+  }
 });

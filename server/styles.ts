@@ -96,14 +96,8 @@ body {
   appearance: none; cursor: pointer;
 }
 .od-switch select:hover { background: var(--hover); }
+.od-switch-ico { display: none; }
 .od-switch select:focus, .od-switch select:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
-.od-docname {
-  font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
-  color: var(--ink); border: 1px solid transparent; background: transparent; border-radius: var(--radius-0);
-  padding: 5px 8px; flex: 1 1 200px; width: auto; min-width: 60px; text-overflow: ellipsis;
-}
-.od-docname:hover { border-color: var(--ink); }
-.od-docname:focus, .od-docname:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-color: var(--ink); background: var(--surface); }
 
 .od-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -227,13 +221,21 @@ body {
   .od-aside-close { display: inline-flex; height: 28px; width: 28px; }
   .od-pkg { display: none; }
 }
-/* One row always: the crumb goes first, then the metrics; the document name absorbs the rest. */
+/* One row always. The spacer pushes dropdown, metrics, AI, and MENU right. Under 1180px the crumb drops. */
 @media (max-width: 1180px) { .od-bar .crumb { display: none; } }
-@media (max-width: 760px) { .od-metrics { display: none; } }
+/* Phones: the editor dropdown is a boxed numpad icon (the native select sits over it, transparent, so a tap opens the platform picker) and MENU is the boxed burger alone. */
+@media (max-width: 760px) {
+  .od-metrics { display: none; }
+  .od-switch { width: 32px; height: 32px; justify-content: center; border: 1px solid var(--ink); background: var(--surface); }
+  .od-switch:hover { background: var(--hover); }
+  .od-switch::after { content: none; }
+  .od-switch-ico { display: block; pointer-events: none; }
+  .od-switch select { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; padding: 0; opacity: 0; }
+  .od-menu-lbl { display: none; }
+  .od-menu-btn { width: 32px; height: 32px; padding: 0; justify-content: center; }
+}
 @media (max-width: 640px) {
   .od-bar { gap: 6px; padding: 6px 8px; }
-  .od-switch select { max-width: 130px; text-overflow: ellipsis; }
-  .od-docname { flex: 1 1 auto; width: auto; }
   .od-menu-wrap { position: static; }
   .od-menu { position: absolute; left: 8px; right: 8px; top: 100%; min-width: 0; width: auto; }
   .od-sub { padding: 4px 10px; min-height: 0; }
@@ -364,6 +366,23 @@ body {
 }
 .od-dialog footer a:hover { background-size: 100% 42%; }
 .od-dialog footer a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.od-name-dialog { width: min(420px, 94vw); }
+.od-name-dialog .od-name-body {
+  display: flex; flex-direction: column; gap: 8px; padding: 16px;
+}
+.od-name-dialog label {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 400;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.od-name-dialog input {
+  font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--ink); width: 100%; height: 36px; padding: 0 10px;
+  border: 1px solid var(--ink); border-radius: var(--radius-0); background: var(--surface);
+}
+.od-name-dialog input:focus, .od-name-dialog input:focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 3px;
+}
+.od-name-dialog footer { display: flex; justify-content: flex-end; gap: 8px; }
 #od-metrics-body { padding: 16px; max-height: 64vh; overflow: auto; }
 #od-metrics-body h4 {
   font-family: var(--font-mono); font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase;

@@ -290,19 +290,27 @@ function watchFit(adapter: EditorAdapter) {
 
 /* ------------------------------- documents ------------------------------- */
 
-/** Last name set by the chrome. Embed mode has no #od-docname, so this is the name. */
+/** Document name. There is no name field; export and rename both read this. */
 let docTitle = "Untitled document";
 
 function docName(): string {
-  const el = $("od-docname") as HTMLInputElement | null;
-  const raw = (el ? el.value : docTitle).trim() || "Untitled document";
+  const raw = docTitle.trim() || "Untitled document";
   return raw.replace(/\.docx$/i, "").replace(/[\\/:*?"<>|]+/g, "-");
 }
 
 function setDocName(name: string) {
+  const previous = docTitle;
   docTitle = name.replace(/\.docx$/i, "");
-  const el = $("od-docname") as HTMLInputElement | null;
-  if (el) el.value = docTitle;
+  // The shell title is the editor name. Touch document.title only when the
+  // page built it from the document name ("Brief" or "Brief · …").
+  const title = document.title;
+  if (
+    previous &&
+    previous !== docTitle &&
+    (title === previous || title.startsWith(`${previous} `) || title.startsWith(`${previous}·`))
+  ) {
+    document.title = docTitle + title.slice(previous.length);
+  }
 }
 
 async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void>): Promise<boolean> {
@@ -719,6 +727,28 @@ function wire() {
     input.value = "";
   });
   $("od-export")?.addEventListener("click", () => void exportDocx());
+
+  const renameDialog = $("od-rename-dialog") as HTMLDialogElement | null;
+  const renameInput = $("od-rename-input") as HTMLInputElement | null;
+  $("od-rename")?.addEventListener("click", () => {
+    if (!renameDialog || !renameInput) return;
+    renameInput.value = docTitle;
+    renameDialog.showModal();
+    renameInput.focus();
+    renameInput.select();
+  });
+  $("od-rename-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!renameDialog || !renameInput) return;
+    const next = renameInput.value.trim().replace(/\.docx$/i, "").trim();
+    // Empty and whitespace-only names are rejected; the previous name stays.
+    if (!next) return;
+    setDocName(next);
+    renameDialog.close();
+  });
+  renameDialog?.querySelectorAll<HTMLButtonElement>("[data-od-rename-cancel]").forEach((btn) => {
+    btn.addEventListener("click", () => renameDialog.close());
+  });
   $("od-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     void send();
