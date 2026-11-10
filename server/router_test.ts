@@ -38,7 +38,13 @@ Deno.test("shell without ?embed=1 is the full chrome: assistant, sub-bar, switch
   assertEquals(html.includes(">CHILL<"), true);
   assertEquals(html.includes(">NEUROTIC<"), true);
   assertEquals(html.includes(`href="https://editors-arena.val.run"`), true);
+  assertEquals(html.includes("Editors arena"), true);
   assertEquals(html.includes("Editors arena →"), true);
+  // The in-page link stays in this tab. Embed mode is the one that adds target=_blank.
+  assertEquals(
+    html.includes(`<a role="menuitem" href="/">All editors &amp; measurements</a>`),
+    true,
+  );
 });
 
 Deno.test("shell with ?embed=1 sends no bar and no assistant", async () => {
@@ -53,19 +59,26 @@ Deno.test("shell with ?embed=1 sends no bar and no assistant", async () => {
     `id="od-prompt"`,
     `id="od-log"`,
     `id="od-suggestions"`,
-    `id="od-menu"`,
     `id="od-more"`,
     `id="od-switch"`,
     `id="od-docname"`,
     `id="od-metrics"`,
     `class="od-sub"`,
     `class="od-engine"`,
-    `id="od-new"`,
-    `id="od-sample"`,
     "Assistant",
   ]) {
     assertEquals(html.includes(absent), false, `expected no ${absent} in embed mode`);
   }
+  assertEquals(html.includes(`id="od-menu"`), true);
+  assertEquals(html.includes("Editors arena"), false);
+  assertEquals(html.includes(`class="site-nav"`), false);
+  assertEquals(html.includes(`class="od-menu-wrap od-embed-menu"`), true);
+  assertEquals(
+    html.includes(
+      `<a role="menuitem" href="/" target="_blank" rel="noopener">All editors &amp; measurements</a>`,
+    ),
+    true,
+  );
   assertEquals(html.includes(`class="od-embed"`), true);
   // The editor takes the iframe: single-column layout, no chrome bar.
   assertEquals(html.includes(`class="od-layout no-agent"`), true);

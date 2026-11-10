@@ -53,11 +53,46 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
+ * The #od-menu panel. Shared by the bar (non-embed) and the floating embed
+ * panel. `embed` drops "Editors arena →" (we are already inside it) and opens
+ * "All editors & measurements" in a new tab so the iframe does not navigate.
+ * The non-embed string is the historical markup, whitespace included.
+ */
+function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string): string {
+  const allEditors = embed
+    ? `<a role="menuitem" href="/" target="_blank" rel="noopener">All editors &amp; measurements</a>`
+    : `<a role="menuitem" href="/">All editors &amp; measurements</a>`;
+  const arena = embed
+    ? ""
+    : `\n        <a role="menuitem" href="https://editors-arena.val.run" target="_blank" rel="noopener">Editors arena →</a>`;
+  return `      <div class="od-menu" id="od-menu" role="menu" hidden>
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Document</div>
+        ${viewer ? "" : `<button role="menuitem" id="od-new">New blank document<kbd>⌥N</kbd></button>`}
+        ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import">Open .docx from your computer…<kbd>⌘O</kbd></button>`}
+        ${viewer ? "" : `<button role="menuitem" id="od-export">Export this document as .docx<kbd>⌘S</kbd></button>`}
+        <hr />
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Samples</div>
+        <button role="menuitem" id="od-showcase">Load the rich sample<small>tables, lists, image, styles</small></button>
+        <button role="menuitem" id="od-sample">Load the short sample</button>
+        <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx">Download the rich sample ↓</a>
+        <hr />
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / View</div>
+        <button role="menuitem" id="od-metrics-item">Performance of this load</button>
+        <button role="menuitem" id="od-reload">Reload editor</button>
+        <hr />
+        ${allEditors}${arena}
+        <a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
+        <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
+      </div>`;
+}
+
+/**
  * The editor page. `embed` (from ?embed=1): editors-arena loads the page in an
  * iframe with no bar at all (the arena's slot header is the only one). The
- * stage, the file input, and the metrics dialog stay, because lib/ui.ts looks
- * them up. The postMessage channel lives in lib/ui.ts; lib/embed.ts holds the
- * message shapes.
+ * menu panel still renders, without the #od-more button, so the arena can
+ * open it. The stage, the file input, and the metrics dialog stay, because
+ * lib/ui.ts looks them up. The postMessage channel lives in lib/ui.ts;
+ * lib/embed.ts holds the message shapes.
  */
 function shell(o: EditorShell, embed = false): string {
   const meta = editors.find((e) => e.slug === o.slug);
@@ -75,6 +110,11 @@ function shell(o: EditorShell, embed = false): string {
     `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
   const switcher = `<optgroup label="Open-source editors">${editors.filter((e) => e.kind !== "viewer").map(option).join("")}</optgroup>` +
     `<optgroup label="Proprietary viewers (view-only)">${editors.filter((e) => e.kind === "viewer").map(option).join("")}</optgroup>`;
+  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#");
+  // Leading spaces live on the template line, so a non-embed page stays byte-identical.
+  const embedMenu = embed
+    ? `<div class="od-menu-wrap od-embed-menu">\n${panel}\n    </div>\n`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -97,7 +137,7 @@ ${o.head ?? ""}
 <script type="module" src="/lib/boot.ts"></script>
 </head>
 <body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}"${embed ? ' class="od-embed"' : ""}>
-  ${embed ? "" : `<header class="site-nav od-bar">
+  ${embedMenu}${embed ? "" : `<header class="site-nav od-bar">
     <a class="wm" href="/" title="All editors">
       <span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH
     </a>
@@ -117,26 +157,7 @@ ${o.head ?? ""}
       <button class="od-btn od-menu-btn" id="od-more" type="button" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
         <span class="od-burger" aria-hidden="true"><i></i><i></i><i></i></span><span>MENU</span>
       </button>
-      <div class="od-menu" id="od-menu" role="menu" hidden>
-        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Document</div>
-        ${viewer ? "" : `<button role="menuitem" id="od-new">New blank document<kbd>⌥N</kbd></button>`}
-        ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import">Open .docx from your computer…<kbd>⌘O</kbd></button>`}
-        ${viewer ? "" : `<button role="menuitem" id="od-export">Export this document as .docx<kbd>⌘S</kbd></button>`}
-        <hr />
-        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Samples</div>
-        <button role="menuitem" id="od-showcase">Load the rich sample<small>tables, lists, image, styles</small></button>
-        <button role="menuitem" id="od-sample">Load the short sample</button>
-        <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx">Download the rich sample ↓</a>
-        <hr />
-        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / View</div>
-        <button role="menuitem" id="od-metrics-item">Performance of this load</button>
-        <button role="menuitem" id="od-reload">Reload editor</button>
-        <hr />
-        <a role="menuitem" href="/">All editors &amp; measurements</a>
-        <a role="menuitem" href="https://editors-arena.val.run" target="_blank" rel="noopener">Editors arena →</a>
-        <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub →</a>
-        <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
-      </div>
+${panel}
     </div>
   </header>`}
   ${embed ? "" : `<div class="od-sub">

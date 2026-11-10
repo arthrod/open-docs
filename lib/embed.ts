@@ -32,7 +32,8 @@ export type ChildMessage =
   | { source: "open-docs"; type: "ready"; slug: string; name: string; startupMs?: number }
   | { source: "open-docs"; type: "error"; slug: string; message: string; during?: EmbedDuring }
   | { source: "open-docs"; type: "opened"; slug: string; name: string }
-  | { source: "open-docs"; type: "exported"; slug: string; name: string; bytes: ArrayBuffer };
+  | { source: "open-docs"; type: "exported"; slug: string; name: string; bytes: ArrayBuffer }
+  | { source: "open-docs"; type: "menu"; slug: string; open: boolean };
 
 export const childReady = (slug: string, name: string, startupMs?: number): ChildMessage =>
   typeof startupMs === "number" && Number.isFinite(startupMs)
@@ -64,11 +65,16 @@ export const childExported = (
     bytes,
   });
 
+/** The menu opened or closed. The arena mirrors `open` onto its MENU button. */
+export const childMenu = (slug: string, open: boolean): ChildMessage =>
+  ({ source: "open-docs", type: "menu", slug, open });
+
 /** parent → child messages (from editors-arena). */
 export type ArenaMessage =
   | { type: "open"; name: string; bytes: ArrayBuffer }
   | { type: "sample" }
-  | { type: "export" };
+  | { type: "export" }
+  | { type: "menu" };
 
 /**
  * Validate a parent → child payload. The caller has already checked
@@ -81,6 +87,7 @@ export function parseArenaMessage(data: unknown): ArenaMessage | null {
   if (d.source !== "editors-arena") return null;
   if (d.type === "sample") return { type: "sample" };
   if (d.type === "export") return { type: "export" };
+  if (d.type === "menu") return { type: "menu" };
   if (
     d.type === "open" && typeof d.name === "string" && d.name.trim() !== "" &&
     d.bytes instanceof ArrayBuffer && d.bytes.byteLength > 0
