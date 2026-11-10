@@ -14,7 +14,7 @@
  * never inferred from numbering text.
  */
 import { strFromU8, unzipSync } from "https://esm.sh/fflate@0.8.2?target=es2022";
-import { type Block, blocksToMarkdown, type Run, tableToMarkdown } from "./markdown.ts";
+import { type Block, blocksToMarkdown, type ListState, type Run, tableToMarkdown } from "./markdown.ts";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -78,7 +78,7 @@ function chain(styles: Map<string, StyleInfo>, id: string | null | undefined): S
   return out;
 }
 
-type Level = { bullet: boolean; start?: number };
+type Level = { bullet: boolean; start?: number; restart?: number };
 
 /** numId → per level: is it a bullet, and the number it starts at. */
 function readNumbering(doc: Document | undefined): Map<string, Map<number, Level>> {
@@ -86,11 +86,12 @@ function readNumbering(doc: Document | undefined): Map<string, Map<number, Level
   if (!doc) return out;
   const start = (el: Element | undefined) => {
     const v = wAttr(el, "val");
-    return v === undefined ? undefined : Number(v);
+    return v == null || v === "" ? undefined : Number(v);
   };
   const level = (l: Element): Level => ({
     bullet: (wAttr(kid(l, "numFmt"), "val") ?? "bullet") === "bullet",
     start: start(kid(l, "start")),
+    restart: start(kid(l, "lvlRestart")),
   });
   const abstract = new Map<string, Map<number, Level>>();
   for (const a of kids(doc.documentElement, "abstractNum")) {
@@ -107,10 +108,9 @@ function readNumbering(doc: Document | undefined): Map<string, Map<number, Level
       const base = lvls.get(ilvl) ?? { bullet: true };
       const own = kid(o, "lvl");
       const fmt = wAttr(kid(own, "numFmt"), "val");
-      lvls.set(ilvl, {
-        bullet: fmt ? fmt === "bullet" : base.bullet,
-        start: start(kid(o, "startOverride")) ?? start(kid(own, "start")) ?? base.start,
-      });
+      // A whole <w:lvl> replaces the level (its start defaults to 1).
+      const lv = own ? { ...level(own), bullet: fmt ? fmt === "bullet" : base.bullet } : base;
+      lvls.set(ilvl, { ...lv, start: start(kid(o, "startOverride")) ?? lv.start });
     }
     out.set(wAttr(n, "numId") ?? "", lvls);
   }
@@ -253,7 +253,7 @@ function paragraphBlock(p: Element, ctx: Ctx): Block {
   if (numId && numId !== "0") {
     const ilvl = Number(wAttr(kid(numPr, "ilvl"), "val") ?? styleChain.find((s) => s.ilvl !== undefined)?.ilvl ?? 0);
     const lv = ctx.numbering.get(numId)?.get(ilvl);
-    return { kind: "li", level: ilvl, ordered: !(lv?.bullet ?? true), list: numId, start: lv?.start, runs };
+    return { kind: "li", level: ilvl, ordered: !(lv?.bullet ?? true), list: numId, start: lv?.start, restart: lv?.restart, runs };
   }
   if (names.some((n) => /quote/.test(n))) {
     // Quote styles are italic; a quote whose every run is italic is that
@@ -294,10 +294,14 @@ export function docxToMarkdown(bytes: Uint8Array): string {
   const body = kid(doc.documentElement, "body");
   const parts: string[] = [];
   let pending: Block[] = [];
+  // One set of list counters for the whole body: a list continues past a table.
+  const lists: ListState = new Map();
   const flush = () => {
-    // Empty paragraphs are spacing, not content.
-    const blocks = pending.filter((b) => b.kind === "hr" || b.runs.some((r) => r.text.trim()));
-    if (blocks.length) parts.push(blocksToMarkdown(blocks));
+    // Empty paragraphs are spacing, not content; an empty numbered item still
+    // takes its number.
+    const blocks = pending.filter((b) => b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()));
+    const md = blocks.length ? blocksToMarkdown(blocks, lists) : "";
+    if (md) parts.push(md);
     pending = [];
   };
   const visit = (el: Element) => {

@@ -49,6 +49,8 @@ export type Block = {
   list?: string;
   /** List items: the number this list's level starts at (default 1). */
   start?: number;
+  /** List items: the level's w:lvlRestart (0: never restarts). */
+  restart?: number;
   align?: "left" | "center" | "right" | "justify";
   runs: Run[];
   rows?: Run[][][];
@@ -138,7 +140,8 @@ function blocks(tokens: Tok[], ctx: Ctx, out: Block[]) {
             } else if (first && (c.type === "text" || c.type === "paragraph")) {
               const runs = inline(c.tokens ?? [{ type: "text", text: c.text }]);
               if (item.task) runs.unshift({ text: item.checked ? "☒ " : "☐ " });
-              out.push({ kind: "li", level: ctx.level, ordered: !!t.ordered, runs });
+              const start = t.ordered && Number.isInteger(t.start) ? t.start : undefined;
+              out.push({ kind: "li", level: ctx.level, ordered: !!t.ordered, start, runs });
               first = false;
             } else {
               // A second paragraph inside an item: keep it, unnumbered.
@@ -269,39 +272,57 @@ export function tableToMarkdown(rows: Run[][][]): string {
   return [line(md[0]), `|${" --- |".repeat(width)}`, ...md.slice(1).map(line)].join("\n");
 }
 
-export function blocksToMarkdown(blocks: Block[]): string {
+/** List counters that outlive one run of blocks: a Word list keeps counting
+ * across a table, which the .docx reader formats on its own. */
+export type ListState = Map<string, { n: (number | undefined)[]; restart: (number | undefined)[] }>;
+
+export function blocksToMarkdown(blocks: Block[], lists: ListState = new Map()): string {
   const out: string[] = [];
-  // The open list run: per level, which list it is and its last number. A list
-  // is its id (a .docx numId) or, for markdown-origin items, bullets vs numbers.
-  let levels: { key: string; n: number }[] = [];
-  // Per list id, its counters by level: a Word list keeps counting across an
-  // interrupting paragraph, and a deeper level restarts under each new parent.
-  const lists = new Map<string, number[]>();
-  blocks.forEach((b, i) => {
-    const prev = blocks[i - 1];
+  // The open list run: per level, which list it is, its last number, and the
+  // column its content starts at. A list is its id (a .docx numId) or, for
+  // markdown-origin items, bullets vs numbers.
+  let levels: { key: string; n: number; pad: number }[] = [];
+  // The last block written: an empty numbered item counts but prints nothing.
+  let prev: Block | undefined;
+  for (const b of blocks) {
     // Headings are bold by style; echoing that as **…** adds noise.
     const raw = runsToMarkdown(b.kind === "title" || b.kind === "heading" ? b.runs.map((r) => ({ ...r, bold: false })) : b.runs);
     const text = b.kind === "title" || b.kind === "heading" ? raw : escapeLineStart(raw);
     let n = 0;
+    let indent = 0;
     let newList = false;
     if (b.kind !== "li") levels = [];
     else {
       const lvl = b.level ?? 0;
       const key = b.list ?? `md:${!!b.ordered}`;
       levels = levels.slice(0, lvl + 1);
+      indent = lvl ? levels[lvl - 1]?.pad ?? 3 * lvl : 0;
       // A different list at the top level starts a new list, wherever the
       // previous item was nested.
       newList = lvl === 0 && prev?.kind === "li" && levels[0]?.key !== key;
       if (b.list !== undefined) {
-        const c = (lists.get(b.list) ?? []).slice(0, lvl + 1);
-        c[lvl] = (c[lvl] ?? (b.start ?? 1) - 1) + 1;
-        lists.set(b.list, c);
-        n = c[lvl];
+        // Per list id, counters by level: a Word list keeps counting across an
+        // interrupting paragraph; a deeper level restarts under a new parent
+        // unless its w:lvlRestart says otherwise (0: never; k: only when a
+        // level shallower than k is used).
+        const st = lists.get(b.list) ?? { n: [], restart: [] };
+        if (b.restart !== undefined) st.restart[lvl] = b.restart;
+        for (let k = lvl + 1; k < st.n.length; k++) {
+          const r = st.restart[k];
+          if (r === undefined || (r !== 0 && lvl < r)) st.n[k] = undefined;
+        }
+        st.n[lvl] = (st.n[lvl] ?? (b.start ?? 1) - 1) + 1;
+        lists.set(b.list, st);
+        n = st.n[lvl]!;
       } else n = levels[lvl]?.key === key ? levels[lvl].n + 1 : b.start ?? 1;
-      levels[lvl] = { key, n };
+      // A child's content lines up with its parent's text: "10. " is 4 wide.
+      const marker = b.ordered ? `${n}.` : "-";
+      levels[lvl] = { key, n, pad: indent + Math.max(3, marker.length + 1) };
+      if (b.list !== undefined && !b.runs.some((r) => r.text.trim())) continue;
     }
     // Separate blocks with a blank line, except consecutive items of one list.
-    if (i > 0 && (newList || !(b.kind === "li" && prev?.kind === "li"))) out.push("");
+    if (prev && (newList || !(b.kind === "li" && prev.kind === "li"))) out.push("");
+    prev = b;
     switch (b.kind) {
       case "title":
         out.push(`# ${text}`);
@@ -310,7 +331,7 @@ export function blocksToMarkdown(blocks: Block[]): string {
         out.push(`${"#".repeat(b.level ?? 1)} ${text}`);
         break;
       case "li":
-        out.push(`${"   ".repeat(b.level ?? 0)}${b.ordered ? `${n}.` : "-"} ${text}`);
+        out.push(`${" ".repeat(indent)}${b.ordered ? `${n}.` : "-"} ${text}`);
         break;
       case "quote":
         out.push(`> ${text}`);
@@ -330,6 +351,6 @@ export function blocksToMarkdown(blocks: Block[]): string {
       default:
         out.push(text);
     }
-  });
+  }
   return out.join("\n");
 }
