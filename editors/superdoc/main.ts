@@ -119,8 +119,15 @@ async function superdocGlobal(): Promise<any> {
 // Exposed for the test probes in /lib/probes (read-only use).
 (window as any).__superdoc = () => instance;
 
-function editor(): any {
-  return instance?.activeEditor;
+async function editor(): Promise<any> {
+  // The worker-backed facade is briefly absent while a document opens.
+  let ed = instance?.activeEditor;
+  for (let i = 0; i < 200 && !ed?.doc?.insert; i++) {
+    await new Promise((r) => setTimeout(r, 25));
+    ed = instance?.activeEditor;
+  }
+  if (!ed?.doc?.insert) throw new Error("SuperDoc's document API is not ready");
+  return ed;
 }
 
 /** Wait until SuperDoc says the document is open (or reports why not). */
@@ -154,6 +161,8 @@ function create(SuperDoc: any, bytes: Uint8Array): Promise<void> {
 
 window.od.register({
   name: "SuperDoc",
+  // clearContent + insert(markdown) + style steps, all in doc.history.
+  applyInHistory: true,
   mergeQuality: "native",
   extraResources: [SUPERDOC_ENGINE],
 
@@ -181,16 +190,12 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
-    // activeEditor is briefly null right after a document (re)opens.
-    let ed = editor();
-    for (let i = 0; i < 200 && !ed?.doc?.insert; i++) {
-      await new Promise((r) => setTimeout(r, 25));
-      ed = editor();
-    }
+    const ed = await editor();
     if (!ed?.doc?.clearContent || !ed?.doc?.insert) throw new Error("SuperDoc's document API is not ready");
     // SuperDoc's own markdown importer (doc.insert type:"markdown") maps
     // headings, marks, lists, links and code to Word structures, and every
-    // step lands in SuperDoc's undo history.
+    // step lands in its Document API history (doc.history), not the retired
+    // ProseMirror commands surface, which is null in this V2 runtime.
     await ed.doc.clearContent();
     const res = await ed.doc.insert({ value: markdown, type: "markdown" });
     if (res && res.success === false) throw new Error(`SuperDoc rejected the markdown (${res.failure?.code ?? res.status ?? "unknown"})`);
@@ -199,11 +204,13 @@ window.od.register({
 
   exportDocx: () => exportBytes(),
 
-  // SuperDoc's own history (its ProseMirror undo/redo commands).
-  undo() {
-    editor()?.commands?.undo?.();
+  // SuperDoc V2's own async history API, also used by its built-in toolbar.
+  async undo() {
+    const ed = await editor();
+    await ed.doc.history.undo();
   },
-  redo() {
-    editor()?.commands?.redo?.();
+  async redo() {
+    const ed = await editor();
+    await ed.doc.history.redo();
   },
 });
