@@ -29,6 +29,8 @@ type EditorRef = {
 };
 
 let ref: EditorRef | null = null;
+// Exposed for the probes in /lib/probes (read-only use).
+(window as any).__eigenpal = () => ref;
 const FONTS = packagedFonts();
 
 function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "blank"; view: boolean }) {
@@ -93,6 +95,14 @@ window.od.register({
     // becomes a Word document through Plate's own markdown reader and .docx
     // exporter (lib/plate-docx.ts), opened with docx-editor.dev's own parser.
     ref.load(await markdownToDocx(markdown));
+  },
+
+  // docx-editor.dev's own history commands.
+  undo() {
+    ref?.exec({ type: "undo" } as never);
+  },
+  redo() {
+    ref?.exec({ type: "redo" } as never);
   },
 
   async exportDocx() {
