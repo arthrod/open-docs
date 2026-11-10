@@ -25,9 +25,8 @@ const history: Array<{ role: "user" | "assistant"; content: string }> = [];
  */
 let docGen = 0;
 /**
- * Applied assistant edits, oldest first. Undo restores a snapshot taken before
- * the edit, so only the TOP of the stack can be undone without silently
- * discarding the edits applied after it.
+ * Applied assistant edits, oldest first. Undo steps the engine's own history,
+ * which unwinds newest first, so only the TOP of the stack can be undone.
  */
 const appliedStack: symbol[] = [];
 const EDIT_EVENT = "od-edit-stack";
@@ -355,12 +354,23 @@ function diffCounts(before: string, after: string) {
   };
 }
 
-/** Before an agent write: something we can restore exactly. */
-async function snapshot(a: EditorAdapter): Promise<{ bytes?: Uint8Array; markdown?: string }> {
-  try {
-    if (a.exportDocx) return { bytes: await a.exportDocx() };
-  } catch { /* fall back to markdown */ }
-  return { markdown: await a.getMarkdown() };
+/** Whitespace-insensitive document text, to tell when native undo is back. */
+const sameText = (x: string, y: string) => x.replace(/\s+/g, " ").trim() === y.replace(/\s+/g, " ").trim();
+/** Native history steps an apply may take (SuperDoc's importer is several). */
+const MAX_STEPS = 12;
+
+/**
+ * Step the engine's OWN history (undo or redo) until the document reads
+ * `target` again. Returns the steps taken, or null if it never got there.
+ */
+async function stepHistory(a: EditorAdapter, dir: "undo" | "redo", target: string): Promise<number | null> {
+  const step = dir === "undo" ? a.undo : a.redo;
+  if (!step) return null;
+  for (let i = 1; i <= MAX_STEPS; i++) {
+    await step.call(a);
+    if (sameText(await a.getMarkdown(), target)) return i;
+  }
+  return null;
 }
 
 function editCard(markdown: string, summary: string, before: string) {
@@ -376,24 +386,27 @@ function editCard(markdown: string, summary: string, before: string) {
   const row = card.querySelector(".row")!;
   const apply = Object.assign(document.createElement("button"), { className: "od-btn primary", textContent: "Apply" });
   const undo = Object.assign(document.createElement("button"), { className: "od-btn", textContent: "Undo" });
+  const redo = Object.assign(document.createElement("button"), { className: "od-btn", textContent: "Redo" });
   const state = Object.assign(document.createElement("span"), { className: "state" });
   undo.hidden = true;
-  row.append(apply, undo, state);
+  redo.hidden = true;
+  row.append(apply, undo, redo, state);
   $("od-log")!.append(card);
   $("od-log")!.scrollTop = $("od-log")!.scrollHeight;
 
-  let snap: { bytes?: Uint8Array; markdown?: string } | undefined;
   const gen = docGen; // the document this edit was computed for
   const token = Symbol("edit");
   const isTop = () => appliedStack[appliedStack.length - 1] === token;
-  let afterApply = ""; // document text right after our apply
+  let beforeApply = ""; // document text right before our apply
+  let afterApply = ""; // document text right after it
   let confirmDiscard = false;
+  /** Undo / Redo are the engine's own history, offered only when the apply is in it. */
+  const native = () => !!(current?.applyInHistory && current.undo && current.redo);
 
   // Keep the buttons honest as the document moves on.
   const refresh = () => {
     if (gen !== docGen) {
-      apply.disabled = true;
-      undo.disabled = true;
+      apply.disabled = undo.disabled = redo.disabled = true;
       card.className = "od-edit undone";
       state.textContent = "Different document";
       return;
@@ -407,57 +420,85 @@ function editCard(markdown: string, summary: string, before: string) {
   };
   document.addEventListener(EDIT_EVENT, refresh);
 
+  const applied = () => {
+    appliedStack.push(token);
+    confirmDiscard = false;
+    card.className = "od-edit applied";
+    apply.hidden = true;
+    redo.hidden = true;
+    undo.hidden = !native();
+    undo.disabled = false;
+    undo.textContent = "Undo";
+    state.textContent = native() ? "Applied ✓" : `Applied ✓ (${current?.name ?? "this editor"} can't undo this edit)`;
+    stackChanged();
+  };
+
   const doApply = async () => {
     if (!current || gen !== docGen) return refresh();
     apply.disabled = true;
     setStatus("Applying the assistant's edit…");
     try {
-      snap = await snapshot(current);
+      beforeApply = await current.getMarkdown().catch(() => "");
       await current.applyMarkdown(markdown);
       afterApply = await current.getMarkdown().catch(() => "");
-      appliedStack.push(token);
-      confirmDiscard = false;
-      card.className = "od-edit applied";
-      apply.hidden = true;
-      undo.hidden = false;
-      undo.disabled = false;
-      undo.textContent = "Undo";
-      state.textContent = "Applied ✓";
+      applied();
       setStatus("Edit applied", "ok");
-      stackChanged();
     } catch (err) {
       apply.disabled = false;
       fail("Applying the edit failed", err);
     }
   };
   apply.addEventListener("click", () => void doApply());
+
   undo.addEventListener("click", async () => {
-    if (!current || !snap || gen !== docGen || !isTop()) return refresh();
-    // Restoring the snapshot also drops anything typed since; say so first.
+    if (!current || !native() || gen !== docGen || !isTop()) return refresh();
+    // Native undo walks back through anything typed since, too; say so first.
     const now = await current.getMarkdown().catch(() => afterApply);
-    if (now !== afterApply && !confirmDiscard) {
+    if (!sameText(now, afterApply) && !confirmDiscard) {
       confirmDiscard = true;
       undo.textContent = "Undo anyway";
-      state.textContent = "You edited since — undo discards that too";
+      state.textContent = "You edited since — undo also undoes that";
       return;
     }
     undo.disabled = true;
     try {
-      if (snap.bytes) await current.load(snap.bytes);
-      else await current.applyMarkdown(snap.markdown ?? "");
+      const steps = await stepHistory(current, "undo", beforeApply);
       appliedStack.pop();
       stackChanged();
       card.className = "od-edit undone";
-      state.textContent = "Undone";
       undo.hidden = true;
       undo.textContent = "Undo";
-      apply.hidden = false;
-      apply.disabled = false;
-      apply.textContent = "Re-apply";
-      setStatus("Edit undone", "ok");
+      redo.hidden = false;
+      redo.disabled = false;
+      state.textContent = steps == null
+        ? `Undid ${MAX_STEPS} steps of ${current.name}'s history; the text still differs from before the edit`
+        : "Undone";
+      setStatus(steps == null ? "Undo stopped before the original text" : "Edit undone", steps == null ? "err" : "ok");
     } catch (err) {
       undo.disabled = false;
       fail("Undo failed", err);
+    }
+  });
+
+  redo.addEventListener("click", async () => {
+    if (!current || !native() || gen !== docGen || appliedStack.includes(token)) return refresh();
+    redo.disabled = true;
+    try {
+      const steps = await stepHistory(current, "redo", afterApply);
+      if (steps == null) {
+        // History moved on (e.g. the user typed after undoing): redo has nothing to replay.
+        redo.hidden = true;
+        apply.hidden = false;
+        apply.disabled = false;
+        apply.textContent = "Re-apply";
+        state.textContent = `${current.name} has nothing to redo; re-apply instead`;
+        return;
+      }
+      applied();
+      setStatus("Edit redone", "ok");
+    } catch (err) {
+      redo.disabled = false;
+      fail("Redo failed", err);
     }
   });
   return doApply;
