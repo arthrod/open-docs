@@ -78,7 +78,7 @@ body {
 /* ------------------------------ top bar ------------------------------ */
 .od-bar {
   position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 10px 14px;
-  flex: none; flex-wrap: wrap; min-height: 52px; height: auto; padding: 8px 12px; min-width: 0;
+  flex: none; flex-wrap: nowrap; min-height: 52px; height: auto; padding: 8px 12px; min-width: 0;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   -webkit-backdrop-filter: saturate(140%) blur(10px); backdrop-filter: saturate(140%) blur(10px);
   border-bottom: 1px solid var(--ink);
@@ -91,7 +91,7 @@ body {
 }
 .od-switch select {
   font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-  color: var(--ink); max-width: 220px; height: 32px; padding: 0 28px 0 10px;
+  color: var(--ink); max-width: 180px; height: 32px; padding: 0 28px 0 10px;
   border: 1px solid var(--ink); border-radius: 0; background: var(--surface);
   appearance: none; cursor: pointer;
 }
@@ -100,7 +100,7 @@ body {
 .od-docname {
   font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
   color: var(--ink); border: 1px solid transparent; background: transparent; border-radius: var(--radius-0);
-  padding: 5px 8px; flex: 0 1 260px; width: 260px; min-width: 70px; text-overflow: ellipsis;
+  padding: 5px 8px; flex: 1 1 200px; width: auto; min-width: 60px; text-overflow: ellipsis;
 }
 .od-docname:hover { border-color: var(--ink); }
 .od-docname:focus, .od-docname:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-color: var(--ink); background: var(--surface); }
@@ -227,6 +227,8 @@ body {
   .od-aside-close { display: inline-flex; height: 28px; width: 28px; }
   .od-pkg { display: none; }
 }
+/* One row always: the crumb goes first, then the metrics; the document name absorbs the rest. */
+@media (max-width: 1180px) { .od-bar .crumb { display: none; } }
 @media (max-width: 760px) { .od-metrics { display: none; } }
 @media (max-width: 640px) {
   .od-bar { gap: 6px; padding: 6px 8px; }
