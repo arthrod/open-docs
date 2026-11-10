@@ -17,6 +17,8 @@ let handle: PlateHandle | undefined;
 window.od.register({
   name: "Plate",
   mergeQuality: "native",
+  // applyMarkdown is one replaceNodes transform: one step of Slate's history.
+  applyInHistory: true,
 
   async mount() {
     const root = await waitFor<HTMLDivElement>("#plate-root");
