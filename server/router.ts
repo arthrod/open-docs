@@ -84,6 +84,7 @@ function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: s
         ${allEditors}${arena}
         <a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
         <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
+        <a role="menuitem" class="od-contact" href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
       </div>`;
 }
 
@@ -157,7 +158,7 @@ ${o.head ?? ""}
     <a class="wm" href="/" title="All editors">
       <span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH
     </a>
-    <span class="crumb">/ open-docs</span>
+    <span class="crumb">/ editors</span>
     <span class="od-spacer"></span>
     <label class="od-switch" title="Switch editor">
       <img class="od-switch-ico" src="/lib/icons/numpad.svg" alt="" width="16" height="16" />
