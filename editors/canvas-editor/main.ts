@@ -57,7 +57,8 @@ const TITLES: Record<string, TitleLevel | null> = {
 
 window.od.register({
   name: "canvas-editor",
-  // select all + executeInsertElementList: one record in its history.
+  // select all + executeInsertElementList (+ executeTitle for a leading
+  // heading): records in its own history.
   applyInHistory: true,
   mergeQuality: "native",
 
@@ -119,6 +120,14 @@ window.od.register({
     editor.command.executeSetRange(0, 0);
     editor.command.executeSelectAll();
     editor.command.executeInsertElementList(elementList);
+    // insertElementList gives the first inserted block the formatting of the
+    // line it lands on, so a leading <h1> arrives as plain text (a paste at
+    // the top does the same). Its converter said it is a title: set it with
+    // canvas-editor's own Title command (a second step in its history).
+    if (elementList[0]?.type === ElementType.TITLE && elementList[0].level) {
+      editor.command.executeSetRange(1, 1);
+      editor.command.executeTitle(elementList[0].level);
+    }
   },
 
   undo() {
