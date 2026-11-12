@@ -36,6 +36,8 @@ const postChild = (msg: ChildMessage, transfer?: Transferable[]) => {
 };
 /** A parent message that arrived before the adapter mounted; run after. */
 let pendingEmbedAction: (() => void) | undefined;
+/** When the iframe's blur handler last closed the menu (embed mode). */
+let blurClosedAt = 0;
 
 let current: EditorAdapter | undefined;
 let mounted = false;
@@ -401,6 +403,9 @@ function onParentMessage(e: MessageEvent) {
   if (msg.type === "menu") {
     const menu = $("od-menu");
     if (!menu) return;
+    // The arena click that blurred this iframe meant "close": ignore a toggle
+    // arriving right after a blur-triggered close (the same click caused both).
+    if (menu.hidden && performance.now() - blurClosedAt < 500) return;
     if (menu.hidden) openMenu();
     else closeMenu();
     return;
@@ -758,7 +763,10 @@ function wire() {
   // A click in the arena blurs this iframe. Close so the panel does not stay up.
   if (embed) {
     window.addEventListener("blur", () => {
-      if (menu && !menu.hidden) closeMenu();
+      if (menu && !menu.hidden) {
+        closeMenu();
+        blurClosedAt = performance.now();
+      }
     });
   }
 
