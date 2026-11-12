@@ -27,7 +27,16 @@ type DocenEl = HTMLElement & {
   setZoom?(pct: number): void;
   getZoom?(): number;
   /** The underlying Tiptap editor (main document story). */
-  readonly editor?: { schema: unknown; commands: { setContent(content: unknown): boolean } };
+  readonly editor?: {
+    schema: unknown;
+    commands: {
+      setContent(content: unknown): boolean;
+      command(fn: (props: {
+        tr: { setMeta(key: string, value: unknown): unknown };
+        commands: { setContent(content: unknown): boolean };
+      }) => boolean): boolean;
+    };
+  };
 };
 
 let el: DocenEl | undefined;
@@ -98,7 +107,20 @@ window.od.register({
     if (!editor) throw new Error("docen editor not ready");
     const [{ marked }, { parseHTMLBody }] = await Promise.all([import(MARKED), import(DOCX_PASTE)]);
     const body = new DOMParser().parseFromString(await marked.parse(markdown), "text/html").body;
-    if (!editor.commands.setContent(parseHTMLBody(body, editor.schema))) {
+    // docen's paste rules have no <blockquote> rule; its style-class convention
+    // maps docx-style-IntenseQuote to the quote style (the old importer applied it).
+    for (const quote of body.querySelectorAll("blockquote")) {
+      for (const paragraph of quote.querySelectorAll(":scope > p")) {
+        paragraph.classList.add("docx-style-IntenseQuote");
+      }
+    }
+    // closeHistory starts a new history event, so this replacement cannot group
+    // with recent typing and one Undo restores exactly the pre-apply document.
+    const ok = editor.commands.command(({ tr, commands }) => {
+      tr.setMeta("closeHistory", true);
+      return commands.setContent(parseHTMLBody(body, editor.schema));
+    });
+    if (!ok) {
       throw new Error("docen setContent rejected the pasted content");
     }
   },

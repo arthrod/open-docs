@@ -97,7 +97,13 @@ export default {
   #cc-panel details summary h3 { display: inline; }
   #cc-panel details[open] summary { margin-bottom: 8px; }
   #cc-manual-out { font: 12px/1.55 ui-monospace, monospace; color: #0a0a0a; margin-top: 8px; }
-  @media (max-width: 900px) { #cc-main { flex-direction: column; } #cc-panel { width: auto; max-width: none; border-left: 0; border-top: 1px solid #e8e8e5; } }
+  @media (max-width: 900px) {
+    #cc-main { flex-direction: column; }
+    /* Bounded heights with independent scrolling: the panel must not be able
+       to consume the whole column and shrink the document area to zero. */
+    #cc-scroll { flex: 1 1 55%; min-height: 0; }
+    #cc-panel { flex: 0 0 auto; width: auto; max-width: none; max-height: 45%; border-left: 0; border-top: 1px solid #e8e8e5; }
+  }
 </style>`,
 
   body: `<div id="cc-host">
@@ -117,7 +123,7 @@ export default {
       <aside id="cc-panel" aria-label="Cite check">
         <section>
           <h3>Sources</h3>
-          <input type="file" id="cc-source-file" accept=".docx,.txt,.md" multiple hidden>
+          <input type="file" id="cc-source-file" accept=".docx,.txt,.md" multiple hidden aria-label="Source files">
           <button type="button" id="cc-add-source" title="Import source files (.docx via the editor engine; .txt/.md as text)">+ Import source files — .docx · .txt · .md</button>
           <div id="cc-source-list"></div>
           <div class="row">
@@ -137,7 +143,7 @@ export default {
           <details>
             <summary><h3>Manual check</h3></summary>
             <button type="button" id="cc-capture" title="Reads the editor's native range over your selection">Capture selection</button>
-            <textarea id="cc-manual" rows="3" spellcheck="false" placeholder="Select a passage in the brief and click Capture (or type/paste a quote)…" style="margin-top:8px"></textarea>
+            <textarea id="cc-manual" rows="3" spellcheck="false" aria-label="Manual check quote" placeholder="Select a passage in the brief and click Capture (or type/paste a quote)…" style="margin-top:8px"></textarea>
             <div class="row">
               <select id="cc-manual-source" aria-label="Source"><option value="">Source…</option></select>
               <input id="cc-manual-pin" type="text" placeholder="p. 12" aria-label="Pinpoint">

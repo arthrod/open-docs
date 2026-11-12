@@ -12,7 +12,10 @@
 import { chromium } from "playwright-core";
 
 const BASE = (process.argv[2] ?? "http://127.0.0.1:8788").replace(/\/$/, "");
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+// Chrome location: CHROME_PATH env var wins; on macOS default to the app
+// bundle; elsewhere pass undefined so playwright-core uses its own lookup.
+const CHROME = process.env.CHROME_PATH ??
+  (process.platform === "darwin" ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : undefined);
 const Q1 = "The district court retains wide latitude to admit or exclude summary judgment evidence under Rule 56(c).";
 const T5_SPAN = "The delivery contract at issue was executed in March 2024";
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
