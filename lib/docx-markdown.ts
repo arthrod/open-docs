@@ -14,7 +14,7 @@
  * never inferred from numbering text.
  */
 import { strFromU8, unzipSync } from "https://esm.sh/fflate@0.8.2?target=es2022";
-import { type Block, blocksToMarkdown, type ListState, type Run, tableToMarkdown } from "./markdown.ts";
+import { advanceList, type Block, blocksToMarkdown, type ListState, type Run, tableToMarkdown } from "./markdown.ts";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -78,7 +78,7 @@ function chain(styles: Map<string, StyleInfo>, id: string | null | undefined): S
   return out;
 }
 
-type Level = { bullet: boolean; start?: number; restart?: number };
+type Level = { bullet: boolean; none?: boolean; start?: number; restart?: number };
 
 /** numId → per level: is it a bullet, and the number it starts at. */
 function readNumbering(doc: Document | undefined): Map<string, Map<number, Level>> {
@@ -88,11 +88,16 @@ function readNumbering(doc: Document | undefined): Map<string, Map<number, Level
     const v = wAttr(el, "val");
     return v == null || v === "" ? undefined : Number(v);
   };
-  const level = (l: Element): Level => ({
-    bullet: (wAttr(kid(l, "numFmt"), "val") ?? "bullet") === "bullet",
-    start: start(kid(l, "start")),
-    restart: start(kid(l, "lvlRestart")),
-  });
+  const level = (l: Element): Level => {
+    // numFmt "none" means no marker at all — not a bullet, not a decimal list.
+    const fmt = wAttr(kid(l, "numFmt"), "val") ?? "bullet";
+    return {
+      bullet: fmt === "bullet",
+      none: fmt === "none",
+      start: start(kid(l, "start")),
+      restart: start(kid(l, "lvlRestart")),
+    };
+  };
   const abstract = new Map<string, Map<number, Level>>();
   for (const a of kids(doc.documentElement, "abstractNum")) {
     const lvls = new Map<number, Level>();
@@ -109,7 +114,9 @@ function readNumbering(doc: Document | undefined): Map<string, Map<number, Level
       const own = kid(o, "lvl");
       const fmt = wAttr(kid(own, "numFmt"), "val");
       // A whole <w:lvl> replaces the level (its start defaults to 1).
-      const lv = own ? { ...level(own), bullet: fmt ? fmt === "bullet" : base.bullet } : base;
+      const lv = own
+        ? { ...level(own), bullet: fmt ? fmt === "bullet" : base.bullet, none: fmt ? fmt === "none" : base.none }
+        : base;
       lvls.set(ilvl, { ...lv, start: start(kid(o, "startOverride")) ?? lv.start });
     }
     out.set(wAttr(n, "numId") ?? "", lvls);
@@ -253,7 +260,11 @@ function paragraphBlock(p: Element, ctx: Ctx): Block {
   if (numId && numId !== "0") {
     const ilvl = Number(wAttr(kid(numPr, "ilvl"), "val") ?? styleChain.find((s) => s.ilvl !== undefined)?.ilvl ?? 0);
     const lv = ctx.numbering.get(numId)?.get(ilvl);
-    return { kind: "li", level: ilvl, ordered: !(lv?.bullet ?? true), list: numId, start: lv?.start, restart: lv?.restart, runs };
+    // numFmt="none": the paragraph belongs to a list but shows no marker —
+    // keep it a plain paragraph instead of giving it a decimal number.
+    if (!lv?.none) {
+      return { kind: "li", level: ilvl, ordered: !(lv?.bullet ?? true), list: numId, start: lv?.start, restart: lv?.restart, runs };
+    }
   }
   if (names.some((n) => /quote/.test(n))) {
     // Quote styles are italic; a quote whose every run is italic is that
@@ -269,11 +280,17 @@ function paragraphBlock(p: Element, ctx: Ctx): Block {
   return { kind: "p", align: align as Block["align"], runs };
 }
 
-function tableMarkdown(tbl: Element, ctx: Ctx): string {
+function tableMarkdown(tbl: Element, ctx: Ctx, lists: ListState): string {
   // Paragraphs within a cell are joined by a line break.
   const rows = kids(tbl, "tr").map((tr) =>
     kids(tr, "tc").map((tc) =>
-      kids(tc, "p").map((p) => paragraphRuns(p, ctx)).filter((r) => r.length)
+      kids(tc, "p").map((p) => {
+        // A list item inside a cell prints as plain text, but it still
+        // advances its list's counters for later body items.
+        const b = paragraphBlock(p, ctx);
+        if (b.kind === "li" && b.list !== undefined) advanceList(lists, b);
+        return paragraphRuns(p, ctx);
+      }).filter((r) => r.length)
         .flatMap((runs, i) => (i ? [{ text: "\n" } as Run, ...runs] : runs))
     )
   );
@@ -310,7 +327,7 @@ export function docxToMarkdown(bytes: Uint8Array): string {
       if (c.localName === "p") pending.push(paragraphBlock(c, ctx));
       else if (c.localName === "tbl") {
         flush();
-        const t = tableMarkdown(c, ctx);
+        const t = tableMarkdown(c, ctx, lists);
         if (t) parts.push(t);
       } else if (c.localName === "sdt" || c.localName === "sdtContent" || c.localName === "customXml") visit(c);
     }
