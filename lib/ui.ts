@@ -367,15 +367,41 @@ const MAX_STEPS = 12;
 
 /**
  * Step the engine's OWN history (undo or redo) until the document reads
- * `target` again. Returns the steps taken, or null if it never got there.
+ * `target` again. Returns the steps taken, or restores the walk and returns
+ * null if it never got there. Read failures also restore the walk before throwing.
  */
 async function stepHistory(a: EditorAdapter, dir: "undo" | "redo", target: string): Promise<number | null> {
   const step = dir === "undo" ? a.undo : a.redo;
   if (!step) return null;
-  for (let i = 1; i <= MAX_STEPS; i++) {
-    await step.call(a);
-    if (sameText(await a.getMarkdown(), target)) return i;
+  const reverse = dir === "undo" ? a.redo : a.undo;
+  if (!reverse) return null;
+  let previous = await a.getMarkdown();
+  if (sameText(previous, target)) return 0;
+  let steps = 0;
+  const rollback = async () => {
+    while (steps > 0) {
+      await reverse.call(a);
+      steps--;
+    }
+  };
+  try {
+    for (let i = 0; i < MAX_STEPS; i++) {
+      await step.call(a);
+      // Count before reading: a rejected read must still recover this step.
+      steps++;
+      const next = await a.getMarkdown();
+      if (next === previous) {
+        steps--; // Empty history did not change the document.
+        break;
+      }
+      if (sameText(next, target)) return steps;
+      previous = next;
+    }
+  } catch (err) {
+    await rollback();
+    throw err;
   }
+  await rollback();
   return null;
 }
 
@@ -407,6 +433,7 @@ function editCard(markdown: string, summary: string, before: string) {
   let beforeApply = ""; // document text right before our apply
   let beforeOk = true; // false when the pre-apply text could not be read
   let afterApply = ""; // document text right after it
+  let afterOk = true; // false when the post-apply text could not be read
   let confirmDiscard = false;
   /** Undo / Redo are the engine's own history, offered only when the apply is in it. */
   const native = () => !!(current?.applyInHistory && current.undo && current.redo);
@@ -428,6 +455,13 @@ function editCard(markdown: string, summary: string, before: string) {
       const top = isLastUndone();
       redo.disabled = !top;
       redo.title = top ? "" : "Redo the most recently undone edit first";
+      if (!undoneStack.includes(token)) {
+        redo.hidden = true;
+        apply.hidden = false;
+        apply.disabled = false;
+        apply.textContent = "Re-apply";
+        state.textContent = "History moved on; re-apply instead";
+      }
     }
   };
   document.addEventListener(EDIT_EVENT, refresh);
@@ -450,9 +484,10 @@ function editCard(markdown: string, summary: string, before: string) {
     apply.disabled = true;
     setStatus("Applying the assistant's edit…");
     try {
+      beforeOk = afterOk = true;
       beforeApply = await current.getMarkdown().catch(() => { beforeOk = false; return ""; });
       await current.applyMarkdown(markdown);
-      afterApply = await current.getMarkdown().catch(() => "");
+      afterApply = await current.getMarkdown().catch(() => { afterOk = false; return ""; });
       undoneStack.length = 0; // a new edit invalidates the redo stack
       applied();
       setStatus("Edit applied", "ok");
@@ -481,9 +516,7 @@ function editCard(markdown: string, summary: string, before: string) {
     try {
       const steps = await stepHistory(current, "undo", beforeApply);
       if (steps == null) {
-        // The walk never reached the pre-edit text: redo the steps taken so
-        // the document (and the user's own edits in it) is left as it was.
-        for (let i = 0; i < MAX_STEPS; i++) await current.redo!();
+        // stepHistory restored the document after failing to reach the target.
         undo.disabled = false;
         state.textContent = `${current.name}'s history couldn't reach the pre-edit text; nothing was undone`;
         setStatus("Undo did not reach the original text", "err");
@@ -497,10 +530,8 @@ function editCard(markdown: string, summary: string, before: string) {
       undo.textContent = "Undo";
       redo.hidden = false;
       redo.disabled = false;
-      state.textContent = steps == null
-        ? `Undid ${MAX_STEPS} steps of ${current.name}'s history; the text still differs from before the edit`
-        : "Undone";
-      setStatus(steps == null ? "Undo stopped before the original text" : "Edit undone", steps == null ? "err" : "ok");
+      state.textContent = "Undone";
+      setStatus("Edit undone", "ok");
     } catch (err) {
       undo.disabled = false;
       fail("Undo failed", err);
@@ -509,6 +540,10 @@ function editCard(markdown: string, summary: string, before: string) {
 
   redo.addEventListener("click", async () => {
     if (!current || !native() || gen !== docGen || appliedStack.includes(token) || !isLastUndone()) return refresh();
+    if (!afterOk) {
+      setStatus("Redo refused: the post-edit text could not be read", "err");
+      return;
+    }
     redo.disabled = true;
     try {
       const steps = await stepHistory(current, "redo", afterApply);
