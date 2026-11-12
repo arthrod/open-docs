@@ -55,27 +55,27 @@ export interface DocxTable {
 }
 
 function paragraphXml(p: DocxParagraph): string {
+  // Child order follows the WordprocessingML schema (CT_RPr: rFonts before b/i;
+  // CT_PPr: pBdr → spacing → jc) — Word rejects out-of-order children.
   const rPr = [
+    p.serif ? '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>' : "",
     p.bold ? "<w:b/>" : "",
     p.italic ? "<w:i/>" : "",
-    p.serif ? '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>' : "",
     p.size ? `<w:sz w:val="${p.size}"/><w:szCs w:val="${p.size}"/>` : "",
   ].join("");
-  const spacing = [
-    p.line || p.after !== undefined || p.before !== undefined
-      ? `<w:spacing ${p.line ? `w:line="${p.line}" w:lineRule="auto"` : ""}${p.after !== undefined ? ` w:after="${p.after}"` : ""}${p.before !== undefined ? ` w:before="${p.before}"` : ""}/>`
-      : "",
-    p.ruleBelow ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : "",
-  ].join("");
+  const pBdr = p.ruleBelow ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="000000"/></w:pBdr>' : "";
+  const spacing = p.line || p.after !== undefined || p.before !== undefined
+    ? `<w:spacing ${p.line ? `w:line="${p.line}" w:lineRule="auto"` : ""}${p.after !== undefined ? ` w:after="${p.after}"` : ""}${p.before !== undefined ? ` w:before="${p.before}"` : ""}/>`
+    : "";
+  const jc = p.center ? '<w:jc w:val="center"/>' : p.right ? '<w:jc w:val="right"/>' : p.justify ? '<w:jc w:val="both"/>' : "";
   const pPr = [
     p.style ? `<w:pStyle w:val="${escapeXml(p.style)}"/>` : "",
     p.bullet
       ? `<w:numPr><w:ilvl w:val="${p.bullet - 1}"/><w:numId w:val="1"/></w:numPr>`
       : "",
-    p.center ? '<w:jc w:val="center"/>' : "",
-    p.right ? '<w:jc w:val="right"/>' : "",
-    p.justify ? '<w:jc w:val="both"/>' : "",
+    pBdr,
     spacing,
+    jc,
   ].join("");
   const pPrXml = pPr ? `<w:pPr>${pPr}</w:pPr>` : "";
   // An empty paragraph has NO run: `<w:r><w:t></w:t></w:r>` is legal OOXML but
@@ -92,7 +92,7 @@ function paragraphXml(p: DocxParagraph): string {
 function captionTableXml(t: DocxTable): string {
   const border = '<w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tcBorders>';
   const cell = (paras: DocxParagraph[], width: number) =>
-    `<w:tc><w:tcPr>${border}<w:tcW w:w="${width}" w:type="dxa"/></w:tcPr>${paras.map(paragraphXml).join("")}</w:tc>`;
+    `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${border}</w:tcPr>${paras.map(paragraphXml).join("")}</w:tc>`;
   return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/></w:tblBorders></w:tblPr>` +
     `<w:tblGrid><w:gridCol w:w="5100"/><w:gridCol w:w="3600"/></w:tblGrid>` +
     `<w:tr>${cell(t.table.left, 5100)}${cell(t.table.right, 3600)}</w:tr></w:tbl>` +

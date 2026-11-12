@@ -82,10 +82,30 @@ export function bestWindow(source, quote, pad = 6) {
   const qSet = multiset(q);
   let best = null;
   for (let size = Math.max(1, q.length - 2); size <= q.length + pad; size++) {
+    if (size > S.length) break;
+    // Slide the window: add the token that enters, remove the one that leaves,
+    // and keep the intersection size in O(1) per step instead of rebuilding a
+    // multiset per window. Scan order (size, then start) is unchanged, so the
+    // strict-greater tie-break picks the same window as before.
+    const wSet = new Map();
+    let inter = 0;
+    const add = (tok) => {
+      const c = (wSet.get(tok) ?? 0) + 1;
+      wSet.set(tok, c);
+      if (c <= (qSet.get(tok) ?? 0)) inter++;
+    };
+    const remove = (tok) => {
+      const c = wSet.get(tok) ?? 0;
+      if (c <= 0) return;
+      wSet.set(tok, c - 1);
+      if (c <= (qSet.get(tok) ?? 0)) inter--;
+    };
+    for (let i = 0; i < size; i++) add(S[i].norm);
     for (let st = 0; st + size <= S.length; st++) {
-      let inter = 0;
-      const wSet = multiset(S.slice(st, st + size).map((t) => t.norm));
-      for (const [tok, c] of qSet) inter += Math.min(c, wSet.get(tok) ?? 0);
+      if (st > 0) {
+        remove(S[st - 1].norm);
+        add(S[st + size - 1].norm);
+      }
       const union = q.length + size - inter;
       const score = union === 0 ? 1 : inter / union;
       const coverage = inter / q.length;
@@ -429,6 +449,7 @@ export function extractQuotes(documentText, sources) {
   }
 
   const quotes = [];
+  const seen = new Map();
   const QUOTE_RE = /["“]([^"”“\n]+)["”]\s*\[(\d+)\]/g;
   let qm;
   while ((qm = QUOTE_RE.exec(bodyText)) !== null) {
@@ -439,7 +460,10 @@ export function extractQuotes(documentText, sources) {
       warnings.push(`footnote ${n}: quoted passage has no resolvable footnote`);
       continue;
     }
-    const entry = { id: `Q${n}`, text, sourceId: r.sourceId };
+    // Two quotes may cite the same footnote [n]; keep IDs unique.
+    const k = (seen.get(n) ?? 0) + 1;
+    seen.set(n, k);
+    const entry = { id: k === 1 ? `Q${n}` : `Q${n}.${k}`, text, sourceId: r.sourceId };
     if (r.pinpoint !== undefined) entry.pinpoint = r.pinpoint;
     quotes.push(entry);
   }

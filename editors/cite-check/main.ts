@@ -398,8 +398,9 @@ function highlightQuote(text: string, classification: string) {
 function insertNote(r: { id: string; classification: string; anchor?: { sourceName: string | null } | null; pinpoint?: { raw: string } | null }) {
   const c = editor.command;
   const sourceName = r.anchor?.sourceName ?? "(unlocated)";
-  const pin = r.pinpoint ? `, ${r.pinpoint.raw}` : "";
-  const html = `<p><em>[${r.id} — ${r.classification} · ${sourceName}${pin} · cite-check ✓]</em></p>`;
+  // pinpoint.raw and sourceName come from the imported .docx / sources input:
+  // escape the whole note text before it reaches getElementListByHTML.
+  const html = `<p><em>${escapeHtml(`[${r.id} — ${r.classification} · ${sourceName}${r.pinpoint ? `, ${r.pinpoint.raw}` : ""} · cite-check ✓]`)}</em></p>`;
   const options = c.getOptions();
   const elementList = getElementListByHTML(html, {
     innerWidth: options.width - options.margins[1] - options.margins[3],
@@ -463,7 +464,7 @@ function renderReport() {
       ? `${r.anchor.sourceName}${r.anchor.segmentLabel !== null ? `, ${r.anchor.segmentKind} ${r.anchor.segmentLabel}` : ""} (chars ${r.anchor.charStart}–${r.anchor.charEnd})`
       : "not located";
     const pin = r.pinpoint
-      ? `<span class="${r.pinpoint.status === "ok" ? "pin-ok" : r.pinpoint.status === "mismatch" ? "pin-bad" : ""}">pinpoint ${r.pinpoint.raw}: ${r.pinpoint.status}</span>`
+      ? `<span class="${r.pinpoint.status === "ok" ? "pin-ok" : r.pinpoint.status === "mismatch" ? "pin-bad" : ""}">pinpoint ${escapeHtml(r.pinpoint.raw)}: ${escapeHtml(r.pinpoint.status)}</span>`
       : "";
     const diff = r.diff?.length ? formatDiffOps(r.diff) : "";
     const notes = (r.notes ?? []).map((n: string) => `<div class="meta warn">${escapeHtml(n)}</div>`).join("");
@@ -496,9 +497,11 @@ function renderReport() {
 
 // The panel row shows the quote's own text; extraction results do not carry it
 // back, so look it up from lastInput's extraction (id → text).
-function quoteTextOf(r: { id: string }): string {
+function quoteTextOf(r: { id: string; text?: string }): string {
+  // Extraction results carry their own text now; the regex is only a fallback.
+  if (typeof r.text === "string" && r.text) return r.text;
   if (!lastInput?.document?.text) return "";
-  const m = new RegExp(`[“"]([^“”"\\n]+)[”"]\\s*\\[${r.id.replace(/^Q/, "")}\\]`).exec(lastInput.document.text);
+  const m = new RegExp(`[“"]([^“”"\\n]+)[”"]\\s*\\[${r.id.replace(/^Q/, "").replace(/\.\d+$/, "")}\\]`).exec(lastInput.document.text);
   if (m) return m[1].trim();
   return manualQuotes.get(r.id) ?? "";
 }
