@@ -30,6 +30,8 @@ export interface Measurement {
   loadedBytes: number;
   transferBytes: number;
   resources: number;
+  /** Wall-clock time the resource list was collected (before cache-size reads). */
+  resourcesAt: number;
   warm: boolean;
   rows: ResourceRow[];
 }
@@ -104,6 +106,9 @@ export async function measure(opts: {
     rows.push(row);
     unknown.push(row);
   }
+  // Snapshot time of the resource list, taken before the cache-size reads below
+  // (the heap is read only after them, so one timestamp cannot date both).
+  const resourcesAt = Date.now();
   await pool(unknown, 8, async (r) => {
     r.bytes = await cachedSize(r.url);
   });
@@ -132,6 +137,7 @@ export async function measure(opts: {
     loadedBytes: rows.reduce((s, r) => s + r.bytes, 0),
     transferBytes: rows.reduce((s, r) => s + r.transfer, 0),
     resources: rows.length,
+    resourcesAt,
     // Warm = the visible bodies mostly came from cache. Compare transfer with
     // the ENCODED (compressed) size — against decoded size, a gzip'd cold load
     // would look cached. A 304 revalidation transfers only ~300 B of headers.

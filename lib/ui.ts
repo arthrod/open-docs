@@ -18,6 +18,11 @@ let current: EditorAdapter | undefined;
 let mounted = false;
 let busy = false;
 let lastMeasurement: Measurement | undefined;
+/** "Re-measure now": the same reading taken again later, with when it was taken. */
+let nowMeasurement: { m: Measurement; at: Date } | undefined;
+let measureArgs: { adapter: EditorAdapter; mountStart: number; mountEnd: number } | undefined;
+/** True while a re-measure is in flight; lives outside the dialog so a re-rendered button stays disabled. */
+let measuring = false;
 const history: Array<{ role: "user" | "assistant"; content: string }> = [];
 /**
  * Bumped whenever a different document is opened (New / Sample / Import). An
@@ -122,12 +127,24 @@ function renderMetricsDialog() {
       .map(([k, v]) => `<tr><td>${k}</td><td class="n">${v.files}</td><td class="n">${fmtBytes(v.bytes)}</td></tr>`).join("");
   const biggest = [...m.rows].sort((a, b) => b.bytes - a.bytes).slice(0, 6)
     .map((r) => `<tr><td title="${r.url}">${r.url.replace(/^https?:\/\//, "").split("?")[0].slice(-58)}</td><td>${r.kind}</td><td class="n">${fmtBytes(r.bytes)}</td></tr>`).join("");
+  const n = nowMeasurement;
+  const at = (d: Date | number) => new Date(d).toLocaleTimeString();
+  const now = n
+    ? `<table class="od-table" id="od-remeasured"><thead><tr><th>Current state</th><th style="text-align:right">This load</th><th style="text-align:right">Now</th></tr></thead><tbody>
+      <tr><td>JS heap in use <small>(${at(n.at)})</small></td><td class="n">${fmtBytes(m.heapBytes)}</td><td class="n">${fmtBytes(n.m.heapBytes)}</td></tr>
+      <tr><td>Bytes loaded so far <small>(${at(n.m.resourcesAt)})</small></td><td class="n">${fmtBytes(m.loadedBytes)}</td><td class="n">${fmtBytes(n.m.loadedBytes)}</td></tr>
+      <tr><td>Files loaded so far <small>(${at(n.m.resourcesAt)})</small></td><td class="n">${m.resources}</td><td class="n">${n.m.resources}</td></tr>
+    </tbody></table>`
+    : "";
   body.innerHTML = `
     <div class="od-kpis">
       <div class="od-kpi"><b>${fmtMs(m.startupMs)}</b><small>startup (page → editor ready)</small></div>
       <div class="od-kpi"><b>${fmtBytes(m.heapBytes)}</b><small>JS heap in use${m.heapTotalBytes ? ` of ${fmtBytes(m.heapTotalBytes)}` : ""}</small></div>
       <div class="od-kpi"><b>${fmtBytes(m.loadedBytes)}</b><small>${m.resources} files loaded${m.transferBytes ? ` · ${fmtBytes(m.transferBytes)} over network` : ""}</small></div>
     </div>
+    <p style="margin:10px 0"><button type="button" class="od-btn" id="od-remeasure">Re-measure now</button>
+      <span class="od-note">reads heap and loaded bytes again, as the page is now (after editing, loading a document, assistant edits)</span></p>
+    ${now}
     <table class="od-table"><tbody>
       <tr><td>Page HTML → adapter module ready</td><td class="n">${fmtMs(m.moduleMs)}</td></tr>
       <tr><td>Editor mount (import library + first render)</td><td class="n">${fmtMs(m.mountMs)}</td></tr>
@@ -141,10 +158,43 @@ function renderMetricsDialog() {
     <table class="od-table"><thead><tr><th>File</th><th>Type</th><th style="text-align:right">Size</th></tr></thead><tbody>${biggest}</tbody></table>
     <p class="od-note">Sizes are decoded bytes (what the browser parses), including the shared page chrome (~60 KB).
     JS heap comes from <code>performance.memory</code> and is only available in Chromium browsers.
-    Each load is saved anonymously so the landing page can compare editors by median.</p>`;
+    Each load is saved anonymously so the landing page can compare editors by median; re-measuring is not saved.</p>`;
+  const remeasureBtn = $("od-remeasure") as HTMLButtonElement | null;
+  if (remeasureBtn) {
+    // A re-rendered dialog must not offer a second measurement while one runs.
+    if (measuring) {
+      remeasureBtn.disabled = true;
+      remeasureBtn.textContent = "Measuring…";
+    }
+    remeasureBtn.addEventListener("click", () => void remeasure());
+  }
+}
+
+/** Take the reading again, now; shown next to the load's numbers, never posted. */
+async function remeasure() {
+  if (!measureArgs || measuring) return;
+  measuring = true;
+  const btn = $("od-remeasure") as HTMLButtonElement | null;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Measuring…";
+  }
+  try {
+    const { adapter, mountStart, mountEnd } = measureArgs;
+    const m = await measure({ slug, mountStart, mountEnd, registeredAt: window.od.registeredAt, extraUrls: adapter.extraResources });
+    nowMeasurement = { m, at: new Date() };
+  } catch (err) {
+    setStatus("Re-measure failed", "err");
+    console.warn("[open-docs] remeasure", err);
+    return;
+  } finally {
+    measuring = false;
+  }
+  renderMetricsDialog();
 }
 
 async function recordMetrics(adapter: EditorAdapter, mountStart: number, mountEnd: number) {
+  measureArgs = { adapter, mountStart, mountEnd };
   // Let late chunks, fonts and workers arrive before we count bytes / heap.
   await new Promise((r) => setTimeout(r, 1500));
   try {
