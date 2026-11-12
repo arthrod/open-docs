@@ -276,6 +276,22 @@ export function tableToMarkdown(rows: Run[][][]): string {
  * across a table, which the .docx reader formats on its own. */
 export type ListState = Map<string, { n: (number | undefined)[]; restart: (number | undefined)[] }>;
 
+/** Advance one Word list's counters for a list item and return its number.
+ * Shared by the body writer and the table reader, so an item inside a table
+ * still counts toward later body items of the same list. */
+export function advanceList(lists: ListState, b: Block): number {
+  const lvl = b.level ?? 0;
+  const st = lists.get(b.list!) ?? { n: [], restart: [] };
+  if (b.restart !== undefined) st.restart[lvl] = b.restart;
+  for (let k = lvl + 1; k < st.n.length; k++) {
+    const r = st.restart[k];
+    if (r === undefined || (r !== 0 && lvl < r)) st.n[k] = undefined;
+  }
+  st.n[lvl] = (st.n[lvl] ?? (b.start ?? 1) - 1) + 1;
+  lists.set(b.list!, st);
+  return st.n[lvl]!;
+}
+
 export function blocksToMarkdown(blocks: Block[], lists: ListState = new Map()): string {
   const out: string[] = [];
   // The open list run: per level, which list it is, its last number, and the
@@ -284,6 +300,8 @@ export function blocksToMarkdown(blocks: Block[], lists: ListState = new Map()):
   let levels: { key: string; n: number; pad: number }[] = [];
   // The last block written: an empty numbered item counts but prints nothing.
   let prev: Block | undefined;
+  // A list break owed by a skipped empty item to the next printed item.
+  let pendingBreak = false;
   for (const b of blocks) {
     // Headings are bold by style; echoing that as **…** adds noise.
     const raw = runsToMarkdown(b.kind === "title" || b.kind === "heading" ? b.runs.map((r) => ({ ...r, bold: false })) : b.runs);
@@ -300,25 +318,19 @@ export function blocksToMarkdown(blocks: Block[], lists: ListState = new Map()):
       // A different list at the top level starts a new list, wherever the
       // previous item was nested.
       newList = lvl === 0 && prev?.kind === "li" && levels[0]?.key !== key;
+      newList ||= pendingBreak;
+      pendingBreak = false;
       if (b.list !== undefined) {
         // Per list id, counters by level: a Word list keeps counting across an
         // interrupting paragraph; a deeper level restarts under a new parent
         // unless its w:lvlRestart says otherwise (0: never; k: only when a
         // level shallower than k is used).
-        const st = lists.get(b.list) ?? { n: [], restart: [] };
-        if (b.restart !== undefined) st.restart[lvl] = b.restart;
-        for (let k = lvl + 1; k < st.n.length; k++) {
-          const r = st.restart[k];
-          if (r === undefined || (r !== 0 && lvl < r)) st.n[k] = undefined;
-        }
-        st.n[lvl] = (st.n[lvl] ?? (b.start ?? 1) - 1) + 1;
-        lists.set(b.list, st);
-        n = st.n[lvl]!;
+        n = advanceList(lists, b);
       } else n = levels[lvl]?.key === key ? levels[lvl].n + 1 : b.start ?? 1;
       // A child's content lines up with its parent's text: "10. " is 4 wide.
       const marker = b.ordered ? `${n}.` : "-";
       levels[lvl] = { key, n, pad: indent + Math.max(3, marker.length + 1) };
-      if (b.list !== undefined && !b.runs.some((r) => r.text.trim())) continue;
+      if (b.list !== undefined && !b.runs.some((r) => r.text.trim())) { pendingBreak = newList; continue; }
     }
     // Separate blocks with a blank line, except consecutive items of one list.
     if (prev && (newList || !(b.kind === "li" && prev.kind === "li"))) out.push("");
