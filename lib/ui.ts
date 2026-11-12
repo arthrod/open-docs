@@ -21,6 +21,8 @@ let lastMeasurement: Measurement | undefined;
 /** "Re-measure now": the same reading taken again later, with when it was taken. */
 let nowMeasurement: { m: Measurement; at: Date } | undefined;
 let measureArgs: { adapter: EditorAdapter; mountStart: number; mountEnd: number } | undefined;
+/** True while a re-measure is in flight; lives outside the dialog so a re-rendered button stays disabled. */
+let measuring = false;
 const history: Array<{ role: "user" | "assistant"; content: string }> = [];
 /**
  * Bumped whenever a different document is opened (New / Sample / Import). An
@@ -120,11 +122,12 @@ function renderMetricsDialog() {
   const biggest = [...m.rows].sort((a, b) => b.bytes - a.bytes).slice(0, 6)
     .map((r) => `<tr><td title="${r.url}">${r.url.replace(/^https?:\/\//, "").split("?")[0].slice(-58)}</td><td>${r.kind}</td><td class="n">${fmtBytes(r.bytes)}</td></tr>`).join("");
   const n = nowMeasurement;
+  const at = (d: Date | number) => new Date(d).toLocaleTimeString();
   const now = n
-    ? `<table class="od-table" id="od-remeasured"><thead><tr><th>Current state</th><th style="text-align:right">This load</th><th style="text-align:right">Now (${n.at.toLocaleTimeString()})</th></tr></thead><tbody>
-      <tr><td>JS heap in use</td><td class="n">${fmtBytes(m.heapBytes)}</td><td class="n">${fmtBytes(n.m.heapBytes)}</td></tr>
-      <tr><td>Bytes loaded so far</td><td class="n">${fmtBytes(m.loadedBytes)}</td><td class="n">${fmtBytes(n.m.loadedBytes)}</td></tr>
-      <tr><td>Files loaded so far</td><td class="n">${m.resources}</td><td class="n">${n.m.resources}</td></tr>
+    ? `<table class="od-table" id="od-remeasured"><thead><tr><th>Current state</th><th style="text-align:right">This load</th><th style="text-align:right">Now</th></tr></thead><tbody>
+      <tr><td>JS heap in use <small>(${at(n.at)})</small></td><td class="n">${fmtBytes(m.heapBytes)}</td><td class="n">${fmtBytes(n.m.heapBytes)}</td></tr>
+      <tr><td>Bytes loaded so far <small>(${at(n.m.resourcesAt)})</small></td><td class="n">${fmtBytes(m.loadedBytes)}</td><td class="n">${fmtBytes(n.m.loadedBytes)}</td></tr>
+      <tr><td>Files loaded so far <small>(${at(n.m.resourcesAt)})</small></td><td class="n">${m.resources}</td><td class="n">${n.m.resources}</td></tr>
     </tbody></table>`
     : "";
   body.innerHTML = `
@@ -150,20 +153,37 @@ function renderMetricsDialog() {
     <p class="od-note">Sizes are decoded bytes (what the browser parses), including the shared page chrome (~60 KB).
     JS heap comes from <code>performance.memory</code> and is only available in Chromium browsers.
     Each load is saved anonymously so the landing page can compare editors by median; re-measuring is not saved.</p>`;
-  $("od-remeasure")?.addEventListener("click", () => void remeasure());
+  const remeasureBtn = $("od-remeasure") as HTMLButtonElement | null;
+  if (remeasureBtn) {
+    // A re-rendered dialog must not offer a second measurement while one runs.
+    if (measuring) {
+      remeasureBtn.disabled = true;
+      remeasureBtn.textContent = "Measuring…";
+    }
+    remeasureBtn.addEventListener("click", () => void remeasure());
+  }
 }
 
 /** Take the reading again, now; shown next to the load's numbers, never posted. */
 async function remeasure() {
-  if (!measureArgs) return;
+  if (!measureArgs || measuring) return;
+  measuring = true;
   const btn = $("od-remeasure") as HTMLButtonElement | null;
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Measuring…";
   }
-  const { adapter, mountStart, mountEnd } = measureArgs;
-  const m = await measure({ slug, mountStart, mountEnd, registeredAt: window.od.registeredAt, extraUrls: adapter.extraResources });
-  nowMeasurement = { m, at: new Date() };
+  try {
+    const { adapter, mountStart, mountEnd } = measureArgs;
+    const m = await measure({ slug, mountStart, mountEnd, registeredAt: window.od.registeredAt, extraUrls: adapter.extraResources });
+    nowMeasurement = { m, at: new Date() };
+  } catch (err) {
+    setStatus("Re-measure failed", "err");
+    console.warn("[open-docs] remeasure", err);
+    return;
+  } finally {
+    measuring = false;
+  }
   renderMetricsDialog();
 }
 
