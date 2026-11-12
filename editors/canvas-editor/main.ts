@@ -88,6 +88,13 @@ window.od.register({
     editor.command.executeImportMarkdown({ value: markdown });
   },
 
+  undo() {
+    editor?.command.executeUndo();
+  },
+  redo() {
+    editor?.command.executeRedo();
+  },
+
   async getMarkdown() {
     return editor ? editor.command.executeExportMarkdown() : "";
   },

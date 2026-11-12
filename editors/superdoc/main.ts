@@ -198,4 +198,12 @@ window.od.register({
   },
 
   exportDocx: () => exportBytes(),
+
+  // SuperDoc's own history (its ProseMirror undo/redo commands).
+  undo() {
+    editor()?.commands?.undo?.();
+  },
+  redo() {
+    editor()?.commands?.redo?.();
+  },
 });

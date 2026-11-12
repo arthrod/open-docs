@@ -46,6 +46,14 @@ window.od.register({
     return handle ? handle.toMarkdown() : "";
   },
 
+  // Slate's own history (withHistory).
+  undo() {
+    handle?.editor.undo();
+  },
+  redo() {
+    handle?.editor.redo();
+  },
+
   async exportDocx() {
     if (!handle) throw new Error("Plate not mounted");
     return plateValueToDocx(handle.getValue());

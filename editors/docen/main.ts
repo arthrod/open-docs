@@ -84,6 +84,14 @@ window.od.register({
     await el.openMarkdown(markdown);
   },
 
+  // docen's editor is Tiptap; its own history commands.
+  undo() {
+    (el as any)?.editor?.commands.undo();
+  },
+  redo() {
+    (el as any)?.editor?.commands.redo();
+  },
+
   async exportDocx() {
     if (!el) throw new Error("docen not mounted");
     return await toBytes(await el.saveDOCX());

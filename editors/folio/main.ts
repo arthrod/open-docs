@@ -62,7 +62,21 @@ async function open(input: Uint8Array | ArrayBuffer): Promise<void> {
     initialZoom: fitZoom,
     author: "open-docs",
     colorMode: "light",
+    onEditorViewReady: (v: { dom: HTMLElement } | null) => {
+      pmView = v ?? undefined;
+    },
   }) as Handle;
+}
+
+/** folio's ProseMirror view: its own keymap binds Mod-Z / Mod-Shift-Z to its history. */
+let pmView: { dom: HTMLElement } | undefined;
+// Exposed for the probes in /lib/probes (read-only use).
+(window as any).__folio = () => ({ api, handle, view: pmView });
+const MOD: KeyboardEventInit = /Mac/.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+function historyKey(shiftKey: boolean) {
+  // Lowercase key: prosemirror-keymap binds "Mod-Shift-z" and synthetic events carry keyCode 0,
+  // so its keyCode fallback can't map an uppercase "Z" back to "z".
+  pmView?.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "z", code: "KeyZ", shiftKey, bubbles: true, cancelable: true, ...MOD }));
 }
 
 async function blank(): Promise<ArrayBuffer> {
@@ -113,4 +127,7 @@ window.od.register({
   },
 
   exportDocx: () => exportBytes(),
+
+  undo: () => historyKey(false),
+  redo: () => historyKey(true),
 });
