@@ -146,12 +146,16 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
+    const viewBefore = pmView;
     const { marked } = await import(
       "https://esm.sh/marked@18.1.3?target=es2022"
     );
     const html = marked.parse(markdown, { gfm: true, async: false }) ||
       "<p></p>";
     const view = pmView;
+    if (view !== viewBefore) {
+      throw new Error("folio document changed while the apply was being prepared");
+    }
     if (!view || typeof view.pasteHTML !== "function") {
       throw new Error("folio pm view or pasteHTML missing");
     }
