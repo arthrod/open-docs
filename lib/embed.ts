@@ -16,6 +16,25 @@ export function isEmbedUrl(href: string): boolean {
 }
 
 /**
+ * The origin child -> parent messages may be posted to. A `parentOrigin` query
+ * parameter wins; otherwise the referrer's origin; "*" only when neither is
+ * known. Inbound messages should be accepted from this same origin.
+ */
+export function embedTargetOrigin(href: string, referrer: string): string {
+  try {
+    const p = new URL(href).searchParams.get("parentOrigin");
+    if (p) return new URL(p).origin;
+  } catch {
+    // fall through to the referrer
+  }
+  try {
+    return referrer ? new URL(referrer).origin : "*";
+  } catch {
+    return "*";
+  }
+}
+
+/**
  * The file name an `open` message carries, normalised for the Import path
  * (which only accepts names ending in .docx).
  */
@@ -63,4 +82,16 @@ export function parseArenaMessage(data: unknown): ArenaMessage | null {
     return { type: "open", name: d.name, bytes: d.bytes };
   }
   return null;
+}
+
+/** Inbound check: the event must come from the embedding parent window AND,
+ * when a target origin is known, from that origin. */
+export function acceptsArenaEvent(
+  e: { source: unknown; origin: string },
+  parent: unknown,
+  targetOrigin: string,
+): boolean {
+  if (e.source !== parent) return false;
+  if (targetOrigin !== "*" && e.origin !== targetOrigin) return false;
+  return true;
 }

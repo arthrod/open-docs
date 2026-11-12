@@ -149,7 +149,9 @@ ${o.head ?? ""}
       </div>
     </div>
   </header>`}
-  ${embed ? "" : `<div class="od-sub">
+  ${embed
+    ? `<div class="od-sub od-sub-embed"><span class="od-status" id="od-status" role="status" aria-live="polite"></span></div>`
+    : `<div class="od-sub">
     <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
     ${meta?.license ? `<span class="od-lic">${esc(meta.license)}</span>` : ""}
     ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer, not an editor</span>` : ""}

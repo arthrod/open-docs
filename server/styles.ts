@@ -385,7 +385,12 @@ body {
 /* editors-arena loads /e/<slug>?embed=1 in an iframe: compact bar (engine name,
    doc name, Open/Sample/Export, metrics chip), no assistant, editor takes the
    freed space. Scoped to body.od-embed so nothing else changes. */
-body.od-embed .od-bar { height: 40px; gap: 6px; padding: 0 8px; flex-wrap: nowrap; overflow: hidden; }
+/* Narrow slots: keep every action reachable — the bar scrolls horizontally
+   instead of clipping the rightmost button. */
+body.od-embed .od-bar { height: 40px; gap: 6px; padding: 0 8px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+/* Embed mode has no .od-sub row; keep a compact status target so setStatus works. */
+body.od-embed .od-sub-embed { min-height: 0; padding: 0 8px; }
+body.od-embed .od-status { flex: none; font-size: 10.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The arena's slot header already names the engine and shows its startup time. */
 body.od-embed .od-engine, body.od-embed .od-metrics { display: none; }
 body.od-embed .od-docname { flex: 1 1 60px; width: auto; min-width: 0; }

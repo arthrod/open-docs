@@ -16,6 +16,8 @@ import {
   embedFileName,
   isEmbedUrl,
   parseArenaMessage,
+  embedTargetOrigin,
+  acceptsArenaEvent,
 } from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
 
@@ -27,8 +29,11 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const embed = isEmbedUrl(location.href);
 if (embed) document.body.classList.add("od-embed");
 /** Only embed mode ever posts, and only to the embedding parent. */
+/** Child → parent messages go only to the embedding origin when it is known
+ *  (`parentOrigin` param, else the referrer); "*" only as a last resort. */
+const embedOrigin = embed ? embedTargetOrigin(location.href, document.referrer) : "*";
 const postChild = (msg: ChildMessage) => {
-  if (embed) window.parent.postMessage(msg, "*");
+  if (embed) window.parent.postMessage(msg, embedOrigin);
 };
 /** A parent message that arrived before the adapter mounted; run after. */
 let pendingEmbedAction: (() => void) | undefined;
@@ -85,6 +90,7 @@ function setLoading(on: boolean, detail?: string) {
 function fail(where: string, err: unknown) {
   const e = err as Error;
   console.error(`[open-docs] ${where}`, err);
+  postChild(childError(slug, `${where}: ${e?.message ?? String(err)}`));
   setStatus(`${where}: ${e?.message ?? err}`, "err");
   setLoading(false);
   const stage = $("od-stage");
@@ -243,15 +249,17 @@ async function start(adapter: EditorAdapter) {
     setStatus(`${adapter.name} ready`, "ok");
     postChild(childReady(slug, adapter.name, mountEnd));
     // The parent may have asked for a document while mount() was still running.
-    const pending = pendingEmbedAction;
-    pendingEmbedAction = undefined;
-    pending?.();
     (window as unknown as { __odlog?: (k: string, m: string) => void }).__odlog?.(
       "ready",
       `${adapter.name} mounted in ${Math.round(mountEnd - mountStart)}ms (startup ${Math.round(mountEnd)}ms)`,
     );
     void recordMetrics(adapter, mountStart, mountEnd);
     watchFit(adapter);
+    // The parent may have asked for a document while mount() was still running;
+    // run it after watchFit so the fitNow() inside the action is not a no-op.
+    const pending = pendingEmbedAction;
+    pendingEmbedAction = undefined;
+    pending?.();
   } catch (err) {
     paintChip(undefined, "err");
     const e = err as Error;
@@ -299,6 +307,7 @@ function setDocName(name: string) {
 async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void>) {
   if (!current || !mounted) {
     setStatus("The editor is still loading…", "err");
+    postChild(childError(slug, `${label}: the editor is still loading`));
     return;
   }
   setStatus(`${label}…`);
@@ -348,10 +357,12 @@ const openSample = () =>
 async function importFile(file: File) {
   if (!/\.docx$/i.test(file.name)) {
     setStatus(`${file.name} is not a .docx file`, "err");
+    postChild(childError(slug, `${file.name} is not a .docx file`));
     return;
   }
   if (current?.acceptsFiles === false) {
     setStatus(`${editorName} only opens documents from a public link — it shows this site's samples`, "err");
+    postChild(childError(slug, `${editorName} only opens documents from a public link`));
     return;
   }
   await withAdapter(`Import ${file.name}`, async (a) => {
@@ -372,7 +383,7 @@ async function importFile(file: File) {
  * itself might post is filtered out by parseArenaMessage.
  */
 function onParentMessage(e: MessageEvent) {
-  if (e.source !== window.parent) return;
+  if (!acceptsArenaEvent(e, window.parent, embedOrigin)) return;
   const msg = parseArenaMessage(e.data);
   if (!msg) return;
   const act = msg.type === "sample"
