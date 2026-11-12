@@ -37,6 +37,55 @@ type FolioView = {
   dispatch(tr: unknown): void;
 };
 
+/** Merge a fromMarkdown document's numbering and styles into the mounted
+ * document's package, remapping ids that clash with the host's (the md
+ * document's own numPr references are rewritten to the remapped ids). */
+function mergePackageParts(host: unknown, mdDoc: any): void {
+  const hp = (host as any)?.package;
+  const mp = mdDoc?.package;
+  if (!hp || !mp) return;
+  const hNum = hp.numbering;
+  const mNum = mp.numbering;
+  if (hNum && mNum) {
+    const hNums: any[] = hNum.nums ?? (hNum.nums = []);
+    const hAbs: any[] = hNum.abstractNums ?? (hNum.abstractNums = []);
+    const usedNum = new Set(hNums.map((n) => n.numId));
+    const usedAbs = new Set(hAbs.map((a) => a.abstractNumId));
+    let nextNum = hNums.reduce((mx, n) => Math.max(mx, n.numId), 0) + 1;
+    let nextAbs = hAbs.reduce((mx, a) => Math.max(mx, a.abstractNumId), 0) + 1;
+    const absRemap = new Map<number, number>();
+    for (const a of mNum.abstractNums ?? []) {
+      let id = a.abstractNumId;
+      if (usedAbs.has(id)) id = nextAbs++;
+      else nextAbs = Math.max(nextAbs, id + 1);
+      absRemap.set(a.abstractNumId, id);
+      usedAbs.add(id);
+      hAbs.push({ ...a, abstractNumId: id });
+    }
+    const numRemap = new Map<number, number>();
+    for (const n of mNum.nums ?? []) {
+      let id = n.numId;
+      if (usedNum.has(id)) id = nextNum++;
+      else nextNum = Math.max(nextNum, id + 1);
+      numRemap.set(n.numId, id);
+      usedNum.add(id);
+      hNums.push({ ...n, numId: id, abstractNumId: absRemap.get(n.abstractNumId) ?? n.abstractNumId });
+    }
+    const walk = (blocks: any[]) => {
+      for (const b of blocks ?? []) {
+        const numPr = b?.formatting?.numPr;
+        if (numPr && numRemap.has(numPr.numId)) numPr.numId = numRemap.get(numPr.numId);
+        if (b?.content) walk(b.content);
+        if (b?.blocks) walk(b.blocks);
+      }
+    };
+    walk(mdDoc.content ?? []);
+  }
+  const hStyles: any[] = hp.styles ?? (hp.styles = []);
+  const haveStyle = new Set(hStyles.map((s) => s.styleId));
+  for (const s of mp.styles ?? []) if (!haveStyle.has(s.styleId)) hStyles.push(s);
+}
+
 let api: any;
 let handle: Handle | undefined;
 /** The zoom that fits the page to the stage (folio's own zoom; 1 = 100%). */
@@ -146,15 +195,24 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
-    const view = pmView;
-    if (!view) throw new Error("folio pm view missing");
+    const viewBefore = pmView;
+    if (!viewBefore) throw new Error("folio pm view missing");
     const [f, { toProseDoc }] = await Promise.all([folio(), import(CORE_CONVERSION)]);
+    const view = pmView;
+    if (view !== viewBefore) {
+      throw new Error("folio document changed while the apply was being prepared");
+    }
     // folio's own Markdown compiler → its own Document → ProseMirror converter
     // (styles, numbering, quote style, code font). The node comes from a
     // separately loaded folio-core, so it is re-read through the mounted
     // view's schema before the one replacing transaction.
+    const mdDoc = f.fromMarkdown(markdown);
+    // Save projects the PM state onto the mounted document's package, so the
+    // Markdown document's numbering/styles must be merged in first (ids that
+    // clash with the host's are remapped) or exported numIds would dangle.
+    mergePackageParts(handle?.getDocument(), mdDoc);
     const content = view.state.schema.nodeFromJSON(
-      toProseDoc(f.fromMarkdown(markdown)).toJSON(),
+      toProseDoc(mdDoc).toJSON(),
     ).content;
     view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, content));
   },
