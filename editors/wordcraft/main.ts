@@ -141,9 +141,15 @@ window.od.register({
 
   applyMarkdown: (markdown) =>
     driving(async () => {
+      // Empty input clears the document: select all, paste one empty paragraph
+      // (still one undo step) instead of throwing.
+      if (!markdown.trim()) {
+        await window.wordcraft.execute("select.all", { whole: true });
+        await window.wordcraft.execute("edit.paste", { html: "<p></p>", text: "" });
+        return;
+      }
       // Parse before selecting: conversion failure must not disturb selection.
       const html = await marked.parse(markdown);
-      if (!markdown.trim()) throw new Error("WordCraft HTML paste requires non-empty Markdown");
       if (new TextEncoder().encode(html).byteLength > 16 * 1024 * 1024) {
         throw new Error("WordCraft HTML paste exceeds its 16 MiB limit");
       }
