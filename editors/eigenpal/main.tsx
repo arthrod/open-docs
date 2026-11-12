@@ -116,7 +116,8 @@ window.od.register({
       : { type: "deleteText" });
     // `ok` only means the command ran: a paste every lane declined (view mode,
     // a header story, a cell selection) answers {ok: true, changed: false}.
-    if (!pasted.ok || !pasted.changed) throw new Error(`Paste did not change the document: ${JSON.stringify(pasted)}`);
+    // The delete branch may legitimately change nothing on an already-empty document.
+    if (!pasted.ok || (html && !pasted.changed)) throw new Error(`Paste did not change the document: ${JSON.stringify(pasted)}`);
   },
 
   // docx-editor.dev's own history commands.
