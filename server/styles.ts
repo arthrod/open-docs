@@ -127,6 +127,10 @@ body {
   display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
 }
 .od-menu > button:hover, .od-menu > a:hover { background: var(--mark); }
+/* Muted kbd/small text on the yellow hover background fails WCAG AA: use ink. */
+.od-menu > button:hover kbd, .od-menu > a:hover kbd,
+.od-menu > button:hover small, .od-menu > a:hover small,
+.od-metrics:hover small { color: var(--ink); }
 .od-menu > button:focus-visible, .od-menu > a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .od-menu kbd {
   margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--muted);

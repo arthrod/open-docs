@@ -164,7 +164,7 @@ ${o.head ?? ""}
       <div class="od-suggestions" id="od-suggestions"></div>
       <form class="od-input" id="od-form">
         <textarea id="od-prompt" rows="2" placeholder="Ask the assistant to write or edit (⌘↵ to send)"></textarea>
-        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)"><span class="arr">→</span></button>
+        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)" aria-label="Send"><span class="arr" aria-hidden="true">→</span></button>
       </form>
     </aside>`}
   </div>
