@@ -74,7 +74,9 @@ let pmView: { dom: HTMLElement } | undefined;
 (window as any).__folio = () => ({ api, handle, view: pmView });
 const MOD: KeyboardEventInit = /Mac/.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
 function historyKey(shiftKey: boolean) {
-  pmView?.dom.dispatchEvent(new KeyboardEvent("keydown", { key: shiftKey ? "Z" : "z", code: "KeyZ", shiftKey, bubbles: true, cancelable: true, ...MOD }));
+  // Lowercase key: prosemirror-keymap binds "Mod-Shift-z" and synthetic events carry keyCode 0,
+  // so its keyCode fallback can't map an uppercase "Z" back to "z".
+  pmView?.dom.dispatchEvent(new KeyboardEvent("keydown", { key: "z", code: "KeyZ", shiftKey, bubbles: true, cancelable: true, ...MOD }));
 }
 
 async function blank(): Promise<ArrayBuffer> {

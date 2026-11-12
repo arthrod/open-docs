@@ -26,6 +26,7 @@ type EditorRef = {
   load(doc: Uint8Array | "blank"): void;
   save(): Promise<ArrayBuffer | null>;
   getEditor(): unknown;
+  exec(command: { type: "undo" | "redo" }): unknown;
 };
 
 let ref: EditorRef | null = null;
@@ -99,10 +100,10 @@ window.od.register({
 
   // docx-editor.dev's own history commands.
   undo() {
-    ref?.exec({ type: "undo" } as never);
+    ref?.exec({ type: "undo" });
   },
   redo() {
-    ref?.exec({ type: "redo" } as never);
+    ref?.exec({ type: "redo" });
   },
 
   async exportDocx() {
