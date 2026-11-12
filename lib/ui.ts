@@ -25,16 +25,21 @@ const history: Array<{ role: "user" | "assistant"; content: string }> = [];
  */
 let docGen = 0;
 /**
- * Applied assistant edits, oldest first. Undo restores a snapshot taken before
- * the edit, so only the TOP of the stack can be undone without silently
- * discarding the edits applied after it.
+ * Applied assistant edits, oldest first. Undo steps the engine's own history,
+ * which unwinds newest first, so only the TOP of the stack can be undone.
  */
 const appliedStack: symbol[] = [];
+/**
+ * Undone assistant edits, newest last. Native redo replays oldest-undone
+ * first, so only the TOP of this stack may be redone.
+ */
+const undoneStack: symbol[] = [];
 const EDIT_EVENT = "od-edit-stack";
 const stackChanged = () => document.dispatchEvent(new CustomEvent(EDIT_EVENT));
 function newDocument() {
   docGen++;
   appliedStack.length = 0;
+  undoneStack.length = 0;
   history.length = 0; // the conversation was about the previous document
   stackChanged();
 }
@@ -355,12 +360,49 @@ function diffCounts(before: string, after: string) {
   };
 }
 
-/** Before an agent write: something we can restore exactly. */
-async function snapshot(a: EditorAdapter): Promise<{ bytes?: Uint8Array; markdown?: string }> {
+/** Whitespace-insensitive document text, to tell when native undo is back. */
+const sameText = (x: string, y: string) => x.replace(/\s+/g, " ").trim() === y.replace(/\s+/g, " ").trim();
+/** Native history steps an apply may take (SuperDoc's importer is several). */
+const MAX_STEPS = 12;
+
+/**
+ * Step the engine's OWN history (undo or redo) until the document reads
+ * `target` again. Returns the steps taken, or restores the walk and returns
+ * null if it never got there. Read failures also restore the walk before throwing.
+ */
+async function stepHistory(a: EditorAdapter, dir: "undo" | "redo", target: string): Promise<number | null> {
+  const step = dir === "undo" ? a.undo : a.redo;
+  if (!step) return null;
+  const reverse = dir === "undo" ? a.redo : a.undo;
+  if (!reverse) return null;
+  let previous = await a.getMarkdown();
+  if (sameText(previous, target)) return 0;
+  let steps = 0;
+  const rollback = async () => {
+    while (steps > 0) {
+      await reverse.call(a);
+      steps--;
+    }
+  };
   try {
-    if (a.exportDocx) return { bytes: await a.exportDocx() };
-  } catch { /* fall back to markdown */ }
-  return { markdown: await a.getMarkdown() };
+    for (let i = 0; i < MAX_STEPS; i++) {
+      await step.call(a);
+      // Count before reading: a rejected read must still recover this step.
+      steps++;
+      const next = await a.getMarkdown();
+      if (next === previous) {
+        steps--; // Empty history did not change the document.
+        break;
+      }
+      if (sameText(next, target)) return steps;
+      previous = next;
+    }
+  } catch (err) {
+    await rollback();
+    throw err;
+  }
+  await rollback();
+  return null;
 }
 
 function editCard(markdown: string, summary: string, before: string) {
@@ -376,24 +418,30 @@ function editCard(markdown: string, summary: string, before: string) {
   const row = card.querySelector(".row")!;
   const apply = Object.assign(document.createElement("button"), { className: "od-btn primary", textContent: "Apply" });
   const undo = Object.assign(document.createElement("button"), { className: "od-btn", textContent: "Undo" });
+  const redo = Object.assign(document.createElement("button"), { className: "od-btn", textContent: "Redo" });
   const state = Object.assign(document.createElement("span"), { className: "state" });
   undo.hidden = true;
-  row.append(apply, undo, state);
+  redo.hidden = true;
+  row.append(apply, undo, redo, state);
   $("od-log")!.append(card);
   $("od-log")!.scrollTop = $("od-log")!.scrollHeight;
 
-  let snap: { bytes?: Uint8Array; markdown?: string } | undefined;
   const gen = docGen; // the document this edit was computed for
   const token = Symbol("edit");
   const isTop = () => appliedStack[appliedStack.length - 1] === token;
-  let afterApply = ""; // document text right after our apply
+  const isLastUndone = () => undoneStack[undoneStack.length - 1] === token;
+  let beforeApply = ""; // document text right before our apply
+  let beforeOk = true; // false when the pre-apply text could not be read
+  let afterApply = ""; // document text right after it
+  let afterOk = true; // false when the post-apply text could not be read
   let confirmDiscard = false;
+  /** Undo / Redo are the engine's own history, offered only when the apply is in it. */
+  const native = () => !!(current?.applyInHistory && current.undo && current.redo);
 
   // Keep the buttons honest as the document moves on.
   const refresh = () => {
     if (gen !== docGen) {
-      apply.disabled = true;
-      undo.disabled = true;
+      apply.disabled = undo.disabled = redo.disabled = true;
       card.className = "od-edit undone";
       state.textContent = "Different document";
       return;
@@ -403,61 +451,117 @@ function editCard(markdown: string, summary: string, before: string) {
       undo.disabled = !top;
       undo.title = top ? "" : "Undo the later assistant edit first";
       state.textContent = top ? "Applied ✓" : "Applied ✓ (later edit on top)";
+    } else if (!appliedStack.includes(token) && !redo.hidden) {
+      const top = isLastUndone();
+      redo.disabled = !top;
+      redo.title = top ? "" : "Redo the most recently undone edit first";
+      if (!undoneStack.includes(token)) {
+        redo.hidden = true;
+        apply.hidden = false;
+        apply.disabled = false;
+        apply.textContent = "Re-apply";
+        state.textContent = "History moved on; re-apply instead";
+      }
     }
   };
   document.addEventListener(EDIT_EVENT, refresh);
+
+  const applied = () => {
+    appliedStack.push(token);
+    confirmDiscard = false;
+    card.className = "od-edit applied";
+    apply.hidden = true;
+    redo.hidden = true;
+    undo.hidden = !native();
+    undo.disabled = false;
+    undo.textContent = "Undo";
+    state.textContent = native() ? "Applied ✓" : `Applied ✓ (${current?.name ?? "this editor"} can't undo this edit)`;
+    stackChanged();
+  };
 
   const doApply = async () => {
     if (!current || gen !== docGen) return refresh();
     apply.disabled = true;
     setStatus("Applying the assistant's edit…");
     try {
-      snap = await snapshot(current);
+      beforeOk = afterOk = true;
+      beforeApply = await current.getMarkdown().catch(() => { beforeOk = false; return ""; });
       await current.applyMarkdown(markdown);
-      afterApply = await current.getMarkdown().catch(() => "");
-      appliedStack.push(token);
-      confirmDiscard = false;
-      card.className = "od-edit applied";
-      apply.hidden = true;
-      undo.hidden = false;
-      undo.disabled = false;
-      undo.textContent = "Undo";
-      state.textContent = "Applied ✓";
+      afterApply = await current.getMarkdown().catch(() => { afterOk = false; return ""; });
+      undoneStack.length = 0; // a new edit invalidates the redo stack
+      applied();
       setStatus("Edit applied", "ok");
-      stackChanged();
     } catch (err) {
       apply.disabled = false;
       fail("Applying the edit failed", err);
     }
   };
   apply.addEventListener("click", () => void doApply());
+
   undo.addEventListener("click", async () => {
-    if (!current || !snap || gen !== docGen || !isTop()) return refresh();
-    // Restoring the snapshot also drops anything typed since; say so first.
+    if (!current || !native() || gen !== docGen || !isTop()) return refresh();
+    // Native undo walks back through anything typed since, too; say so first.
     const now = await current.getMarkdown().catch(() => afterApply);
-    if (now !== afterApply && !confirmDiscard) {
+    if (!sameText(now, afterApply) && !confirmDiscard) {
       confirmDiscard = true;
       undo.textContent = "Undo anyway";
-      state.textContent = "You edited since — undo discards that too";
+      state.textContent = "You edited since — undo also undoes that";
+      return;
+    }
+    if (!beforeOk) {
+      setStatus("Undo refused: the pre-edit text could not be read", "err");
       return;
     }
     undo.disabled = true;
     try {
-      if (snap.bytes) await current.load(snap.bytes);
-      else await current.applyMarkdown(snap.markdown ?? "");
+      const steps = await stepHistory(current, "undo", beforeApply);
+      if (steps == null) {
+        // stepHistory restored the document after failing to reach the target.
+        undo.disabled = false;
+        state.textContent = `${current.name}'s history couldn't reach the pre-edit text; nothing was undone`;
+        setStatus("Undo did not reach the original text", "err");
+        return;
+      }
       appliedStack.pop();
+      undoneStack.push(token);
       stackChanged();
       card.className = "od-edit undone";
-      state.textContent = "Undone";
       undo.hidden = true;
       undo.textContent = "Undo";
-      apply.hidden = false;
-      apply.disabled = false;
-      apply.textContent = "Re-apply";
+      redo.hidden = false;
+      redo.disabled = false;
+      state.textContent = "Undone";
       setStatus("Edit undone", "ok");
     } catch (err) {
       undo.disabled = false;
       fail("Undo failed", err);
+    }
+  });
+
+  redo.addEventListener("click", async () => {
+    if (!current || !native() || gen !== docGen || appliedStack.includes(token) || !isLastUndone()) return refresh();
+    if (!afterOk) {
+      setStatus("Redo refused: the post-edit text could not be read", "err");
+      return;
+    }
+    redo.disabled = true;
+    try {
+      const steps = await stepHistory(current, "redo", afterApply);
+      if (steps == null) {
+        // History moved on (e.g. the user typed after undoing): redo has nothing to replay.
+        redo.hidden = true;
+        apply.hidden = false;
+        apply.disabled = false;
+        apply.textContent = "Re-apply";
+        state.textContent = `${current.name} has nothing to redo; re-apply instead`;
+        return;
+      }
+      undoneStack.pop();
+      applied();
+      setStatus("Edit redone", "ok");
+    } catch (err) {
+      redo.disabled = false;
+      fail("Redo failed", err);
     }
   });
   return doApply;

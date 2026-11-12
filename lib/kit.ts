@@ -35,6 +35,12 @@ export interface EditorAdapter {
    */
   undo?(): Promise<void> | void;
   redo?(): Promise<void> | void;
+  /**
+   * True when `applyMarkdown` is an edit inside the engine's own history, so
+   * `undo()` reverts it. Only then does the assistant offer Undo / Redo: on
+   * any other engine, native undo would step through the user's own edits.
+   */
+  applyInHistory?: boolean;
   /** Human note about how faithful `applyMarkdown` is. */
   mergeQuality?: "native" | "html-paste" | "rebuild";
   /**
