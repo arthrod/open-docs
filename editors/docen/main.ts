@@ -11,6 +11,13 @@ import { waitFor } from "/lib/kit.ts";
 import { DOCEN } from "./assets.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
+/** docen's own markdown importer — @docen/docx@0.7.0's parseMarkdown, the exact
+ * converter `<docen-document>.openMarkdown` calls (same MarkdownManager, same
+ * token bridges). Imported as a subpath so we can parse without swapping the
+ * editor's state. */
+const DOCX_MARKDOWN =
+  "https://esm.sh/@docen/docx@0.7.0/converters/markdown.mjs?target=es2022";
+
 type DocenEl = HTMLElement & {
   openDOCX(bytes: Uint8Array | ArrayBuffer): Promise<void>;
   saveDOCX(): Promise<Uint8Array | ArrayBuffer | Blob>;
@@ -18,6 +25,21 @@ type DocenEl = HTMLElement & {
   saveMarkdown(): Promise<string> | string;
   setZoom?(pct: number): void;
   getZoom?(): number;
+  /** The underlying Tiptap editor (main document story). */
+  readonly editor?: {
+    readonly state: { readonly doc: unknown };
+    commands: {
+      setContent(content: unknown): boolean;
+      command(fn: (props: {
+        tr: {
+          readonly doc: { readonly attrs: Record<string, unknown> };
+          setMeta(key: string, value: unknown): unknown;
+          setDocAttribute(attr: string, value: unknown): unknown;
+        };
+        commands: { setContent(content: unknown): boolean };
+      }) => boolean): boolean;
+    };
+  };
 };
 
 let el: DocenEl | undefined;
@@ -41,6 +63,8 @@ async function toBytes(out: Uint8Array | ArrayBuffer | Blob): Promise<Uint8Array
 
 window.od.register({
   name: "docen",
+  // applyMarkdown is one Tiptap setContent transaction: one history step.
+  applyInHistory: true,
   mergeQuality: "native",
 
   // A Letter page is 816 px; on a narrower stage docen's own zoom (the one its
@@ -77,11 +101,44 @@ window.od.register({
 
   async applyMarkdown(markdown) {
     if (!el) throw new Error("docen not mounted");
-    // docen's own markdown import. Known loss in @docen/docx@0.7.0: its
-    // Bold/Italic/Code marks have no markdown token handlers, so @tiptap/markdown
-    // drops bold, italic and the TEXT of inline code. That is docen's behavior,
-    // shown as is.
-    await el.openMarkdown(markdown);
+    // In-history apply. Parse with the engine's own importer (DOCX_MARKDOWN —
+    // the same parseMarkdown openMarkdown uses), then apply via Tiptap's own
+    // `setContent` command on the element's editor: @tiptap/core@3.29.2's
+    // setContent is one docChanged transaction with no addToHistory:false
+    // meta, so the editor's own UndoRedo history records it and undo()/redo()
+    // (editor.commands.undo/redo) revert / re-apply the whole edit in one step.
+    // openMarkdown can't be used here: it rebuilds a fresh EditorState
+    // (#loadDoc → view.updateState), which resets the history stack.
+    // Known losses unchanged — same importer as before (@docen/docx@0.7.0:
+    // Bold/Italic/Code marks have no markdown token handlers, so bold, italic
+    // and the TEXT of inline code are dropped; its token bridges cover
+    // heading/list/code/hr/blockquote but not tables).
+    const editor = el.editor;
+    if (!editor) throw new Error("docen editor not ready");
+    const docBefore = editor.state.doc;
+    const { parseMarkdown } = await import(DOCX_MARKDOWN);
+    if (editor.state.doc !== docBefore) {
+      throw new Error("docen document changed while the apply was being prepared");
+    }
+    const parsed = parseMarkdown(markdown) as { attrs?: Record<string, unknown> };
+    const parsedAttrs = parsed.attrs ?? {};
+    const ok = editor.commands.command(({ tr, commands }) => {
+      // closeHistory: start a new history event, so one Undo restores exactly
+      // the pre-apply document instead of grouping with recent typing.
+      tr.setMeta("closeHistory", true);
+      // setContent swaps only the content; doc-level attrs a fresh openMarkdown
+      // would load must go in the same transaction (docen keeps headers/
+      // footers/settings in the doc-level documentExtras attr). Attrs absent
+      // from the parsed doc reset to schema defaults.
+      for (const key of Object.keys(tr.doc.attrs)) {
+        if (!(key in parsedAttrs)) tr.setDocAttribute(key, undefined);
+      }
+      for (const [key, value] of Object.entries(parsedAttrs)) tr.setDocAttribute(key, value);
+      return commands.setContent(parsed);
+    });
+    if (!ok) {
+      throw new Error("docen setContent rejected the parsed markdown");
+    }
   },
 
   // docen's editor is Tiptap; its own history commands.
