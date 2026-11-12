@@ -88,16 +88,19 @@ window.od.register({
   },
 
   async applyMarkdown(markdown: string) {
-    const html = await marked.parse(markdown);
+    // Plain web <hN> projects to a bold+size fallback; the vendor's HTML
+    // projection maps the Heading<N> CLASS to a real Heading style in every
+    // dialect, so stamp it on the tags marked emits.
+    const html = (await marked.parse(markdown)).replace(/<h([1-6])(\s|>)/g, '<h$1 class="Heading$1"$2');
     if (!ref) throw new Error("docx-editor.dev not mounted");
     // Vendor selectAll + paste uses its rich-HTML converter and guarded mutation
     // path: replacement is one native history entry, unlike load(newDocument).
     ref.focus();
     const selected = ref.exec({ type: "selectAll" });
     if (!selected.ok) throw new Error(`Select all failed: ${JSON.stringify(selected)}`);
-    const pasted = ref.exec(html.trim()
-      ? { type: "paste", text: markdown, html }
-      : { type: "deleteText" });
+    // deleteText requires a DocTarget; pasting empty content over the selectAll
+    // range clears the document as the same single history entry.
+    const pasted = ref.exec({ type: "paste", text: html.trim() ? markdown : "", html: html.trim() });
     if (!pasted.ok) throw new Error(`Paste failed: ${JSON.stringify(pasted)}`);
   },
 
