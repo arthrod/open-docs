@@ -29,11 +29,17 @@ let docGen = 0;
  * which unwinds newest first, so only the TOP of the stack can be undone.
  */
 const appliedStack: symbol[] = [];
+/**
+ * Undone assistant edits, newest last. Native redo replays oldest-undone
+ * first, so only the TOP of this stack may be redone.
+ */
+const undoneStack: symbol[] = [];
 const EDIT_EVENT = "od-edit-stack";
 const stackChanged = () => document.dispatchEvent(new CustomEvent(EDIT_EVENT));
 function newDocument() {
   docGen++;
   appliedStack.length = 0;
+  undoneStack.length = 0;
   history.length = 0; // the conversation was about the previous document
   stackChanged();
 }
@@ -397,7 +403,9 @@ function editCard(markdown: string, summary: string, before: string) {
   const gen = docGen; // the document this edit was computed for
   const token = Symbol("edit");
   const isTop = () => appliedStack[appliedStack.length - 1] === token;
+  const isLastUndone = () => undoneStack[undoneStack.length - 1] === token;
   let beforeApply = ""; // document text right before our apply
+  let beforeOk = true; // false when the pre-apply text could not be read
   let afterApply = ""; // document text right after it
   let confirmDiscard = false;
   /** Undo / Redo are the engine's own history, offered only when the apply is in it. */
@@ -416,6 +424,10 @@ function editCard(markdown: string, summary: string, before: string) {
       undo.disabled = !top;
       undo.title = top ? "" : "Undo the later assistant edit first";
       state.textContent = top ? "Applied ✓" : "Applied ✓ (later edit on top)";
+    } else if (!appliedStack.includes(token) && !redo.hidden) {
+      const top = isLastUndone();
+      redo.disabled = !top;
+      redo.title = top ? "" : "Redo the most recently undone edit first";
     }
   };
   document.addEventListener(EDIT_EVENT, refresh);
@@ -438,9 +450,10 @@ function editCard(markdown: string, summary: string, before: string) {
     apply.disabled = true;
     setStatus("Applying the assistant's edit…");
     try {
-      beforeApply = await current.getMarkdown().catch(() => "");
+      beforeApply = await current.getMarkdown().catch(() => { beforeOk = false; return ""; });
       await current.applyMarkdown(markdown);
       afterApply = await current.getMarkdown().catch(() => "");
+      undoneStack.length = 0; // a new edit invalidates the redo stack
       applied();
       setStatus("Edit applied", "ok");
     } catch (err) {
@@ -460,10 +473,24 @@ function editCard(markdown: string, summary: string, before: string) {
       state.textContent = "You edited since — undo also undoes that";
       return;
     }
+    if (!beforeOk) {
+      setStatus("Undo refused: the pre-edit text could not be read", "err");
+      return;
+    }
     undo.disabled = true;
     try {
       const steps = await stepHistory(current, "undo", beforeApply);
+      if (steps == null) {
+        // The walk never reached the pre-edit text: redo the steps taken so
+        // the document (and the user's own edits in it) is left as it was.
+        for (let i = 0; i < MAX_STEPS; i++) await current.redo!();
+        undo.disabled = false;
+        state.textContent = `${current.name}'s history couldn't reach the pre-edit text; nothing was undone`;
+        setStatus("Undo did not reach the original text", "err");
+        return;
+      }
       appliedStack.pop();
+      undoneStack.push(token);
       stackChanged();
       card.className = "od-edit undone";
       undo.hidden = true;
@@ -481,7 +508,7 @@ function editCard(markdown: string, summary: string, before: string) {
   });
 
   redo.addEventListener("click", async () => {
-    if (!current || !native() || gen !== docGen || appliedStack.includes(token)) return refresh();
+    if (!current || !native() || gen !== docGen || appliedStack.includes(token) || !isLastUndone()) return refresh();
     redo.disabled = true;
     try {
       const steps = await stepHistory(current, "redo", afterApply);
@@ -494,6 +521,7 @@ function editCard(markdown: string, summary: string, before: string) {
         state.textContent = `${current.name} has nothing to redo; re-apply instead`;
         return;
       }
+      undoneStack.pop();
       applied();
       setStatus("Edit redone", "ok");
     } catch (err) {
