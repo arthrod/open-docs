@@ -26,7 +26,20 @@ type DocenEl = HTMLElement & {
   setZoom?(pct: number): void;
   getZoom?(): number;
   /** The underlying Tiptap editor (main document story). */
-  readonly editor?: { commands: { setContent(content: unknown): boolean } };
+  readonly editor?: {
+    readonly state: { readonly doc: unknown };
+    commands: {
+      setContent(content: unknown): boolean;
+      command(fn: (props: {
+        tr: {
+          readonly doc: { readonly attrs: Record<string, unknown> };
+          setMeta(key: string, value: unknown): unknown;
+          setDocAttribute(attr: string, value: unknown): unknown;
+        };
+        commands: { setContent(content: unknown): boolean };
+      }) => boolean): boolean;
+    };
+  };
 };
 
 let el: DocenEl | undefined;
@@ -102,8 +115,28 @@ window.od.register({
     // heading/list/code/hr/blockquote but not tables).
     const editor = el.editor;
     if (!editor) throw new Error("docen editor not ready");
+    const docBefore = editor.state.doc;
     const { parseMarkdown } = await import(DOCX_MARKDOWN);
-    if (!editor.commands.setContent(parseMarkdown(markdown))) {
+    if (editor.state.doc !== docBefore) {
+      throw new Error("docen document changed while the apply was being prepared");
+    }
+    const parsed = parseMarkdown(markdown) as { attrs?: Record<string, unknown> };
+    const parsedAttrs = parsed.attrs ?? {};
+    const ok = editor.commands.command(({ tr, commands }) => {
+      // closeHistory: start a new history event, so one Undo restores exactly
+      // the pre-apply document instead of grouping with recent typing.
+      tr.setMeta("closeHistory", true);
+      // setContent swaps only the content; doc-level attrs a fresh openMarkdown
+      // would load must go in the same transaction (docen keeps headers/
+      // footers/settings in the doc-level documentExtras attr). Attrs absent
+      // from the parsed doc reset to schema defaults.
+      for (const key of Object.keys(tr.doc.attrs)) {
+        if (!(key in parsedAttrs)) tr.setDocAttribute(key, undefined);
+      }
+      for (const [key, value] of Object.entries(parsedAttrs)) tr.setDocAttribute(key, value);
+      return commands.setContent(parsed);
+    });
+    if (!ok) {
       throw new Error("docen setContent rejected the parsed markdown");
     }
   },
