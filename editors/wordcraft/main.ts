@@ -129,19 +129,43 @@ window.od.register({
 
   load: (bytes) =>
     driving(async () => {
+      const api = (window as unknown as { wordcraft?: { loadDocx?: (b: Uint8Array) => Promise<unknown> } }).wordcraft;
+      if (api?.loadDocx) {
+        await api.loadDocx(bytes);
+        return;
+      }
       open(`${docName}.docx`, bytes);
       await settle();
     }),
 
   applyMarkdown: (markdown) =>
     driving(async () => {
+      const api = (window as unknown as { wordcraft?: { applyMarkdown?: (m: string) => Promise<unknown> } }).wordcraft;
+      if (api?.applyMarkdown) {
+        await api.applyMarkdown(markdown);
+        return;
+      }
       open(`${docName}.md`, new TextEncoder().encode(markdown));
       await settle();
       // Back to a .docx-backed document, so Save keeps writing Word files.
       await saveAsDocx();
     }),
 
-  getMarkdown: () => driving(async () => docxToMarkdown(await saveAsDocx())),
+  getMarkdown: () =>
+    driving(async () => {
+      const api = (window as unknown as { wordcraft?: { getMarkdown?: () => Promise<string> } }).wordcraft;
+      if (api?.getMarkdown) {
+        return await api.getMarkdown();
+      }
+      return docxToMarkdown(await saveAsDocx());
+    }),
 
-  exportDocx: () => driving(() => saveAsDocx()),
+  exportDocx: () =>
+    driving(async () => {
+      const api = (window as unknown as { wordcraft?: { exportDocx?: () => Promise<Uint8Array> } }).wordcraft;
+      if (api?.exportDocx) {
+        return await api.exportDocx();
+      }
+      return saveAsDocx();
+    }),
 });
