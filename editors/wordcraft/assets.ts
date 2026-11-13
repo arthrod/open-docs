@@ -18,14 +18,14 @@
 import { blob } from "https://esm.town/v/std/blob/main.ts";
 import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 
-export const WORDCRAFT_VERSION = "0.16.0";
+export const WORDCRAFT_VERSION = "0.18.1";
 const ZIP_URL =
   `https://github.com/storytold/wordcraft/releases/download/v${WORDCRAFT_VERSION}/wordcraft-web-${WORDCRAFT_VERSION}.zip`;
 const ZIP_SHA256 = "612fcbe9c4fd8c8a2538e4b711dd78eb448859bbdb7f0f4517b26e99511d6f0e";
 
 /** Runtime files (paths relative to the zip's site folder). */
-export const WORDCRAFT_GLUE = "wordcraft-web-9242e10ddc86b8c1.js";
-export const WORDCRAFT_WASM = "wordcraft-web-9242e10ddc86b8c1_bg.wasm";
+export const WORDCRAFT_GLUE = "wordcraft-web-488b6781cf748f53.js";
+export const WORDCRAFT_WASM = "wordcraft-web-db7a4f5a47fbe56_bg.wasm";
 const FILES: Record<string, string> = {
   [WORDCRAFT_GLUE]: "text/javascript; charset=utf-8",
   [WORDCRAFT_WASM]: "application/wasm",
@@ -45,11 +45,25 @@ async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
 
 let installing: Promise<void> | undefined;
 
+async function fetchWithBackoff(url: string): Promise<Response> {
+  let lastErr: unknown;
+  for (const delay of [200, 600, undefined]) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+      lastErr = new Error(`wordcraft release download: ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+    if (delay !== undefined) await new Promise((r) => setTimeout(r, delay));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 /** Download, verify and store the release's runtime files (once per isolate). */
 function install(): Promise<void> {
   installing ??= (async () => {
-    const res = await fetch(ZIP_URL);
-    if (!res.ok) throw new Error(`wordcraft release download: ${res.status}`);
+    const res = await fetchWithBackoff(ZIP_URL);
     const zip = new Uint8Array(await res.arrayBuffer());
     const digest = hex(await crypto.subtle.digest("SHA-256", zip));
     if (digest !== ZIP_SHA256) throw new Error(`wordcraft release checksum mismatch: ${digest}`);

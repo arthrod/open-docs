@@ -25,10 +25,11 @@
  */
 import { waitFor } from "/lib/kit.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
+import { cachedFetch, WORDCRAFT_BASE, WORDCRAFT_GLUE, WORDCRAFT_WASM } from "./prefetch.ts";
 
-const BASE = "/vendor/wordcraft/0.16.0/";
-const GLUE = BASE + "wordcraft-web-9242e10ddc86b8c1.js";
-const WASM = BASE + "wordcraft-web-9242e10ddc86b8c1_bg.wasm";
+const BASE = WORDCRAFT_BASE;
+const GLUE = BASE + WORDCRAFT_GLUE;
+const WASM = BASE + WORDCRAFT_WASM;
 
 let canvas: HTMLCanvasElement;
 /** Name WordCraft knows the document by (without extension). */
@@ -104,7 +105,7 @@ window.od.register({
 
   async mount() {
     canvas = await waitFor<HTMLCanvasElement>("#wordcraft_canvas");
-    window.od.progress("Loading WordCraft (Rust → WebAssembly, 22 MB compressed)…");
+    window.od.progress("Loading WordCraft (Rust → WebAssembly, ~7 MB compressed)…");
     // Listeners first: WordCraft announces itself while init() is still running.
     const ready = new Promise<void>((resolve, reject) => {
       canvas.addEventListener("wordcraft:ready", () => resolve(), { once: true });
@@ -115,13 +116,12 @@ window.od.register({
       );
     });
     const glue = await import(GLUE);
-    // Resolved against this module, not the page: on a view-only page served
-    // by another val the .wasm still comes straight from open-docs.
-    await glue.default({ module_or_path: new URL(WASM, import.meta.url).href });
+    const wasmRes = await cachedFetch(new URL(WASM, import.meta.url).href);
+    await glue.default({ module_or_path: wasmRes });
     await ready;
+    document.getElementById("wc-skeleton")?.classList.add("wc-done");
     // In host mode WordCraft waits for the page's document: hand it a blank one.
-    // View-only pages hand the real document straight in. WordCraft 0.16.0
-    // has no read-only mode, so there it stays editable.
+    // View-only pages hand the real document straight in.
     const v = window.od.viewer;
     open(`${docName}.docx`, v ? await v.initialDocx() : await window.od.blankDocx());
     await settle();

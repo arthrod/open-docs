@@ -16,7 +16,8 @@ import { serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
-import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
+import { buildDocx, looksLikeZip, textFromDocx, textToParagraphs } from "./docx.ts";
+import { renderDocxPages } from "../editors/wordcraft/render.ts";
 import { DOCX_IO_SRI, DOCX_IO_URL } from "../lib/plate-docx-pin.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
 import { recordMetric, summarizeMetrics } from "./metrics.ts";
@@ -278,6 +279,88 @@ export function mountShared(app: Hono) {
   });
 
   app.get("/api/metrics", async (c) => c.json(await summarizeMetrics()));
+
+  const previewCache = new Map<string, { png: Uint8Array; count: number }>();
+
+  app.get("/api/wordcraft/preview", async (c) => {
+    const key = c.req.query("doc") === "showcase" ? "showcase" : "sample";
+    let hit = previewCache.get(key);
+    if (!hit) {
+      const docx = key === "showcase" ? showcaseDocx() : sampleDocx();
+      const pages = await renderDocxPages(docx, 1.0);
+      if (!pages.length) return c.json({ error: "rendered 0 pages" }, 500);
+      hit = { png: pages[0], count: pages.length };
+      previewCache.set(key, hit);
+    }
+    return new Response(hit.png.slice(), {
+      headers: {
+        "content-type": "image/png",
+        "x-wordcraft-page-count": String(hit.count),
+        "cache-control": "public, max-age=300",
+      },
+    });
+  });
+
+  app.post("/api/wordcraft/preview", async (c) => {
+    const type = c.req.header("content-type") ?? "";
+    const bytes = type.includes("application/json")
+      ? base64ToBytes(String((await c.req.json()).docxBase64 ?? ""))
+      : new Uint8Array(await c.req.arrayBuffer());
+    if (!looksLikeZip(bytes)) {
+      return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
+    }
+    const pages = await renderDocxPages(bytes, 1.0);
+    if (!pages.length) return c.json({ error: "rendered 0 pages" }, 500);
+    return new Response(pages[0].slice(), {
+      headers: {
+        "content-type": "image/png",
+        "x-wordcraft-page-count": String(pages.length),
+        "cache-control": "no-store",
+      },
+    });
+  });
+
+  app.post("/api/wordcraft/convert", async (c) => {
+    const type = c.req.header("content-type") ?? "";
+    if (type.includes("application/json")) {
+      const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+      if (!body) return c.json({ error: "invalid JSON body" }, 400);
+      if (typeof body.markdown === "string") {
+        const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Document";
+        const docx = buildDocx(textToParagraphs(body.markdown), title);
+        return new Response(docx.slice(), {
+          headers: {
+            "content-type": DOCX_MIME,
+            "content-disposition": `attachment; filename="${title.replace(/[\\/:*?"<>|]+/g, "-")}.docx"`,
+            "cache-control": "no-store",
+          },
+        });
+      }
+      const b64 = typeof body.docxBase64 === "string" ? body.docxBase64 : typeof body.base64 === "string" ? body.base64 : "";
+      const bytes = base64ToBytes(b64);
+      if (!looksLikeZip(bytes)) {
+        return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
+      }
+      const { title, paragraphs } = textFromDocx(bytes);
+      return c.json({
+        title: title || "Imported document",
+        markdown: paragraphsToText(paragraphs),
+        paragraphs,
+        bytes: bytes.length,
+      });
+    }
+    const bytes = new Uint8Array(await c.req.arrayBuffer());
+    if (!looksLikeZip(bytes)) {
+      return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
+    }
+    const { title, paragraphs } = textFromDocx(bytes);
+    return c.json({
+      title: title || "Imported document",
+      markdown: paragraphsToText(paragraphs),
+      paragraphs,
+      bytes: bytes.length,
+    });
+  });
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {
