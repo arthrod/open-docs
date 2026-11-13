@@ -30,10 +30,16 @@ interface CdpMessage {
   error?: { code: number; message: string; data?: string };
 }
 
+/** Longer than any expected CDP call (navigate, big Runtime.evaluate, screenshot). */
+const REQUEST_TIMEOUT_MS = 120_000;
+
 class CdpClient {
   private ws: WebSocket;
   private nextId = 1;
-  private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  private pending = new Map<
+    number,
+    { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }
+  >();
   public consoleErrors: string[] = [];
   public pageErrors: string[] = [];
   public failedRequests: string[] = [];
@@ -46,6 +52,7 @@ class CdpClient {
         const entry = this.pending.get(msg.id);
         if (entry) {
           this.pending.delete(msg.id);
+          clearTimeout(entry.timer);
           if (msg.error) {
             entry.reject(new Error(`CDP ${msg.error.code}: ${msg.error.message}`));
           } else {
@@ -73,6 +80,18 @@ class CdpClient {
         }
       }
     };
+    this.ws.onclose = () => this.failPending(new Error("CDP WebSocket closed"));
+    this.ws.onerror = () => this.failPending(new Error("CDP WebSocket error"));
+  }
+
+  /** Reject and drop every outstanding request (socket closed, client closed). */
+  private failPending(err: Error) {
+    const entries = [...this.pending.values()];
+    this.pending.clear();
+    for (const entry of entries) {
+      clearTimeout(entry.timer);
+      entry.reject(err);
+    }
   }
 
   static async connect(wsUrl: string): Promise<CdpClient> {
@@ -84,14 +103,30 @@ class CdpClient {
     return new CdpClient(ws);
   }
 
-  send<T = Record<string, unknown>>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  send<T = Record<string, unknown>>(
+    method: string,
+    params: Record<string, unknown> = {},
+    timeoutMs = REQUEST_TIMEOUT_MS,
+  ): Promise<T> {
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (this.pending.delete(id)) {
+          reject(new Error(`CDP request ${method} timed out after ${timeoutMs}ms`));
+        }
+      }, timeoutMs);
       this.pending.set(id, {
         resolve: (v) => resolve(v as T),
         reject,
+        timer,
       });
-      this.ws.send(JSON.stringify({ id, method, params }));
+      try {
+        this.ws.send(JSON.stringify({ id, method, params }));
+      } catch (err) {
+        clearTimeout(timer);
+        this.pending.delete(id);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
     });
   }
 
@@ -113,6 +148,7 @@ class CdpClient {
   }
 
   close() {
+    this.failPending(new Error("CDP client closed"));
     try {
       this.ws.close();
     } catch {

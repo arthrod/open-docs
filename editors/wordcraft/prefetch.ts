@@ -1,7 +1,7 @@
 export const WORDCRAFT_VERSION = "0.18.1";
 export const WORDCRAFT_BASE = `/vendor/wordcraft/${WORDCRAFT_VERSION}/`;
-export const WORDCRAFT_GLUE = "wordcraft-web-488b6781cf748f53.js";
-export const WORDCRAFT_WASM = "wordcraft-web-db7a4f5a47fbe56_bg.wasm";
+export const WORDCRAFT_GLUE = "wordcraft-web-bc9cdbc0b42827ee.js";
+export const WORDCRAFT_WASM = "wordcraft-web-bc9cdbc0b42827ee_bg.wasm";
 export const WORDCRAFT_SNIPPET = "snippets/eframe-d31a8450ea12dfc1/inline0.js";
 
 const RETRY_DELAYS_MS = [200, 600];
@@ -35,7 +35,7 @@ export function prefetchWordcraft(): void {
   prefetched = true;
   for (const rel of [WORDCRAFT_GLUE, WORDCRAFT_SNIPPET, WORDCRAFT_WASM]) {
     const url = new URL(WORDCRAFT_BASE + rel, window.location.origin).href;
-    void cachedFetch(url, { credentials: "same-origin" }).then((r) => r.body?.cancel()).catch(() => {});
+    void cachedFetch(url, { credentials: "same-origin" }).then((r) => r.arrayBuffer()).catch(() => {});
   }
 }
 

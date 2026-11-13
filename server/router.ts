@@ -12,12 +12,13 @@
  *   GET  /api/metrics          per-editor medians, for the landing page
  */
 import type { Hono } from "npm:hono@4";
+import { bodyLimit } from "npm:hono@4/body-limit";
 import { serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
 import { buildDocx, looksLikeZip, textFromDocx, textToParagraphs } from "./docx.ts";
-import { renderDocxPages } from "../editors/wordcraft/render.ts";
+import { DOCX_PREVIEW_MAX_BYTES, renderDocxPages } from "../editors/wordcraft/render.ts";
 import { DOCX_IO_SRI, DOCX_IO_URL } from "../lib/plate-docx-pin.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
 import { recordMetric, summarizeMetrics } from "./metrics.ts";
@@ -193,7 +194,7 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 /** Mount every shared API route onto the app. */
 export function mountShared(app: Hono) {
   app.get("/api/sample.docx", () =>
-    new Response(sampleDocx(), {
+    new Response(sampleDocx().slice(), {
       headers: {
         "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-sample.docx"',
@@ -202,7 +203,7 @@ export function mountShared(app: Hono) {
     }));
 
   app.get("/api/showcase.docx", () =>
-    new Response(showcaseDocx(), {
+    new Response(showcaseDocx().slice(), {
       headers: {
         "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-showcase.docx"',
@@ -215,7 +216,7 @@ export function mountShared(app: Hono) {
 
   /** A valid, empty .docx (one empty paragraph), built by the same writer as the sample. */
   app.get("/api/blank.docx", () =>
-    new Response(buildDocx([{ text: "" }], "Untitled document"), {
+    new Response(buildDocx([{ text: "" }], "Untitled document").slice(), {
       headers: { "content-type": DOCX_MIME, "cache-control": "no-cache" },
     }));
 
@@ -301,7 +302,14 @@ export function mountShared(app: Hono) {
     });
   });
 
-  app.post("/api/wordcraft/preview", async (c) => {
+  // Base64 inside JSON inflates ~4/3 plus the object wrapper; the decoded-size
+  // check below still caps real .docx bytes at DOCX_PREVIEW_MAX_BYTES.
+  const previewBodyLimit = Math.ceil(DOCX_PREVIEW_MAX_BYTES * 4 / 3) + 1024;
+
+  app.post("/api/wordcraft/preview", bodyLimit({
+    maxSize: previewBodyLimit,
+    onError: (c) => c.json({ error: "Request body too large." }, 413),
+  }), async (c) => {
     const type = c.req.header("content-type") ?? "";
     const bytes = type.includes("application/json")
       ? base64ToBytes(String((await c.req.json()).docxBase64 ?? ""))
@@ -309,7 +317,16 @@ export function mountShared(app: Hono) {
     if (!looksLikeZip(bytes)) {
       return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
     }
-    const pages = await renderDocxPages(bytes, 1.0);
+    if (bytes.byteLength > DOCX_PREVIEW_MAX_BYTES) {
+      return c.json({ error: "Document too large to preview." }, 413);
+    }
+    let pages: Uint8Array[];
+    try {
+      pages = await renderDocxPages(bytes, 1.0);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ error: msg }, msg.includes("timed out") ? 504 : 500);
+    }
     if (!pages.length) return c.json({ error: "rendered 0 pages" }, 500);
     return new Response(pages[0].slice(), {
       headers: {
@@ -328,10 +345,17 @@ export function mountShared(app: Hono) {
       if (typeof body.markdown === "string") {
         const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Document";
         const docx = buildDocx(textToParagraphs(body.markdown), title);
+        // RFC 6266: sanitized-ASCII filename fallback plus filename* for the real title.
+        const asciiName = title.replace(/[^\x20-\x7e]/g, "").replace(/[\\/:*?"<>|]+/g, "-").trim() ||
+          "document";
+        const utf8Name = encodeURIComponent(`${title}.docx`).replace(
+          /['()*]/g,
+          (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`,
+        );
         return new Response(docx.slice(), {
           headers: {
             "content-type": DOCX_MIME,
-            "content-disposition": `attachment; filename="${title.replace(/[\\/:*?"<>|]+/g, "-")}.docx"`,
+            "content-disposition": `attachment; filename="${asciiName}.docx"; filename*=UTF-8''${utf8Name}`,
             "cache-control": "no-store",
           },
         });

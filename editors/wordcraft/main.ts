@@ -115,11 +115,14 @@ window.od.register({
         { once: true },
       );
     });
-    const glue = await import(GLUE);
-    const wasmRes = await cachedFetch(new URL(WASM, import.meta.url).href);
-    await glue.default({ module_or_path: wasmRes });
-    await ready;
-    document.getElementById("wc-skeleton")?.classList.add("wc-done");
+    try {
+      const glue = await import(GLUE);
+      const wasmRes = await cachedFetch(new URL(WASM, import.meta.url).href);
+      await glue.default({ module_or_path: wasmRes });
+      await ready;
+    } finally {
+      document.getElementById("wc-skeleton")?.classList.add("wc-done");
+    }
     // In host mode WordCraft waits for the page's document: hand it a blank one.
     // View-only pages hand the real document straight in.
     const v = window.od.viewer;

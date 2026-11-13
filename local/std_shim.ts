@@ -21,11 +21,12 @@ const MIME: Record<string, string> = {
 };
 
 const tsCache = new Map<string, { mtimeMs: number; code: string }>();
+const BUN_BIN = Deno.env.get("BUN_BIN") ?? "bun";
 
 async function transpileTs(filePath: string, source: string, mtimeMs: number): Promise<string> {
   const hit = tsCache.get(filePath);
   if (hit && hit.mtimeMs === mtimeMs) return hit.code;
-  const cmd = new Deno.Command("/Users/arthrod/Library/pnpm/bin/bun", {
+  const cmd = new Deno.Command(BUN_BIN, {
     args: [
       "-e",
       "const fs=require('fs');const src=fs.readFileSync(0,'utf8');const t=new Bun.Transpiler({loader:'ts'});process.stdout.write(t.transformSync(src));",
@@ -50,7 +51,10 @@ async function transpileTs(filePath: string, source: string, mtimeMs: number): P
 export async function serveFile(reqPath: string, _baseUrl?: string): Promise<Response> {
   const clean = decodeURIComponent(reqPath.split("?")[0]).replace(/^\/+/, "");
   const full = path.resolve(ROOT, clean);
-  if (!full.startsWith(ROOT)) return new Response("forbidden", { status: 403 });
+  const rel = path.relative(ROOT, full);
+  if (rel === ".." || rel.startsWith(`..${path.SEPARATOR}`) || path.isAbsolute(rel)) {
+    return new Response("forbidden", { status: 403 });
+  }
   try {
     const stat = await Deno.stat(full);
     if (!stat.isFile) return new Response("not found", { status: 404 });
@@ -109,6 +113,22 @@ try {
   metricRows = [];
 }
 
+// Writes chain on this promise so overlapping inserts can't complete out of
+// order; each op writes a temp file and renames it over METRICS_FILE so the
+// file is never left partially written.
+let metricsWrite: Promise<unknown> = Promise.resolve();
+
+function persistMetrics(): Promise<void> {
+  const snapshot = JSON.stringify(metricRows);
+  const op = metricsWrite.then(async () => {
+    const tmp = `${METRICS_FILE}.tmp`;
+    await Deno.writeTextFile(tmp, snapshot);
+    await Deno.rename(tmp, METRICS_FILE);
+  });
+  metricsWrite = op.catch(() => undefined);
+  return op;
+}
+
 export const sqlite = {
   async execute(input: string | { sql: string; args?: unknown[] }): Promise<{ rows: MetricRow[] }> {
     const sql = typeof input === "string" ? input : input.sql;
@@ -130,7 +150,7 @@ export const sqlite = {
         ua: args[8],
       });
       await Deno.mkdir(path.dirname(METRICS_FILE), { recursive: true });
-      await Deno.writeTextFile(METRICS_FILE, JSON.stringify(metricRows));
+      await persistMetrics();
       return { rows: [] };
     }
     if (/SELECT .* FROM/i.test(sql)) {

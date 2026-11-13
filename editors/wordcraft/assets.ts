@@ -21,11 +21,11 @@ import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 export const WORDCRAFT_VERSION = "0.18.1";
 const ZIP_URL =
   `https://github.com/storytold/wordcraft/releases/download/v${WORDCRAFT_VERSION}/wordcraft-web-${WORDCRAFT_VERSION}.zip`;
-const ZIP_SHA256 = "612fcbe9c4fd8c8a2538e4b711dd78eb448859bbdb7f0f4517b26e99511d6f0e";
+const ZIP_SHA256 = "3daa7c2d1f209a7eeb2527fcefa3fe31e875848fb1970d68f54edae55fe0bc9f";
 
 /** Runtime files (paths relative to the zip's site folder). */
-export const WORDCRAFT_GLUE = "wordcraft-web-488b6781cf748f53.js";
-export const WORDCRAFT_WASM = "wordcraft-web-db7a4f5a47fbe56_bg.wasm";
+export const WORDCRAFT_GLUE = "wordcraft-web-bc9cdbc0b42827ee.js";
+export const WORDCRAFT_WASM = "wordcraft-web-bc9cdbc0b42827ee_bg.wasm";
 const FILES: Record<string, string> = {
   [WORDCRAFT_GLUE]: "text/javascript; charset=utf-8",
   [WORDCRAFT_WASM]: "application/wasm",
@@ -38,8 +38,8 @@ const key = (path: string) => `od_wordcraft_${WORDCRAFT_VERSION}_${path.replaceA
 
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
-async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+async function gzip(bytes: Uint8Array): Promise<Uint8Array<ArrayBuffer>> {
+  const stream = new Blob([bytes.slice()]).stream().pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
