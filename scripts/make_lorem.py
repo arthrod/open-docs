@@ -19,12 +19,14 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, Inches, RGBColor
 
+from measure_lib import lorem_args
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-args = [a for a in sys.argv[1:] if not a.startswith("--")]
-OUT = pathlib.Path(args[0]) if args else ROOT / ".scratch/fixtures/lorem-500.docx"
-CHAPTERS = int(sys.argv[sys.argv.index("--chapters") + 1]) if "--chapters" in sys.argv else 50
+ARGS = lorem_args(sys.argv[1:])
+OUT = pathlib.Path(ARGS.out) if ARGS.out else ROOT / ".scratch/fixtures/lorem-500.docx"
+CHAPTERS = ARGS.chapters
 # Words of body text per chapter: tuned so a chapter ends mid-way down its 10th page in Word.
-CHAPTER_WORDS = int(sys.argv[sys.argv.index("--words") + 1]) if "--words" in sys.argv else 4450
+CHAPTER_WORDS = ARGS.words
 
 WORDS = (
     "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore "

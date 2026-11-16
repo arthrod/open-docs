@@ -24,6 +24,15 @@ export interface SampleRow {
   runs: (number | null)[];
   /** Why it did not load, when it did not. */
   failed: string | null;
+  /** Median of each run's own (after − before) renderer memory. Absent in files written before it was recorded. */
+  rendererGrowth?: number | null;
+  /** How many runs were still busy when the page stopped waiting (180 s): those have no settled time. */
+  settleTimedOut?: number;
+  /** An error from a run that did load: its timing stands, some later readings are missing. */
+  incomplete?: string | null;
+  /** When and where this row was measured, when a partial re-run measured it apart from the others. */
+  measuredAt?: string;
+  environment?: string;
 }
 export interface SampleMeasurements {
   measuredAt: string | null;
@@ -55,16 +64,23 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
       const r = rows[e.slug];
       if (!r) return "";
       const frame = e.opensFiles === false;
-      const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}`;
+      // Said only where it differs from the heading: a row re-measured on another day or machine.
+      const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && r.environment !== data.environment)
+        ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}</small>`
+        : "";
+      const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(r.incomplete.split("\n")[0].slice(0, 120))}</small>` : "";
+      const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}${elsewhere}${incomplete}`;
       if (r.loadMs == null) {
         return `<tr><td>${name}</td><td colspan="${redline ? 4 : 5}"><b>did not open it</b>: ${esc((r.failed ?? "no answer").split("\n")[0].slice(0, 160))}</td>${
           redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : ""
         }</tr>`;
       }
-      const grew = r.rendererRss != null && r.rendererRssReady != null ? r.rendererRss - r.rendererRssReady : null;
+      // Each run's own growth, median: the two medians beside it can come from different runs.
+      const grew = r.rendererGrowth ?? (r.rendererRss != null && r.rendererRssReady != null ? r.rendererRss - r.rendererRssReady : null);
+      const settled = frame ? "n/a" : r.settledMs == null && r.settleTimedOut ? "still busy after 180 s" : ms(r.settledMs);
       return `<tr><td>${name}</td>
       <td class="n">${ms(r.loadMs)}</td>
-      <td class="n"><b>${frame ? "n/a" : ms(r.settledMs)}</b></td>
+      <td class="n"><b>${settled}</b></td>
       <td class="n">${frame ? "n/a" : mb(r.heapBytes)}</td>
       <td class="n" title="before ${mb(r.rendererRssReady)}, after ${mb(r.rendererRss)}">${mb(r.rendererRss)}${grew != null ? ` <small>(${grew >= 0 ? "+" : "−"}${mb(Math.abs(grew))})</small>` : ""}</td>
       ${redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : `<td class="n hide-sm">${r.pages ?? "n/a"}</td>`}

@@ -76,3 +76,28 @@ Deno.test("a run's own underline or colour written as an open/close pair is repl
   if (out.includes("double") || out.includes("00FF00")) throw new Error(out);
   if ((out.match(/<w:u /g) ?? []).length !== 1 || !out.includes("<w:b/>")) throw new Error(out);
 });
+
+Deno.test("a revision tag written with a newline or tab after its name is still a revision", () => {
+  const xml = `<w:p><w:del\nw:id="1" w:author="A"><w:r><w:delText>old</w:delText></w:r></w:del><w:ins\tw:id="2" w:author="A"><w:r><w:t>new</w:t></w:r></w:ins></w:p>`;
+  assertEquals(hasRevisions(xml), true);
+  const out = flattenRevisions(xml);
+  assertEquals(text(out), "oldnew");
+  assertEquals(out.includes("<w:strike/>"), true);
+  // A package holding only such tags is converted, not handed over untouched.
+  const pkg = zipSync({ "word/document.xml": strToU8(xml) });
+  assertEquals(revisionsAsFormatting(pkg).changed, true);
+});
+
+Deno.test("run properties written with whitespace or attributes in the tag are merged into, not doubled", () => {
+  const marks = `<w:u w:val="single"/><w:color w:val="C00000"/>`;
+  const out = flattenRevisions(
+    `<w:ins w:id="1" w:author="A"><w:r><w:rPr ><w:b/></w:rPr ><w:t>a</w:t></w:r>` +
+      `<w:r><w:rPr xmlns:x="urn:x"><w:i/></w:rPr><w:t>b</w:t></w:r><w:r><w:rPr /><w:t>c</w:t></w:r></w:ins>`,
+  );
+  assertEquals((out.match(/<w:rPr[\s>\/]/g) ?? []).length, 3); // one container per run
+  assertEquals(
+    out,
+    `<w:r><w:rPr ><w:b/>${marks}</w:rPr><w:t>a</w:t></w:r><w:r><w:rPr xmlns:x="urn:x"><w:i/>${marks}</w:rPr><w:t>b</w:t></w:r>` +
+      `<w:r><w:rPr>${marks}</w:rPr><w:t>c</w:t></w:r>`,
+  );
+});

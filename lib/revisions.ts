@@ -27,7 +27,7 @@ const INSERTED = `<w:u w:val="single"/><w:color w:val="${RED}"/>`;
 const DELETED = `<w:strike/><w:color w:val="${RED}"/>`;
 
 /** True when the WordprocessingML part has insertions, deletions or moves. */
-export const hasRevisions = (xml: string): boolean => /<w:(ins|del|moveFrom|moveTo)[ >]/.test(xml);
+export const hasRevisions = (xml: string): boolean => /<w:(ins|del|moveFrom|moveTo)(?=[\s>\/])/.test(xml);
 
 const TAG = /<(\/?)w:(ins|del|moveFrom|moveTo|r|delText|delInstrText)(?=[\s>\/])([^>]*?)(\/?)>/g;
 
@@ -75,14 +75,16 @@ export function flattenRevisions(xml: string): string {
     // Deleted wins: text inserted by one reviewer and deleted by another is gone.
     const marks = del ? DELETED : INSERTED;
     const rest = xml.slice(at);
-    const open = /^\s*<w:rPr>/.exec(rest);
-    const empty = /^\s*<w:rPr\/>/.exec(rest);
-    if (open) {
-      const end = rest.indexOf("</w:rPr>");
+    // The tag may carry whitespace or attributes (`<w:rPr >`, a namespace declaration): XML allows
+    // both, and a second container would be ignored by mammoth, which reads the first one only.
+    const open = /^\s*(<w:rPr(?:\s[^>]*?)?)>/.exec(rest);
+    const empty = /^\s*<w:rPr(?:\s[^>]*?)?\/>/.exec(rest);
+    const end = open && !empty ? /<\/w:rPr\s*>/.exec(rest) : null;
+    if (open && end && !empty) {
       // The run's own underline / strike / colour would win or duplicate: replace them.
-      const kept = rest.slice(open[0].length, end).replace(/<w:(u|strike|dstrike|color)\b[^>]*(\/>|>\s*<\/w:\1>)/g, "");
-      out += `<w:rPr>${kept}${marks}</w:rPr>`;
-      at += end + "</w:rPr>".length;
+      const kept = rest.slice(open[0].length, end.index).replace(/<w:(u|strike|dstrike|color)\b[^>]*(\/>|>\s*<\/w:\1>)/g, "");
+      out += `${open[1]}>${kept}${marks}</w:rPr>`;
+      at += end.index + end[0].length;
     } else if (empty) {
       out += `<w:rPr>${marks}</w:rPr>`;
       at += empty[0].length;

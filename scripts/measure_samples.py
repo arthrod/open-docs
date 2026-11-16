@@ -35,6 +35,8 @@ import asyncio, datetime, json, os, platform, statistics, subprocess, sys, tempf
 
 from playwright.async_api import async_playwright
 
+from measure_lib import end_chrome, merge_latest, sample_row
+
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
 EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft"]
@@ -145,6 +147,8 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
             out["loadMs"] = loaded["ms"]
             if loaded.get("settledMs") is not None:
                 out["settledMs"] = loaded["settledMs"]
+            if loaded.get("settleTimedOut"):
+                out["settleTimedOut"] = True  # still busy when the page stopped waiting: no settled time
             await asyncio.sleep(2.0)  # trailing requests (the page already waited for a quiet second)
             out.update(chrome_memory(profile))
             cdp = await ctx.new_cdp_session(page)
@@ -173,7 +177,10 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
             await asyncio.wait_for(ctx.close(), 20)
         except Exception:
             # A renderer that never yields does not close either: end that Chrome.
-            subprocess.run(["pkill", "-f", f"--user-data-dir={profile}"])
+            left = end_chrome(profile)
+            if left:
+                out["cleanup"] = left
+                print(f"{slug}/{sample}: {left}", file=sys.stderr, flush=True)
     return out
 
 
@@ -193,14 +200,7 @@ async def main():
     summary: dict = {}
     for s in samples:
         for e in engines:
-            xs = [x for x in raw if x["engine"] == e and x["sample"] == s]
-            ok = [x for x in xs if "loadMs" in x]
-            med = lambda k: int(statistics.median(x[k] for x in ok if k in x)) if any(k in x for x in ok) else None
-            summary.setdefault(s, {})[e] = {
-                **{k: med(k) for k in ("startupMs", "loadMs", "settledMs", "heapBytes", "rendererRssReady", "rendererRss", "gpuRss", "domNodes", "pages", "bytes", "requests")},
-                "runs": [x.get("loadMs") for x in xs],
-                "failed": next((x.get("error") or x.get("blocked") for x in xs if "loadMs" not in x), None),
-            }
+            summary.setdefault(s, {})[e] = sample_row([x for x in raw if x["engine"] == e and x["sample"] == s])
     where = os.environ.get("MEASURE_WHERE") or f"{platform.system()} {platform.machine()}"
     result = {
         "measuredAt": datetime.date.today().isoformat(),
@@ -215,11 +215,9 @@ async def main():
             latest = json.load(open(opt("--latest")))
         except (OSError, ValueError):
             latest = {}
-        merged = latest.get("samples", {})
-        for s, rows in summary.items():
-            merged.setdefault(s, {}).update(rows)
+        # Each row keeps the date and environment it was measured under (measure_lib.merge_latest).
         with open(opt("--latest"), "w") as f:
-            f.write(json.dumps({**{k: result[k] for k in ("measuredAt", "environment", "base")}, "samples": merged}, indent=1) + "\n")
+            f.write(json.dumps(merge_latest(latest, summary, result), indent=1) + "\n")
     text = json.dumps(result, indent=1) + "\n"
     if opt("--out"):
         os.makedirs(os.path.dirname(opt("--out")) or ".", exist_ok=True)

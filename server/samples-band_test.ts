@@ -32,3 +32,33 @@ Deno.test("every engine in the registry that can open a sample has a revisions n
     if (!REVISION_NOTES[e.slug]) throw new Error(`no revisions note for ${e.slug}`);
   }
 });
+
+Deno.test("memory growth shown is the median of each run's own growth, when the file has it", () => {
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-15", environment: "test",
+    samples: { redline: { folio: row({ rendererGrowth: 16 * 1048576 }), docen: row() } },
+  };
+  const html = samplesBand(editors, data);
+  assertEquals(html.includes("420 MB <small>(+16 MB)</small>"), true); // folio: paired
+  assertEquals(html.includes("420 MB <small>(+120 MB)</small>"), true); // docen: an older file without the field
+});
+
+Deno.test("a row says so when it never settled, when its readings are incomplete, and when it was measured elsewhere", () => {
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-15", environment: "Darwin arm64",
+    samples: {
+      "lorem-500": {
+        folio: row({ settledMs: null, settleTimedOut: 1 }),
+        docen: row({ incomplete: "TimeoutError: Performance.getMetrics\n at y" }),
+        plate: row({ measuredAt: "2026-11-20", environment: "Linux x86_64" }),
+        superdoc: row({ measuredAt: "2026-11-15", environment: "Darwin arm64" }),
+      },
+    },
+  };
+  const html = samplesBand(editors, data);
+  assertEquals(html.includes("still busy after 180 s"), true);
+  assertEquals(html.includes("incomplete: TimeoutError: Performance.getMetrics"), true);
+  assertEquals(html.includes(" at y"), false);
+  assertEquals(html.includes("measured 2026-11-20: Linux x86_64"), true);
+  assertEquals((html.match(/<small class="prov">/g) ?? []).length, 1); // only the row that differs from the heading
+});

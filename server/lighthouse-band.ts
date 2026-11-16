@@ -27,6 +27,8 @@ export interface LighthouseResults {
   pages: Record<string, { desktop: LighthousePage; mobile: LighthousePage }>;
   /** The same pages opening a Menu sample (`?open=<file>`): sample id → page → medians. */
   docs?: Record<string, Record<string, { desktop: LighthousePage; mobile: LighthousePage }>>;
+  /** When and how each `docs` population was measured, when it was measured apart from `pages`. */
+  docsMeta?: Record<string, { measuredAt: string; environment: string }>;
 }
 
 const esc = (s: string) =>
@@ -44,8 +46,14 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
       if (!r) return "";
       const name = `<a href="/e/${e.slug}${q}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}`;
       const d = r.desktop, m = r.mobile;
+      // A median over fewer analyses than were run says so, with the reason the others gave.
+      const part = (f: string, p: LighthousePage) => {
+        const got = p.performanceRuns.filter((n) => n != null).length;
+        return got === p.performanceRuns.length ? "" : `${f} ${got}/${p.performanceRuns.length} analyses${p.error ? `: ${esc(p.error.slice(0, 120))}` : ""}`;
+      };
+      const partial = [part("desktop", d), part("mobile", m)].filter(Boolean).join(" · ");
       if (d.performance == null && m.performance == null) return `<tr><td>${name}</td><td colspan="8"><b>no result</b>: ${esc((d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
-      return `<tr><td>${name}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>
+      return `<tr><td>${name}${partial ? ` <small class="lh-part">${partial}</small>` : ""}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>
       <td class="n hide-sm">${d.cls ?? "n/a"} · ${m.cls ?? "n/a"}</td><td class="n hide-sm">${score(d.accessibility)}</td><td class="n hide-sm">${score(d.bestPractices)}</td><td class="n hide-sm">${score(d.seo)}</td>
       <td class="hide-sm"><a href="${psi(e.slug)}" target="_blank" rel="noopener">run it →</a></td></tr>`;
     };
@@ -60,7 +68,9 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
   const long = table(data.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx");
   const longBlock = long
     ? `<h3 class="smp-h" id="lighthouse-lorem-500">Opening the 500 pages sample <small>each page with <code>?open=lorem-500.docx</code>, which presses the Menu's own button once the editor is ready</small></h3>
-  <p class="sec-copy">PageSpeed gives a page a fixed time to load; an engine still working when it ends is scored on what it had drawn.</p>
+  <p class="sec-copy">PageSpeed gives a page a fixed time to load; an engine still working when it ends is scored on what it had drawn.${
+      data.docsMeta?.["lorem-500"] ? ` Measured ${esc(data.docsMeta["lorem-500"].measuredAt)}: ${esc(data.docsMeta["lorem-500"].environment)}.` : ""
+    }</p>
   ${long}`
     : "";
   return `<section class="band" id="lighthouse"><div class="wrap">

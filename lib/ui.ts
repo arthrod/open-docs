@@ -20,6 +20,7 @@ import {
   parseArenaMessage,
 } from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
+import { longTasksSupported, OpenOwner, settledMs as settledAfter } from "./open-timing.ts";
 
 const slug = document.body.dataset.slug ?? "";
 const editorName = document.body.dataset.name ?? slug;
@@ -190,6 +191,9 @@ async function remeasure() {
   renderMetricsDialog();
 }
 
+/** Set when ?open= made this page load a sample on arrival. */
+let autoOpened = false;
+
 async function recordMetrics(adapter: EditorAdapter, mountStart: number, mountEnd: number) {
   measureArgs = { adapter, mountStart, mountEnd };
   // Let late chunks, fonts and workers arrive before we count bytes / heap.
@@ -212,6 +216,9 @@ async function recordMetrics(adapter: EditorAdapter, mountStart: number, mountEn
     sessionStorage.setItem("od:editor-seen", "1");
     // Test sessions set localStorage["od:no-metrics"] so they don't skew medians.
     if (localStorage.getItem("od:no-metrics")) return;
+    // A visit that opened a sample by itself (?open=) has that document's heap and downloads in
+    // this reading: it is not a startup, so it stays out of the startup figures.
+    if (autoOpened) return;
     void fetch("/api/metrics", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -258,7 +265,10 @@ async function start(adapter: EditorAdapter) {
       const btn = want === "showcase.docx"
         ? $("od-showcase")
         : [...document.querySelectorAll<HTMLButtonElement>(".od-fixture")].find((b) => b.dataset.file === want);
-      btn?.click();
+      if (btn) {
+        autoOpened = true;
+        btn.click();
+      }
     }
     (window as unknown as { __odlog?: (k: string, m: string) => void }).__odlog?.(
       "ready",
@@ -282,7 +292,7 @@ let fitNow = () => {};
 function watchFit(adapter: EditorAdapter) {
   const stage = $("od-stage");
   if (!stage || !adapter.fit) return;
-  let timer = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   fitNow = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
@@ -341,6 +351,7 @@ async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void
 const newDoc = () =>
   withAdapter("New document", async (a) => {
     if (a.viewOnly) return setStatus(`${a.name} is a view-only viewer`, "err");
+    openOwner.start(); // a sample still being measured no longer owns the page
     await a.load(await window.od.blankDocx());
     newDocument();
     setDocName("Untitled document");
@@ -359,56 +370,89 @@ const newDoc = () =>
  *              (docx-editor.dev's `ref.load` is fire-and-forget), and some
  *              keep paginating after they return, so this is the number to
  *              compare on a long document. Work in a worker or on the GPU is
- *              not seen by it. Null where the browser has no Long Tasks API.
+ *              not seen by it. Null where the browser has no Long Tasks API,
+ *              and null (with `settleTimedOut`) when the page was still busy
+ *              after 180 s: it never settled, so no time is claimed for it.
  *
- * Left on <html data-od-loaded> for scripts/measure_samples.py.
+ * `loaded` runs as soon as the adapter's `load()` resolved, before the wait
+ * for quiet: the document on screen is the new one from that moment.
+ *
+ * Left on <html data-od-loaded> for scripts/measure_samples.py. An open that
+ * was overtaken by a newer one (`owner`) writes nothing and returns null.
  */
-async function timedOpen(doc: string, open: () => Promise<void>): Promise<string> {
+const openOwner = new OpenOwner();
+async function timedOpen(doc: string, owner: number, open: () => Promise<void>, loaded: () => void): Promise<string | null> {
   const t0 = performance.now();
   let lastBusy = t0;
   let observer: PerformanceObserver | undefined;
-  try {
-    observer = new PerformanceObserver((list) => {
-      for (const e of list.getEntries()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
-    });
-    observer.observe({ type: "longtask" });
-  } catch {
-    observer = undefined; // Firefox, Safari
-  }
-  await open();
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  const ms = Math.round(performance.now() - t0);
-  let settledMs: number | null = null;
-  if (observer) {
-    const QUIET = 1000, GIVE_UP = 180_000;
-    while (performance.now() - lastBusy < QUIET && performance.now() - t0 < GIVE_UP) {
-      await new Promise((r) => setTimeout(r, 100));
-      for (const e of observer.takeRecords()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
+  // observe() does not throw for an entry type the browser lacks (Firefox, Safari): ask first.
+  if (longTasksSupported()) {
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
+      });
+      observer.observe({ type: "longtask" });
+    } catch {
+      observer = undefined;
     }
-    observer.disconnect();
-    settledMs = Math.max(ms, Math.round(lastBusy - t0));
   }
-  const heapBytes =
-    (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null;
-  document.documentElement.dataset.odLoaded = JSON.stringify({ doc, ms, settledMs, heapBytes });
-  const settled = settledMs != null && settledMs > ms + 250 ? ` (settled after ${fmtMs(settledMs)})` : "";
-  return `in ${fmtMs(ms)}${settled}${heapBytes ? ` · JS heap ${fmtBytes(heapBytes)}` : ""}`;
+  try {
+    await open();
+    if (!openOwner.owns(owner)) return null;
+    loaded();
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const ms = Math.round(performance.now() - t0);
+    let settledMs: number | null = null;
+    let settleTimedOut = false;
+    if (observer) {
+      const QUIET = 1000, GIVE_UP = 180_000;
+      while (performance.now() - lastBusy < QUIET && performance.now() - t0 < GIVE_UP) {
+        await new Promise((r) => setTimeout(r, 100));
+        for (const e of observer.takeRecords()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
+        if (!openOwner.owns(owner)) return null;
+      }
+      const quiet = performance.now() - lastBusy >= QUIET;
+      settleTimedOut = !quiet;
+      settledMs = settledAfter({ t0, ms, lastBusy, quiet });
+    }
+    if (!openOwner.owns(owner)) return null;
+    const heapBytes =
+      (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null;
+    document.documentElement.dataset.odLoaded = JSON.stringify({ doc, ms, settledMs, settleTimedOut, heapBytes });
+    const settled = settleTimedOut
+      ? " (still busy after 180 s)"
+      : settledMs != null && settledMs > ms + 250
+      ? ` (settled after ${fmtMs(settledMs)})`
+      : "";
+    return `in ${fmtMs(ms)}${settled}${heapBytes ? ` · JS heap ${fmtBytes(heapBytes)}` : ""}`;
+  } finally {
+    // Also when the fetch or the adapter rejected: a failed open must not leave its observer registered.
+    observer?.disconnect();
+  }
 }
 
 /** Open one of this site's samples (a path under /api/). */
 const openSiteSample = (path: string, title: string, label: string) =>
   withAdapter(`Load the ${label} sample`, async (a) => {
     delete document.documentElement.dataset.odLoaded;
-    const took = await timedOpen(path, async () => {
+    // This open owns the page from now on; one started earlier and still running is stale.
+    const mine = openOwner.start();
+    // The document is being replaced: an assistant answer computed for the one on screen must not
+    // land on its successor, however long the new one takes to load and settle.
+    docGen++;
+    const took = await timedOpen(path, mine, async () => {
       if (a.loadUrl) return a.loadUrl(path);
       const res = await fetch(path);
       if (!res.ok) throw new Error(`${path} → HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       await a.load(new Uint8Array(await res.arrayBuffer()));
+    }, () => {
+      // Loaded: the new document's identity is set now, not after the settle measurement.
+      newDocument();
+      setDocName(title);
+      postChild(childOpened(slug, docName()));
+      fitNow();
     });
-    newDocument();
-    setDocName(title);
-    postChild(childOpened(slug, docName()));
-    fitNow();
+    if (took === null) return; // a newer open took over: its timing, title and status stand
     const note = label === "redline" && a.revisions ? ` · tracked changes: ${a.revisions}` : "";
     setStatus(`Loaded the ${label} sample ${took}${note}`, "ok");
   });
@@ -434,6 +478,7 @@ async function importFile(file: File) {
   let openError: string | undefined;
   const ok = await withAdapter(`Import ${file.name}`, async (a) => {
     try {
+      openOwner.start(); // a sample still being measured no longer owns the page
       await a.load(new Uint8Array(await file.arrayBuffer()));
     } catch (err) {
       openError = (err as Error)?.message ?? String(err);

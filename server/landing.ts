@@ -220,6 +220,7 @@ html { scroll-behavior: smooth; }
 }
 .tags span.vo { background: var(--mark); border-color: var(--ink); }
 .smp-h { font-size: 20px; margin: 34px 0 6px; }
+.tbl .prov, .tbl .prov-warn, .tbl .lh-part { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
 .smp-h small { display: block; font-family: var(--font-mono); font-size: 10.5px; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
 #samples .tbl td small { color: var(--muted); font-size: 11px; }
 #lighthouse .tbl td .vo { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; background: var(--mark); padding: 1px 5px; margin-left: 4px; }
