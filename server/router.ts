@@ -36,6 +36,11 @@ export interface EditorShell {
   title: string;
   /** Extra import-map entries (bare specifiers / URL remaps) for this editor. */
   importMap?: Record<string, string>;
+  /**
+   * Render NO assistant panel and NO toggle button (page works standalone —
+   * e.g. cite-check, whose owner explicitly does not want the agent there).
+   */
+  noAgent?: boolean;
 }
 
 /** React, resolved once, for every adapter that loads a React package with `?external=react,react-dom`. */
@@ -126,6 +131,8 @@ function shell(o: EditorShell, embed = false): string {
     integrity: { [DOCX_IO_URL]: DOCX_IO_SRI },
   })}</script>`;
   const viewer = meta?.kind === "viewer";
+  const noAgent = !!o.noAgent; // viewer pages never get the agent either
+  const agentless = viewer || noAgent;
   const opensFiles = meta?.opensFiles !== false;
   const option = (e: typeof editors[number]) =>
     `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
@@ -188,7 +195,7 @@ ${o.head ?? ""}
       <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
       <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
     </button>
-    ${viewer ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
+    ${agentless ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
     <div class="od-menu-wrap">
       <button class="od-btn od-menu-btn" id="od-more" type="button" title="Menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
         <span class="od-burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="od-menu-lbl">MENU</span>
@@ -205,7 +212,7 @@ ${panel}
     <span class="od-spacer"></span>
     <span class="od-status" id="od-status" role="status" aria-live="polite"></span>
   </div>`}
-  <div class="od-layout${viewer || embed ? " no-agent" : ""}" id="od-layout">
+  <div class="od-layout${agentless || embed ? " no-agent" : ""}" id="od-layout">
     <main class="od-stage" id="od-stage">
       ${o.body}
       <div class="od-loading" id="od-loading">
@@ -213,7 +220,7 @@ ${panel}
         <div><strong>Loading ${esc(meta?.name ?? o.title)}…</strong><span id="od-loading-detail">Fetching the editor from the CDN</span></div>
       </div>
     </main>
-    ${viewer || embed ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
+    ${agentless || embed ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
       <div class="od-aside-head">
         <div>
           <h2><span class="sq" aria-hidden="true"></span> / Assistant</h2>

@@ -69,7 +69,7 @@ export const editors: EditorMeta[] = [
     license: "MIT",
     repo: "https://github.com/arthrod/open-legal-artifacts",
     blurb:
-      "canvas-editor with the deterministic cite-check core: import a reviewed memo, verify every quote against pasted sources (exact / normalized / fuzzy / not found, with anchors, diffs and pinpoints), annotate it through native undoable commands and export the annotated .docx.",
+      "canvas-editor with the deterministic cite-check core: load a formatted appellate brief, verify every quote against imported source files (exact / normalized / fuzzy / not found, with anchors, diffs and pinpoints), annotate it through native undoable commands and export the annotated .docx.",
     docxRoundTrip: true,
     agent: false,
   },
