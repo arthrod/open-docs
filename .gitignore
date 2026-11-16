@@ -5,3 +5,6 @@ node_modules/
 .scratch/
 .impeccable/
 *.zip
+__pycache__/
+.pytest_cache/
+cov/
