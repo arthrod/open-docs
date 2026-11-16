@@ -78,3 +78,28 @@ fn small_png(img: &wordcraft_render::Rendered) -> Vec<u8> {
         Err(_) => img.to_png(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::small_png;
+    use image::ColorType;
+    use wordcraft_render::Rendered;
+
+    #[test]
+    fn an_opaque_page_is_written_as_rgb_with_its_pixels_intact() {
+        let img = Rendered { width: 2, height: 1, pixels: vec![10, 20, 30, 255, 40, 50, 60, 255] };
+        let decoded = image::load_from_memory(&small_png(&img)).unwrap();
+        assert_eq!((decoded.width(), decoded.height()), (2, 1));
+        assert_eq!(decoded.color(), ColorType::Rgb8);
+        assert_eq!(decoded.to_rgb8().into_raw(), vec![10, 20, 30, 40, 50, 60]);
+    }
+
+    #[test]
+    fn a_page_with_any_transparency_keeps_its_alpha_channel() {
+        // Premultiplied in, straight out: (100, 50, 0) at alpha 128 is stored as (50, 25, 0, 128).
+        let img = Rendered { width: 2, height: 1, pixels: vec![50, 25, 0, 128, 9, 8, 7, 255] };
+        let decoded = image::load_from_memory(&small_png(&img)).unwrap();
+        assert_eq!(decoded.color(), ColorType::Rgba8);
+        assert_eq!(decoded.to_rgba8().into_raw(), vec![100, 50, 0, 128, 9, 8, 7, 255]);
+    }
+}

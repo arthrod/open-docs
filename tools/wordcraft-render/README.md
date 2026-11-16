@@ -14,9 +14,18 @@ const doc = new Doc(docxBytes);
 const sizes = doc.page_sizes();                      // points: width, height, width, height, …
 const png: Uint8Array = doc.render_page(0, 2);       // page 1 at 2 pixels per point
 
+doc.free();                                          // release the document and its layout
+
 // Or every page in one call.
 const pngs: Uint8Array[] = render_docx(docxBytes, 2);
 ```
+
+A `Doc` holds the parsed document and its whole layout in wasm memory until
+it is released. Call `free()` when the last page has been rendered (in a
+`try`/`finally` for a one-off). The glue also registers a finalizer, so a
+`Doc` that is only dropped is released when it is garbage-collected: the
+viewer relies on that for layouts it keeps across page requests, because a
+request may still hold a layout at the moment it is evicted.
 
 Both run `wordcraft_docx::read_with_password` → `wordcraft_layout::layout`
 (Print view) → `wordcraft_render::render_page` (vello_cpu), with headers and
@@ -63,6 +72,12 @@ cargo install wasm-bindgen-cli --version 0.2.129 --locked --root /tmp/wb
 wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext \
   --enable-mutable-globals -o out/wc_render_bg.wasm out/wc_render_bg.wasm
 gzip -9 out/wc_render_bg.wasm
+```
+
+The wrapper's own tests (the PNG encoder) run on the host, from the same workspace:
+
+```sh
+cargo test -p wc-render
 ```
 
 ## License
