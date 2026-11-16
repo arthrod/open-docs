@@ -338,31 +338,75 @@ const newDoc = () =>
     setStatus("New blank document", "ok");
   });
 
-const openShowcase = () =>
-  withAdapter("Load the rich sample", async (a) => {
-    if (a.loadUrl) await a.loadUrl("/api/showcase.docx");
-    else {
-      const res = await fetch("/api/showcase.docx");
-      if (!res.ok) throw new Error(`showcase.docx → HTTP ${res.status}`);
-      await a.load(new Uint8Array(await res.arrayBuffer()));
+/**
+ * How long opening a document took and what the JS heap is afterwards.
+ *
+ *   ms         from the click to two frames after the adapter's `load()`
+ *              resolved: the engine SAYS it is done.
+ *   settledMs  from the click to the end of the last long task (> 50 ms on
+ *              the main thread) before a full quiet second: the page HAS
+ *              stopped working. Some loaders return before they draw
+ *              (docx-editor.dev's `ref.load` is fire-and-forget), and some
+ *              keep paginating after they return, so this is the number to
+ *              compare on a long document. Work in a worker or on the GPU is
+ *              not seen by it. Null where the browser has no Long Tasks API.
+ *
+ * Left on <html data-od-loaded> for scripts/measure_samples.py.
+ */
+async function timedOpen(doc: string, open: () => Promise<void>): Promise<string> {
+  const t0 = performance.now();
+  let lastBusy = t0;
+  let observer: PerformanceObserver | undefined;
+  try {
+    observer = new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
+    });
+    observer.observe({ type: "longtask" });
+  } catch {
+    observer = undefined; // Firefox, Safari
+  }
+  await open();
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const ms = Math.round(performance.now() - t0);
+  let settledMs: number | null = null;
+  if (observer) {
+    const QUIET = 1000, GIVE_UP = 180_000;
+    while (performance.now() - lastBusy < QUIET && performance.now() - t0 < GIVE_UP) {
+      await new Promise((r) => setTimeout(r, 100));
+      for (const e of observer.takeRecords()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
     }
+    observer.disconnect();
+    settledMs = Math.max(ms, Math.round(lastBusy - t0));
+  }
+  const heapBytes =
+    (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null;
+  document.documentElement.dataset.odLoaded = JSON.stringify({ doc, ms, settledMs, heapBytes });
+  const settled = settledMs != null && settledMs > ms + 250 ? ` (settled after ${fmtMs(settledMs)})` : "";
+  return `in ${fmtMs(ms)}${settled}${heapBytes ? ` · JS heap ${fmtBytes(heapBytes)}` : ""}`;
+}
+
+/** Open one of this site's samples (a path under /api/). */
+const openSiteSample = (path: string, title: string, label: string) =>
+  withAdapter(`Load the ${label} sample`, async (a) => {
+    delete document.documentElement.dataset.odLoaded;
+    const took = await timedOpen(path, async () => {
+      if (a.loadUrl) return a.loadUrl(path);
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`${path} → HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      await a.load(new Uint8Array(await res.arrayBuffer()));
+    });
     newDocument();
-    setDocName("Coastal Wind Farm — Spring Field Report");
+    setDocName(title);
     postChild(childOpened(slug, docName()));
     fitNow();
-    setStatus("Loaded the rich sample .docx", "ok");
+    const note = label === "redline" && a.revisions ? ` · tracked changes: ${a.revisions}` : "";
+    setStatus(`Loaded the ${label} sample ${took}${note}`, "ok");
   });
 
-const openSample = () =>
-  withAdapter("Load sample", async (a) => {
-    if (a.loadUrl) await a.loadUrl("/api/sample.docx");
-    else await a.load(await window.od.sampleDocx());
-    newDocument();
-    setDocName("Quarterly Report — Acme Robotics");
-    postChild(childOpened(slug, docName()));
-    fitNow();
-    setStatus("Loaded the sample .docx", "ok");
-  });
+const openShowcase = () =>
+  openSiteSample("/api/showcase.docx", "Coastal Wind Farm — Spring Field Report", "rich");
+
+const openSample = () => openSiteSample("/api/sample.docx", "Quarterly Report — Acme Robotics", "short");
 
 async function importFile(file: File) {
   if (!/\.docx$/i.test(file.name)) {
@@ -718,6 +762,10 @@ function wire() {
   $("od-new")?.addEventListener("click", () => void newDoc());
   $("od-showcase")?.addEventListener("click", () => void openShowcase());
   $("od-sample")?.addEventListener("click", () => void openSample());
+  for (const b of document.querySelectorAll<HTMLButtonElement>(".od-fixture")) {
+    b.addEventListener("click", () =>
+      void openSiteSample(`/api/${b.dataset.file}`, b.dataset.title ?? "", b.dataset.label ?? ""));
+  }
   $("od-reload")?.addEventListener("click", () => location.reload());
   $("od-import")?.addEventListener("click", () => $("od-file")?.click());
   $("od-file")?.addEventListener("change", (e) => {

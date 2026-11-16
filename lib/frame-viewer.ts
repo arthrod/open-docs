@@ -11,7 +11,12 @@
  */
 import { waitFor, type EditorAdapter } from "/lib/kit.ts";
 
-export function frameViewer(name: string, viewerUrl: (docUrl: string) => string): EditorAdapter {
+export function frameViewer(
+  name: string,
+  viewerUrl: (docUrl: string) => string,
+  /** How the vendor's viewer treats tracked changes (EditorAdapter.revisions). */
+  revisions?: string,
+): EditorAdapter {
   let frame: HTMLIFrameElement;
 
   // Each show() takes a generation; a newer one supersedes it, so a late
@@ -49,6 +54,7 @@ export function frameViewer(name: string, viewerUrl: (docUrl: string) => string)
 
   return {
     name,
+    revisions,
     viewOnly: true,
     acceptsFiles: false,
     async mount() {

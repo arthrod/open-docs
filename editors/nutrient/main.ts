@@ -8,6 +8,7 @@
  * .docx, not the .docx itself.
  */
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 
 const BASE = "https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/";
 
@@ -160,6 +161,7 @@ async function fetchBytes(path: string): Promise<Uint8Array> {
 
 window.od.register({
   name: "Nutrient Web SDK",
+  revisions: REVISION_NOTES["nutrient"],
   viewOnly: true,
   extraResources: WORKER_FILES,
 

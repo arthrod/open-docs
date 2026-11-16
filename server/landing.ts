@@ -1,6 +1,7 @@
 /** The comparison page at `/`: every editor, with what it measurably costs. */
 import type { EditorMeta } from "./registry.ts";
 import { DS_ROOT, FONT_MONO_URL, FONT_SANS_URL, WORDMARK_CSS } from "./styles.ts";
+import { samplesBand } from "./samples-band.ts";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -217,6 +218,11 @@ html { scroll-behavior: smooth; }
   color: var(--ink); border: 1px solid var(--faint); padding: 2px 6px;
 }
 .tags span.vo { background: var(--mark); border-color: var(--ink); }
+.smp-h { font-size: 20px; margin: 34px 0 6px; }
+.smp-h small { display: block; font-family: var(--font-mono); font-size: 10.5px; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+#samples .tbl td small { color: var(--muted); font-size: 11px; }
+#samples .tbl td .vo { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; background: var(--mark); padding: 1px 5px; margin-left: 6px; }
+#samples .tbl td.hide-sm { max-width: 340px; font-size: 12.5px; line-height: 1.4; }
 .card-metrics {
   display: grid; grid-template-columns: repeat(3, 1fr); margin: 4px 0 0;
   border: 1px solid var(--ink); gap: 1px; background: var(--faint);
@@ -298,6 +304,7 @@ html { scroll-behavior: smooth; }
     <a href="#editors">Editors</a>
     <a href="https://viewers.benchmarks.law" target="_blank" rel="noopener">Viewers →</a>
     <a href="#metrics">Measurements</a>
+    <a href="#samples">Samples</a>
     <a href="https://arena.benchmarks.law" target="_blank" rel="noopener">Arena →</a>
     <a href="/source" target="_blank" rel="noopener">Source →</a>
     <a href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
@@ -343,6 +350,7 @@ html { scroll-behavior: smooth; }
   <tbody class="vbody"><tr class="sep"><th colspan="9">Proprietary viewers (view-only). Microsoft and Google render on their servers: only the iframe's load is timed, and their memory and downloads are invisible to this page.</th></tr>${vrows}</tbody></table></div>
   <p class="note" id="mnote">Loading measurements…</p>
 </div></section>
+${samplesBand([...editors, ...viewers])}
 <footer class="site-foot"><div class="wrap">
   <div class="foot-top">
     <span class="c">© MMXXVI open-docs · Built on Val Town</span>

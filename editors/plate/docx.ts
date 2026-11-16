@@ -37,6 +37,8 @@ export async function importDocxToNodes(_editor: any, bytes: Uint8Array): Promis
         "p[style-name='Intense Quote'] => blockquote > p:fresh",
         "p[style-name='Code'] => pre:separator('\\n')",
         "r[style-name='Code Char'] => code",
+        // mammoth ignores underline unless told; Plate has the mark and the walker reads <u>.
+        "u => u",
       ],
     },
   );

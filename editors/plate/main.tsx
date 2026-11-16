@@ -8,6 +8,8 @@
  * See docx.ts for why the DOCX path is not @platejs/docx-io.
  */
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
+import { revisionsAsFormatting } from "/lib/revisions.ts";
 import { mountPlate, type PlateHandle } from "./editor.tsx";
 import { emptyValue, importDocxToNodes } from "./docx.ts";
 import { plateValueToDocx } from "/lib/plate-docx.ts";
@@ -33,9 +35,14 @@ window.od.register({
     );
   },
 
+  revisions: REVISION_NOTES["plate"],
+
   async load(bytes) {
     if (!handle) throw new Error("Plate not mounted");
-    handle.setValue(await importDocxToNodes(handle.editor, bytes));
+    // mammoth keeps w:ins text and drops w:del text: a redline would read as
+    // already accepted. lib/revisions.ts makes both visible as underline and
+    // strikethrough, the marks this import path carries (mammoth drops colour).
+    handle.setValue(await importDocxToNodes(handle.editor, revisionsAsFormatting(bytes).bytes));
   },
 
   async applyMarkdown(markdown) {

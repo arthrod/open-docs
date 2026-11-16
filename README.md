@@ -91,6 +91,11 @@ compact top bar — editor dropdown, metrics chip, assistant toggle — and a
   image, alignments, a page break, header/footer with page numbers). Built by
   [`scripts/make_showcase.py`](scripts/make_showcase.py); also downloadable.
   **Load the short sample** is the original four-section report.
+- **Load the redline sample**: the rich sample after two reviewers, with 23
+  tracked changes and 6 comments. **Load the 500-page sample**: lorem ipsum, 50
+  chapters of 10 pages. Both are described under [Samples](#samples). After any
+  sample opens, the status line says how long it took, when the page settled,
+  and the JS heap afterwards.
 - **Performance of this load**, **Reload editor**, source links.
 
 The **metrics chip** shows startup / JS heap / loaded bytes for *this* page
@@ -107,6 +112,140 @@ resize: SuperDoc `zoom.mode: "fit-width"`, docx-editor.dev
 folio `setZoom`, docen `setZoom`, canvas-editor `executePageScale`; Plate's page
 is CSS. Docxodus already follows its container. WordCraft draws its own UI and
 has no zoom API in the released build, so on a phone its page scrolls sideways.
+
+## Samples
+
+| Menu item | File | What it is for |
+| --- | --- | --- |
+| Load the rich sample | `showcase.docx`, 47,871 B, 3 pages | Rendering fidelity: styles, run formatting, lists, a table with a merged cell, a chart, header and footer. Built by [`scripts/make_showcase.py`](scripts/make_showcase.py). |
+| Load the redline sample | `redline.docx`, 80,450 B, 3 pages | The rich sample after review by two people (Ana Lee, Sam Ortiz): 23 tracked changes (insertions, deletions, replacements, one inserted and one deleted paragraph, changes inside table cells, one formatting change) and 6 comments (one reply, one resolved). Made with `jubarte`, so the revisions are the ones Word itself writes. |
+| Load the 500-page sample | `lorem-500.docx`, 467,814 B, 500 pages | A load test: 50 chapters, 2,726 justified paragraphs, about 224,000 words, header and `PAGE`/`NUMPAGES` footer. Built by [`scripts/make_lorem.py`](scripts/make_lorem.py). |
+| Load the short sample | `sample.docx`, 3,778 B | The original four-section report. |
+
+All four open in Microsoft Word with no repair prompt, and Word counts 3, 3 and
+500 pages ([`scripts/word_pages.sh`](scripts/word_pages.sh) asks it). The
+500-page file is built so the count survives a different font: every chapter
+starts on a new page and carries text for nine and a half pages, so an engine
+whose fonts run a little wide or narrow still lands on ten pages per chapter.
+An engine that reports another total (see the table below) is breaking pages
+differently, not reading a different file.
+
+The redline and the 500-page file are too large for a Val file (val files are
+text), so they live in the Hugging Face dataset
+[`arthrod/open-docs-fixtures`](https://huggingface.co/datasets/arthrod/open-docs-fixtures).
+[`server/fixtures.ts`](server/fixtures.ts) fetches them at a pinned dataset
+commit, refuses bytes whose SHA-256 is not the pinned one, and serves them at
+`/api/redline.docx` and `/api/lorem-500.docx`, which is also the public URL
+Microsoft's and Google's viewers are given.
+
+### Tracked changes: what each engine draws
+
+Seen on `redline.docx` on 2026-11-15 (screenshots from
+`scripts/measure_samples.py --shots`). The list the site shows is
+[`lib/revision-notes.ts`](lib/revision-notes.ts).
+
+| Engine | What you see | What the bench does |
+| --- | --- | --- |
+| SuperDoc | Insertions, deletions and comments, each with a card in its review rail | Nothing: the original bytes |
+| folio | Insertions and deletions in the text, with change bars | Nothing |
+| docen | Insertions and deletions in the text | Nothing |
+| WordCraft | Insertions, deletions and comment balloons | Nothing |
+| Docxodus | Insertions, deletions and comment threads | Turns on its own All Markup view (`showRevisions: true`; its default draws the document as if accepted) |
+| docx-editor.dev | The accepted text with inserted words coloured; **deleted words are not shown** | Nothing. Its layout uses the `proposed` view unless a review module is registered, and that module is in the paid `@docx-editor.dev/pro`. Forcing `reviewDisplayMode="all-markup"` without it stops the editor from starting. |
+| canvas-editor | Inserted words underlined, deleted words struck, both red | **Rewrites the file first** ([`lib/revisions.ts`](lib/revisions.ts)). `plugin-docx@1.0.0` skips `w:ins` and `w:del` alike, so without this the inserted *and* the deleted words vanish: "rose 14.2 %" opened as "rose . %". |
+| Plate | Inserted words underlined, deleted words struck (no colour) | **Rewrites the file first**, same module. mammoth keeps inserted text and drops deleted text, so the redline read as already accepted. |
+| Google Docs viewer | Insertions and deletions in the text | Nothing |
+| Apryse WebViewer | Insertions and deletions in the text | Nothing |
+| Microsoft Word viewer | The accepted text; no marks | Nothing (the embed viewer has no markup switch) |
+| Nutrient Web SDK | The accepted text; no marks | Nothing |
+
+`lib/revisions.ts` is the one place where the bench changes a document before an
+engine reads it, and only for the two engines with no revision model. It unwraps
+`w:ins` / `w:del` (and moves), marks their runs, and drops formatting-change
+records; a document without tracked changes is passed through as the same bytes.
+What those two engines still cannot show is theirs: who made each change and
+when, accept and reject, and comments.
+
+### The samples, measured
+
+Every engine opening the two new samples from its own Menu. The table on the
+[landing page](https://editors.benchmarks.law/#samples) is
+[`docs/samples/latest.json`](docs/samples/latest.json); every run is in the dated
+file beside it.
+
+<!-- samples:start -->
+Measured 2026-11-15: Google Chrome (installed, headed) via Playwright, fresh profile per run (cold cache), median of the runs that loaded (3 each; a combination with a failed run was run 3 more times); Darwin arm64.
+
+**Redline (`redline.docx`, 3 pages)**
+
+| Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| canvas-editor | 312 ms | 312 ms | 8 MB | 315 MB (−6 MB) | 3 | 3 of 3 |
+| Docxodus | 475 ms | 475 ms | 9 MB | 589 MB (+48 MB) | n/a | 3 of 3 |
+| SuperDoc | 556 ms | 556 ms | 23 MB | 688 MB (+124 MB) | 3 | 3 of 3 |
+| Plate | 440 ms | 440 ms | 12 MB | 338 MB (+2 MB) | n/a | 3 of 3 |
+| docen | 248 ms | 248 ms | 29 MB | 328 MB (−5 MB) | n/a | 4 of 6 |
+| docx-editor.dev | 105 ms | 473 ms | 30 MB | 351 MB (+27 MB) | n/a | 5 of 6 |
+| folio | 239 ms | 239 ms | 17 MB | 372 MB (−29 MB) | 3 | 3 of 3 |
+| WordCraft | 488 ms | 488 ms | 3 MB | 477 MB (−215 MB) | n/a | 5 of 6 |
+| Word Online viewer | 270 ms | n/a | n/a | 723 MB (+83 MB) | n/a | 5 of 6 |
+| Google viewer | 527 ms | n/a | n/a | 397 MB (−5 MB) | n/a | 5 of 6 |
+| Apryse WebViewer | 302 ms | 302 ms | 18 MB | 464 MB (−2 MB) | n/a | 3 of 3 |
+| Nutrient | 1.85 s | 1.85 s | 26 MB | 524 MB (+40 MB) | n/a | 3 of 3 |
+
+**500 pages (`lorem-500.docx`)**
+
+| Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| canvas-editor | 9.28 s | 9.36 s | 699 MB | 883 MB (+592 MB) | 637 | 4 of 6 |
+| Docxodus | 2.66 s | 2.66 s | 10 MB | 599 MB (+22 MB) | n/a | 3 of 3 |
+| SuperDoc | 4.88 s | 4.88 s | 37 MB | 778 MB (+320 MB) | 25 | 3 of 3 |
+| Plate | 22.0 s | 22.0 s | 82 MB | 469 MB (+141 MB) | n/a | 5 of 6 |
+| docen | 2.23 s | 284.9 s | 128 MB | 1435 MB (+1069 MB) | n/a | 1 of 4 |
+| docx-editor.dev | 292 ms | 1.03 s | 152 MB | 524 MB (+193 MB) | n/a | 3 of 3 |
+| folio | 9.68 s | 9.68 s | 45 MB | 1371 MB (+1063 MB) | 500 | 3 of 3 |
+| WordCraft | 2.73 s | 2.73 s | 3 MB | 361 MB (−328 MB) | n/a | 3 of 3 |
+| Word Online viewer | 619 ms | n/a | n/a | 756 MB (+231 MB) | n/a | 3 of 3 |
+| Google viewer | 881 ms | n/a | n/a | 412 MB (+19 MB) | n/a | 5 of 6 |
+| Apryse WebViewer | 498 ms | 498 ms | 40 MB | 506 MB (+73 MB) | n/a | 3 of 3 |
+| Nutrient | 7.54 s | 7.54 s | 28 MB | 397 MB (−50 MB) | n/a | 3 of 3 |
+<!-- samples:end -->
+
+Read these with care:
+
+- **docen on 500 pages** answers "loaded" after 2.2 s and shows page 1, but its
+  main thread stays busy for 4 min 45 s afterwards (one run with a 15-minute
+  limit; the three runs with the usual 4-minute limit all ended with the page
+  not answering). The tab is not usable during that time.
+- **canvas-editor** draws 637 pages for the 500 and holds about 700 MB of
+  JavaScript heap; one of its six runs stopped answering.
+- **Pages shown** counts what is in the DOM: SuperDoc keeps only the pages near
+  the viewport (25), so its number is not a page count of the document.
+- **Renderer memory growth** can be negative: the "before" reading is taken one
+  second after startup, when the engine's start-up garbage is still resident.
+- Runs that did not load on the short samples were network failures (the page
+  or a CDN module did not arrive), not the engine refusing the file; they are
+  kept in the dated file.
+
+Re-measure with:
+
+```sh
+uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 3 \
+  --out docs/samples/$(date +%F).json --latest docs/samples/latest.json --shots .scratch/shots
+```
+
+One (engine, sample) per launch of the installed Google Chrome, headed, with a
+fresh profile. The page opens on its blank document, then the script clicks the
+Menu's own button. **Loaded** is the click until the adapter's `load()` returns
+(plus two frames). **Settled** is the click until the main thread has been quiet
+for a full second, taken from the Long Tasks API: docx-editor.dev's loader
+returns before it draws, and several engines keep paginating after theirs
+returns, so on the 500-page file Settled is the number to compare. Work in a
+worker or on the GPU is invisible to it. **JS heap** is JavaScript objects only.
+**Renderer memory** is the resident memory of Chrome's renderer processes read
+with `ps`, before and after the sample opens; it includes WebAssembly memory,
+canvases and the DOM, and also Chrome's spare renderer, so read the growth and
+compare engines with each other.
 
 ## The assistant
 
@@ -145,7 +284,9 @@ importer/exporter, and the losses are listed under the vendors:
    canvas-editor, WordCraft), or its own .docx clipboard format fed by Plate's
    converters (`@platejs/markdown` → `@platejs/docx-io`,
    [`lib/plate-docx.ts`](lib/plate-docx.ts); docx-editor.dev). Nothing in the
-   bench writes .docx or a document model by hand.
+   bench writes .docx or a document model by hand for the assistant. (Opening a
+   redline in canvas-editor or Plate is the one exception, described under
+   [Tracked changes](#tracked-changes-what-each-engine-draws).)
 3. What that importer still loses is the engine's, and is listed below
    (docen's and WordCraft's HTML paste drop the Quote style).
 4. Reading back uses the vendor's markdown **exporter** when it has one
@@ -256,6 +397,11 @@ lib/markdown.ts           markdown ⇄ blocks (marked)
 lib/plate-docx.ts         .docx out through Plate's docx-io (Plate export; markdown → .docx)
 lib/plate-docx-pin.ts     pinned URL + SRI of the docx-io browser bundle (tools/plate-docx-io)
 lib/docx-markdown.ts      .docx → markdown reader
+lib/revisions.ts          tracked changes as formatting, for the two engines with no revision model
+lib/revision-notes.ts     how each engine treats tracked changes (status line, landing table)
+server/fixtures.ts        the redline and 500-page samples, fetched from Hugging Face at a pinned commit
+server/samples-band.ts    the landing page's samples table (docs/samples/latest.json)
+scripts/measure_samples.py   every engine opening every sample, in real Chrome
 lib/probes/md-mapping.js  the markdown → Word probe
 editors/<slug>/           shell.ts (server: markup, import map) + main.ts (browser: adapter)
 ```

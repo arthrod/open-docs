@@ -3,8 +3,10 @@
  * https://view.officeapps.live.com/op/embed.aspx?src=<public .docx URL>
  */
 import { frameViewer } from "/lib/frame-viewer.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 
 window.od.register(frameViewer(
   "Microsoft Word viewer",
   (doc) => `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(doc)}`,
+  REVISION_NOTES["word-online"],
 ));

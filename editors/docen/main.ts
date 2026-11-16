@@ -8,6 +8,7 @@
  *  - CDN wiring (icons, zlib, fast-element pin) lives in assets.ts.
  */
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { DOCEN } from "./assets.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
@@ -75,6 +76,8 @@ window.od.register({
     if (window.od.viewer) el.setAttribute("editable", "false");
     // The element boots on its own empty document — that is our blank page.
   },
+
+  revisions: REVISION_NOTES["docen"],
 
   async load(bytes: Uint8Array) {
     if (!el) throw new Error("docen not mounted");

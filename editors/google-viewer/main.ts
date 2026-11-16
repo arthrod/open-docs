@@ -3,8 +3,10 @@
  * https://docs.google.com/gview?embedded=true&url=<public .docx URL>
  */
 import { frameViewer } from "/lib/frame-viewer.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 
 window.od.register(frameViewer(
   "Google Docs viewer",
   (doc) => `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(doc)}`,
+  REVISION_NOTES["google-viewer"],
 ));

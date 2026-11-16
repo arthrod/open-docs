@@ -8,3 +8,5 @@ vendor
 tools/wordcraft-render/dist/*.gz
 tools/plate-docx-io/
 benchmarks-law-design-system-v2.zip
+.scratch
+.impeccable

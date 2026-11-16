@@ -65,6 +65,12 @@ export interface EditorAdapter {
    * URL rather than bytes.
    */
   loadUrl?(path: string): Promise<void>;
+  /**
+   * How this engine treats a document's tracked changes, in a few words; the
+   * status line shows it after the redline sample opens. Measured, not assumed:
+   * see the README's "Tracked changes" table.
+   */
+  revisions?: string;
   /** false: can't open the user's own files (only public links). */
   acceptsFiles?: boolean;
   /**

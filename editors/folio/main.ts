@@ -11,6 +11,7 @@
  * DOCX export.
  */
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 // DO NOT pass ?external=: esm.sh leaves every external as a bare import the
@@ -140,6 +141,8 @@ window.od.register({
     fitZoom = z;
     handle?.setZoom?.(z);
   },
+
+  revisions: REVISION_NOTES["folio"],
 
   async load(bytes: Uint8Array) {
     await open(bytes.slice());

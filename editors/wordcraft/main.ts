@@ -19,6 +19,7 @@
  */
 import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 const BASE = "/vendor/wordcraft/0.17.0/";
@@ -105,6 +106,7 @@ const settle = () => new Promise((r) => setTimeout(r, 400));
 
 window.od.register({
   name: "WordCraft",
+  revisions: REVISION_NOTES["wordcraft"],
   mergeQuality: "html-paste",
   applyInHistory: true,
 

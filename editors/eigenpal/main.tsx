@@ -15,6 +15,7 @@ import React, { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { DocxEditor, type DocxEditorRef } from "https://esm.sh/@docx-editor.dev/react@2.35.0?external=react,react-dom";
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 // The vendor's open-licensed substitutes for Word's fonts (Carlito for Calibri,
 // Liberation for Arial/Times/Courier…). Loaded from jsDelivr, not esm.sh: the
 // package finds its .ttf files relative to import.meta.url.
@@ -62,6 +63,11 @@ function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "b
 
 window.od.register({
   name: "docx-editor.dev",
+  // Its layout takes `proposed` when no review module is registered, and the
+  // review module is in the paid @docx-editor.dev/pro. Forcing
+  // reviewDisplayMode="all-markup" without it stops the editor from starting
+  // (tried 2026-11-15). So the free tier is shown as the vendor ships it.
+  revisions: REVISION_NOTES["eigenpal"],
   // selectAll + its own paste of its own DOCX clipboard fragment: one entry
   // in its history, with the styles/numbering of the .docx it was given.
   applyInHistory: true,

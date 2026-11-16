@@ -161,3 +161,20 @@ Deno.test("menu credits the makers under / Made by, Contact still last, embed to
   const full = await get("/e/plate");
   assertEquals(full.includes(`class="od-makers"`), true);
 });
+
+Deno.test("menu offers the redline and 500-page samples, and their routes exist", async () => {
+  const { FIXTURES, fixtureBytes } = await import("./fixtures.ts");
+  const html = await get("/e/plate");
+  for (const f of FIXTURES) {
+    if (!html.includes(`data-file="${f.file}"`)) throw new Error(`no menu item for ${f.file}`);
+  }
+  // A fixture whose bytes do not match the pinned hash is refused, not served.
+  const wrong = () => Promise.resolve(new Response(new Uint8Array([0x50, 0x4b, 1, 2])));
+  let refused = false;
+  try {
+    await fixtureBytes(FIXTURES[0], wrong as typeof fetch);
+  } catch (e) {
+    refused = /SHA-256/.test((e as Error).message);
+  }
+  if (!refused) throw new Error("a fixture with the wrong hash was accepted");
+});
