@@ -250,6 +250,16 @@ async function start(adapter: EditorAdapter) {
     const pending = pendingEmbedAction;
     pendingEmbedAction = undefined;
     pending?.();
+    // ?open=<file> opens one of the Menu's samples as soon as the editor is ready, by pressing
+    // its Menu button (so a page-load audit such as PageSpeed can see an engine open a file).
+    // Only a file the Menu already offers matches; anything else is ignored.
+    const want = new URLSearchParams(location.search).get("open");
+    if (want) {
+      const btn = want === "showcase.docx"
+        ? $("od-showcase")
+        : [...document.querySelectorAll<HTMLButtonElement>(".od-fixture")].find((b) => b.dataset.file === want);
+      btn?.click();
+    }
     (window as unknown as { __odlog?: (k: string, m: string) => void }).__odlog?.(
       "ready",
       `${adapter.name} mounted in ${Math.round(mountEnd - mountStart)}ms (startup ${Math.round(mountEnd)}ms)`,

@@ -1,0 +1,947 @@
+{
+ "measuredAt": "2026-11-16",
+ "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 3 analyses per page, median",
+ "base": "https://editors.benchmarks.law",
+ "pages": {
+  "e/canvas-editor": {
+   "desktop": {
+    "performance": 100,
+    "accessibility": 94,
+    "bestPractices": 100,
+    "seo": 80,
+    "fcpMs": 218,
+    "lcpMs": 218,
+    "tbtMs": 7,
+    "cls": 0,
+    "speedIndexMs": 924,
+    "performanceRuns": [
+     99,
+     100,
+     100
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 73,
+    "accessibility": 94,
+    "bestPractices": 100,
+    "seo": 82,
+    "fcpMs": 1693,
+    "lcpMs": 1821,
+    "tbtMs": 50,
+    "cls": 0.594,
+    "speedIndexMs": 4612,
+    "performanceRuns": [
+     73,
+     73,
+     80
+    ],
+    "error": null
+   }
+  },
+  "e/cite-check": {
+   "desktop": {
+    "performance": 100,
+    "accessibility": 94,
+    "bestPractices": 100,
+    "seo": 80,
+    "fcpMs": 214,
+    "lcpMs": 214,
+    "tbtMs": 4,
+    "cls": 0.0,
+    "speedIndexMs": 890,
+    "performanceRuns": [
+     100,
+     100,
+     100
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 95,
+    "accessibility": 95,
+    "bestPractices": 100,
+    "seo": 82,
+    "fcpMs": 1834,
+    "lcpMs": 1834,
+    "tbtMs": 0,
+    "cls": 0.006,
+    "speedIndexMs": 4730,
+    "performanceRuns": [
+     99,
+     95,
+     95
+    ],
+    "error": null
+   }
+  },
+  "e/docxodus": {
+   "desktop": {
+    "performance": 66,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 230,
+    "lcpMs": 1072,
+    "tbtMs": 828,
+    "cls": 0.006,
+    "speedIndexMs": 2292,
+    "performanceRuns": [
+     66,
+     78,
+     43
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 48,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1718,
+    "lcpMs": 18807,
+    "tbtMs": 905,
+    "cls": 0.018,
+    "speedIndexMs": 6095,
+    "performanceRuns": [
+     47,
+     77,
+     48
+    ],
+    "error": null
+   }
+  },
+  "e/superdoc": {
+   "desktop": {
+    "performance": 73,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 450,
+    "lcpMs": 450,
+    "tbtMs": 516,
+    "cls": 0.001,
+    "speedIndexMs": 2124,
+    "performanceRuns": [
+     73,
+     68,
+     74
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 76,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1663,
+    "lcpMs": 1663,
+    "tbtMs": 499,
+    "cls": 0.0,
+    "speedIndexMs": 8576,
+    "performanceRuns": [
+     78,
+     72,
+     76
+    ],
+    "error": null
+   }
+  },
+  "e/plate": {
+   "desktop": {
+    "performance": 99,
+    "accessibility": 92,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 213,
+    "lcpMs": 213,
+    "tbtMs": 58,
+    "cls": 0.0,
+    "speedIndexMs": 994,
+    "performanceRuns": [
+     99,
+     99,
+     100
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 98,
+    "accessibility": 92,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 762,
+    "lcpMs": 762,
+    "tbtMs": 34,
+    "cls": 0.018,
+    "speedIndexMs": 3739,
+    "performanceRuns": [
+     97,
+     98,
+     99
+    ],
+    "error": null
+   }
+  },
+  "e/docen": {
+   "desktop": {
+    "performance": 72,
+    "accessibility": 79,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 225,
+    "lcpMs": 225,
+    "tbtMs": 539,
+    "cls": 0.0,
+    "speedIndexMs": 2392,
+    "performanceRuns": [
+     73,
+     69,
+     72
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 72,
+    "accessibility": 85,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 1668,
+    "lcpMs": 1668,
+    "tbtMs": 734,
+    "cls": 0.024,
+    "speedIndexMs": 8786,
+    "performanceRuns": [
+     73,
+     60,
+     72
+    ],
+    "error": null
+   }
+  },
+  "e/eigenpal": {
+   "desktop": {
+    "performance": 95,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 449,
+    "lcpMs": 449,
+    "tbtMs": 80,
+    "cls": 0,
+    "speedIndexMs": 2115,
+    "performanceRuns": [
+     95,
+     97,
+     95
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 83,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1659,
+    "lcpMs": 1809,
+    "tbtMs": 123,
+    "cls": 0.018,
+    "speedIndexMs": 8376,
+    "performanceRuns": [
+     90,
+     66,
+     83
+    ],
+    "error": null
+   }
+  },
+  "e/folio": {
+   "desktop": {
+    "performance": 72,
+    "accessibility": 81,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 445,
+    "lcpMs": 445,
+    "tbtMs": 563,
+    "cls": 0.0,
+    "speedIndexMs": 2239,
+    "performanceRuns": [
+     72,
+     72,
+     71
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 50,
+    "accessibility": 85,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 1655,
+    "lcpMs": 1655,
+    "tbtMs": 777,
+    "cls": 0.598,
+    "speedIndexMs": 7210,
+    "performanceRuns": [
+     50,
+     49,
+     62
+    ],
+    "error": null
+   }
+  },
+  "e/wordcraft": {
+   "desktop": {
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 567,
+    "tbtMs": 0,
+    "cls": 0.022,
+    "speedIndexMs": 798,
+    "performanceRuns": [
+     100,
+     100,
+     100
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 765,
+    "lcpMs": 2405,
+    "tbtMs": 0,
+    "cls": 0.018,
+    "speedIndexMs": 2675,
+    "performanceRuns": [
+     97,
+     97,
+     97
+    ],
+    "error": null
+   }
+  },
+  "e/word-online": {
+   "desktop": {
+    "performance": 98,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 0,
+    "cls": 0.001,
+    "speedIndexMs": 1377,
+    "performanceRuns": [
+     100,
+     97,
+     98
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 93,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 91,
+    "fcpMs": 2084,
+    "lcpMs": 2084,
+    "tbtMs": 0,
+    "cls": 0.0,
+    "speedIndexMs": 6530,
+    "performanceRuns": [
+     93,
+     93,
+     84
+    ],
+    "error": null
+   }
+  },
+  "e/google-viewer": {
+   "desktop": {
+    "performance": 93,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 90,
+    "fcpMs": 224,
+    "lcpMs": 224,
+    "tbtMs": 186,
+    "cls": 0.001,
+    "speedIndexMs": 1546,
+    "performanceRuns": [
+     93,
+     91,
+     100
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 87,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 91,
+    "fcpMs": 761,
+    "lcpMs": 761,
+    "tbtMs": 302,
+    "cls": 0.004,
+    "speedIndexMs": 6435,
+    "performanceRuns": [
+     97,
+     57,
+     87
+    ],
+    "error": null
+   }
+  },
+  "e/apryse": {
+   "desktop": {
+    "performance": 70,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 506,
+    "cls": 0.0,
+    "speedIndexMs": 4740,
+    "performanceRuns": [
+     70,
+     60,
+     70
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 79,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 777,
+    "lcpMs": 777,
+    "tbtMs": 644,
+    "cls": 0.003,
+    "speedIndexMs": 5612,
+    "performanceRuns": [
+     79,
+     98,
+     74
+    ],
+    "error": null
+   }
+  },
+  "e/nutrient": {
+   "desktop": {
+    "performance": 75,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 2187,
+    "tbtMs": 279,
+    "cls": 0.002,
+    "speedIndexMs": 1809,
+    "performanceRuns": [
+     75,
+     75,
+     86
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 61,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 2102,
+    "lcpMs": 10992,
+    "tbtMs": 341,
+    "cls": 0.007,
+    "speedIndexMs": 6902,
+    "performanceRuns": [
+     61,
+     77,
+     49
+    ],
+    "error": null
+   }
+  }
+ },
+ "docs": {
+  "lorem-500": {
+   "e/canvas-editor": {
+    "desktop": {
+     "performance": 70,
+     "accessibility": 94,
+     "bestPractices": 100,
+     "seo": 80,
+     "fcpMs": 216,
+     "lcpMs": 216,
+     "tbtMs": 10005,
+     "cls": 0.004,
+     "speedIndexMs": 739,
+     "performanceRuns": [
+      null,
+      70,
+      null
+     ],
+     "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+    },
+    "mobile": {
+     "performance": 12,
+     "accessibility": 94,
+     "bestPractices": 100,
+     "seo": 82,
+     "fcpMs": 1620,
+     "lcpMs": 7012,
+     "tbtMs": 10188,
+     "cls": 0.827,
+     "speedIndexMs": 22839,
+     "performanceRuns": [
+      null,
+      12,
+      null
+     ],
+     "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+    }
+   },
+   "e/cite-check": {
+    "desktop": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null
+     ],
+     "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+    },
+    "mobile": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null
+     ],
+     "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+    }
+   },
+   "e/docxodus": {
+    "desktop": {
+     "performance": 36,
+     "accessibility": 96,
+     "bestPractices": 100,
+     "seo": 90,
+     "fcpMs": 224,
+     "lcpMs": 10193,
+     "tbtMs": 9744,
+     "cls": 0.006,
+     "speedIndexMs": 3697,
+     "performanceRuns": [
+      35,
+      37,
+      36
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 35,
+     "accessibility": 97,
+     "bestPractices": 100,
+     "seo": 91,
+     "fcpMs": 1526,
+     "lcpMs": 43810,
+     "tbtMs": 8384,
+     "cls": 0.018,
+     "speedIndexMs": 8943,
+     "performanceRuns": [
+      37,
+      34,
+      null
+     ],
+     "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+    }
+   },
+   "e/superdoc": {
+    "desktop": {
+     "performance": 71,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 90,
+     "fcpMs": 450,
+     "lcpMs": 450,
+     "tbtMs": 683,
+     "cls": 0.001,
+     "speedIndexMs": 1834,
+     "performanceRuns": [
+      77,
+      69,
+      71
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 70,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 91,
+     "fcpMs": 1657,
+     "lcpMs": 1661,
+     "tbtMs": 671,
+     "cls": 0.001,
+     "speedIndexMs": 8044,
+     "performanceRuns": [
+      70,
+      49,
+      78
+     ],
+     "error": null
+    }
+   },
+   "e/plate": {
+    "desktop": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null
+     ],
+     "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+    },
+    "mobile": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null
+     ],
+     "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+    }
+   },
+   "e/docen": {
+    "desktop": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null
+     ],
+     "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+    },
+    "mobile": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null
+     ],
+     "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+    }
+   },
+   "e/eigenpal": {
+    "desktop": {
+     "performance": 60,
+     "accessibility": 97,
+     "bestPractices": 100,
+     "seo": 90,
+     "fcpMs": 452,
+     "lcpMs": 452,
+     "tbtMs": 1153,
+     "cls": 0.122,
+     "speedIndexMs": 4676,
+     "performanceRuns": [
+      57,
+      60,
+      60
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 40,
+     "accessibility": 97,
+     "bestPractices": 100,
+     "seo": 91,
+     "fcpMs": 1659,
+     "lcpMs": 18338,
+     "tbtMs": 2061,
+     "cls": 0.018,
+     "speedIndexMs": 20884,
+     "performanceRuns": [
+      59,
+      40,
+      36
+     ],
+     "error": null
+    }
+   },
+   "e/folio": {
+    "desktop": {
+     "performance": 60,
+     "accessibility": 84,
+     "bestPractices": 96,
+     "seo": 91,
+     "fcpMs": 448,
+     "lcpMs": 448,
+     "tbtMs": 12866,
+     "cls": 0.001,
+     "speedIndexMs": 4891,
+     "performanceRuns": [
+      60,
+      61,
+      60
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 37,
+     "accessibility": 86,
+     "bestPractices": 96,
+     "seo": 91,
+     "fcpMs": 1656,
+     "lcpMs": 1656,
+     "tbtMs": 10292,
+     "cls": 0.598,
+     "speedIndexMs": 16059,
+     "performanceRuns": [
+      37,
+      37,
+      37
+     ],
+     "error": null
+    }
+   },
+   "e/wordcraft": {
+    "desktop": {
+     "performance": 100,
+     "accessibility": 100,
+     "bestPractices": 96,
+     "seo": 90,
+     "fcpMs": 225,
+     "lcpMs": 566,
+     "tbtMs": 0,
+     "cls": 0.022,
+     "speedIndexMs": 755,
+     "performanceRuns": [
+      100,
+      100,
+      100
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 97,
+     "accessibility": 100,
+     "bestPractices": 96,
+     "seo": 91,
+     "fcpMs": 776,
+     "lcpMs": 2406,
+     "tbtMs": 0,
+     "cls": 0.018,
+     "speedIndexMs": 2847,
+     "performanceRuns": [
+      96,
+      97,
+      98
+     ],
+     "error": null
+    }
+   },
+   "e/word-online": {
+    "desktop": {
+     "performance": 93,
+     "accessibility": 100,
+     "bestPractices": 73,
+     "seo": 90,
+     "fcpMs": 223,
+     "lcpMs": 223,
+     "tbtMs": 0,
+     "cls": 0.075,
+     "speedIndexMs": 2480,
+     "performanceRuns": [
+      93,
+      90,
+      93
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 96,
+     "accessibility": 100,
+     "bestPractices": 73,
+     "seo": 91,
+     "fcpMs": 772,
+     "lcpMs": 772,
+     "tbtMs": 0,
+     "cls": 0,
+     "speedIndexMs": 5488,
+     "performanceRuns": [
+      96,
+      95,
+      96
+     ],
+     "error": null
+    }
+   },
+   "e/google-viewer": {
+    "desktop": {
+     "performance": 78,
+     "accessibility": 100,
+     "bestPractices": 54,
+     "seo": 90,
+     "fcpMs": 211,
+     "lcpMs": 258,
+     "tbtMs": 438,
+     "cls": 0.001,
+     "speedIndexMs": 1669,
+     "performanceRuns": [
+      78,
+      98,
+      62
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 57,
+     "accessibility": 100,
+     "bestPractices": 54,
+     "seo": 91,
+     "fcpMs": 5497,
+     "lcpMs": 5497,
+     "tbtMs": 296,
+     "cls": 0,
+     "speedIndexMs": 7154,
+     "performanceRuns": [
+      57,
+      96,
+      45
+     ],
+     "error": null
+    }
+   },
+   "e/apryse": {
+    "desktop": {
+     "performance": 60,
+     "accessibility": 100,
+     "bestPractices": 96,
+     "seo": 90,
+     "fcpMs": 211,
+     "lcpMs": 211,
+     "tbtMs": 1571,
+     "cls": 0.0,
+     "speedIndexMs": 6101,
+     "performanceRuns": [
+      60,
+      60,
+      76
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 66,
+     "accessibility": 100,
+     "bestPractices": 96,
+     "seo": 91,
+     "fcpMs": 781,
+     "lcpMs": 1585,
+     "tbtMs": 1588,
+     "cls": 0,
+     "speedIndexMs": 9720,
+     "performanceRuns": [
+      73,
+      35,
+      66
+     ],
+     "error": null
+    }
+   },
+   "e/nutrient": {
+    "desktop": {
+     "performance": 72,
+     "accessibility": 100,
+     "bestPractices": 96,
+     "seo": 90,
+     "fcpMs": 225,
+     "lcpMs": 514,
+     "tbtMs": 573,
+     "cls": 0.002,
+     "speedIndexMs": 1644,
+     "performanceRuns": [
+      72,
+      75,
+      71
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 78,
+     "accessibility": 100,
+     "bestPractices": 96,
+     "seo": 91,
+     "fcpMs": 776,
+     "lcpMs": 776,
+     "tbtMs": 383,
+     "cls": 0.007,
+     "speedIndexMs": 4498,
+     "performanceRuns": [
+      89,
+      78,
+      49
+     ],
+     "error": null
+    }
+   }
+  }
+ }
+}
