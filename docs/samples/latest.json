@@ -21,7 +21,8 @@
      305,
      306
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 21905408
    },
    "docxodus": {
     "startupMs": 1642,
@@ -40,7 +41,8 @@
      434,
      483
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 16384000
    },
    "superdoc": {
     "startupMs": 2103,
@@ -59,7 +61,8 @@
      501,
      505
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 28753920
    },
    "plate": {
     "startupMs": 1728,
@@ -81,7 +84,8 @@
      511,
      543
     ],
-    "failed": "Error: Page.goto: net::ERR_CONNECTION_RESET at https://editors.benchmarks.law/e/plate\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/plate\", waiting until \"commit\"\n"
+    "failed": "Error: Page.goto: net::ERR_CONNECTION_RESET at https://editors.benchmarks.law/e/plate\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/plate\", waiting until \"commit\"\n",
+    "rendererGrowth": -1835008
    },
    "docen": {
     "startupMs": 1194,
@@ -100,7 +104,8 @@
      160,
      185
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": -2293760
    },
    "eigenpal": {
     "startupMs": 1222,
@@ -119,7 +124,8 @@
      103,
      112
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 17039360
    },
    "folio": {
     "startupMs": 1145,
@@ -138,7 +144,8 @@
      198,
      387
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 43417600
    },
    "wordcraft": {
     "startupMs": 1905,
@@ -157,7 +164,8 @@
      480,
      479
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": -114016256
    },
    "word-online": {
     "startupMs": 1071,
@@ -176,7 +184,8 @@
      222,
      195
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 155762688
    },
    "google-viewer": {
     "startupMs": 1201,
@@ -195,7 +204,8 @@
      20703,
      372
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": -29261824
    },
    "apryse": {
     "startupMs": 2328,
@@ -214,7 +224,8 @@
      92,
      93
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": -112394240
    },
    "nutrient": {
     "startupMs": 3397,
@@ -233,7 +244,8 @@
      1449,
      1188
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 161873920
    }
   },
   "redline": {
@@ -254,7 +266,8 @@
      285,
      312
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 4947968
    },
    "docxodus": {
     "startupMs": 1301,
@@ -273,7 +286,8 @@
      475,
      455
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 49250304
    },
    "superdoc": {
     "startupMs": 1871,
@@ -292,7 +306,8 @@
      556,
      546
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 129351680
    },
    "plate": {
     "startupMs": 1155,
@@ -311,7 +326,8 @@
      390,
      715
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 42532864
    },
    "docen": {
     "startupMs": 1590,
@@ -333,7 +349,8 @@
      299,
      170
     ],
-    "failed": "TypeError: Failed to fetch dynamically imported module: https://esm.sh/@docen/editor@0.7.0?target=es2022&deps=@microsoft/fast-element@3.0.2\n\nTypeError: Failed to fetch dynamically imported module: https://esm.sh/@docen/editor@0.7.0?target=es2022&deps=@microsoft/fast-element@3.0.2"
+    "failed": "TypeError: Failed to fetch dynamically imported module: https://esm.sh/@docen/editor@0.7.0?target=es2022&deps=@microsoft/fast-element@3.0.2\n\nTypeError: Failed to fetch dynamically imported module: https://esm.sh/@docen/editor@0.7.0?target=es2022&deps=@microsoft/fast-element@3.0.2",
+    "rendererGrowth": -13737984
    },
    "eigenpal": {
     "startupMs": 2203,
@@ -355,7 +372,8 @@
      64,
      112
     ],
-    "failed": "Error: Page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://editors.benchmarks.law/e/eigenpal\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/eigenpal\", waiting until \"commit\"\n"
+    "failed": "Error: Page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://editors.benchmarks.law/e/eigenpal\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/eigenpal\", waiting until \"commit\"\n",
+    "rendererGrowth": 33112064
    },
    "folio": {
     "startupMs": 1056,
@@ -374,7 +392,8 @@
      228,
      239
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 25886720
    },
    "wordcraft": {
     "startupMs": 1808,
@@ -396,7 +415,8 @@
      491,
      480
     ],
-    "failed": "Error: Page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://editors.benchmarks.law/e/wordcraft\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/wordcraft\", waiting until \"commit\"\n"
+    "failed": "Error: Page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://editors.benchmarks.law/e/wordcraft\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/wordcraft\", waiting until \"commit\"\n",
+    "rendererGrowth": -261996544
    },
    "word-online": {
     "startupMs": 1151,
@@ -418,7 +438,8 @@
      270,
      253
     ],
-    "failed": "Error: Page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://editors.benchmarks.law/e/word-online\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/word-online\", waiting until \"commit\"\n"
+    "failed": "Error: Page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE at https://editors.benchmarks.law/e/word-online\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/word-online\", waiting until \"commit\"\n",
+    "rendererGrowth": 138788864
    },
    "google-viewer": {
     "startupMs": 1454,
@@ -440,7 +461,8 @@
      531,
      461
     ],
-    "failed": "Error: Google Docs viewer did not load within 60s\n\nError: Google Docs viewer did not load within 60s\n    at https://editors.benchmarks.law/lib/frame-viewer.ts:42:45"
+    "failed": "Error: Google Docs viewer did not load within 60s\n\nError: Google Docs viewer did not load within 60s\n    at https://editors.benchmarks.law/lib/frame-viewer.ts:42:45",
+    "rendererGrowth": -14123008
    },
    "apryse": {
     "startupMs": 2203,
@@ -459,7 +481,8 @@
      648,
      151
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": -1884160
    },
    "nutrient": {
     "startupMs": 3269,
@@ -478,7 +501,8 @@
      1852,
      1387
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 43220992
    }
   },
   "lorem-500": {
@@ -502,7 +526,8 @@
      8554,
      10011
     ],
-    "failed": "Error: Page.goto: net::ERR_ABORTED at https://editors.benchmarks.law/e/canvas-editor\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/canvas-editor\", waiting until \"commit\"\n"
+    "failed": "Error: Page.goto: net::ERR_ABORTED at https://editors.benchmarks.law/e/canvas-editor\nCall log:\n  - navigating to \"https://editors.benchmarks.law/e/canvas-editor\", waiting until \"commit\"\n",
+    "rendererGrowth": 622395392
    },
    "docxodus": {
     "startupMs": 2072,
@@ -521,7 +546,8 @@
      2434,
      2658
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 19218432
    },
    "superdoc": {
     "startupMs": 2662,
@@ -540,7 +566,8 @@
      3711,
      4877
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 335577088
    },
    "plate": {
     "startupMs": 2690,
@@ -562,7 +589,8 @@
      22037,
      21983
     ],
-    "failed": "not ready within 240s"
+    "failed": "not ready within 240s",
+    "rendererGrowth": 148733952
    },
    "docen": {
     "startupMs": 1877,
@@ -582,7 +610,8 @@
      null,
      2226
     ],
-    "failed": "not loaded within 240s of navigation (the page stopped answering)"
+    "failed": "not loaded within 240s of navigation (the page stopped answering)",
+    "rendererGrowth": 1120796672
    },
    "eigenpal": {
     "startupMs": 1967,
@@ -601,7 +630,8 @@
      292,
      320
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 223543296
    },
    "folio": {
     "startupMs": 1659,
@@ -620,7 +650,8 @@
      9683,
      9781
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 1114537984
    },
    "wordcraft": {
     "startupMs": 2441,
@@ -639,7 +670,8 @@
      2728,
      2943
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": -366116864
    },
    "word-online": {
     "startupMs": 1405,
@@ -658,7 +690,8 @@
      619,
      501
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 208764928
    },
    "google-viewer": {
     "startupMs": 21512,
@@ -680,7 +713,8 @@
      881,
      679
     ],
-    "failed": "Error: Google Docs viewer did not load within 60s\n\nError: Google Docs viewer did not load within 60s\n    at https://editors.benchmarks.law/lib/frame-viewer.ts:42:45"
+    "failed": "Error: Google Docs viewer did not load within 60s\n\nError: Google Docs viewer did not load within 60s\n    at https://editors.benchmarks.law/lib/frame-viewer.ts:42:45",
+    "rendererGrowth": 33865728
    },
    "apryse": {
     "startupMs": 2868,
@@ -699,7 +733,8 @@
      498,
      688
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": 114819072
    },
    "nutrient": {
     "startupMs": 3998,
@@ -718,7 +753,8 @@
      6906,
      16413
     ],
-    "failed": null
+    "failed": null,
+    "rendererGrowth": -88604672
    }
   }
  }

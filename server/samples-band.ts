@@ -33,10 +33,13 @@ export interface SampleRow {
   /** When and where this row was measured, when a partial re-run measured it apart from the others. */
   measuredAt?: string;
   environment?: string;
+  base?: string;
 }
 export interface SampleMeasurements {
   measuredAt: string | null;
   environment: string;
+  /** The site the rows were measured against. */
+  base?: string;
   samples: Record<string, Record<string, SampleRow>>;
 }
 
@@ -65,8 +68,9 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
       if (!r) return "";
       const frame = e.opensFiles === false;
       // Said only where it differs from the heading: a row re-measured on another day or machine.
-      const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && r.environment !== data.environment)
-        ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}</small>`
+      const otherBase = !!r.base && !!data.base && r.base !== data.base;
+      const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && r.environment !== data.environment) || otherBase
+        ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
       const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(r.incomplete.split("\n")[0].slice(0, 120))}</small>` : "";
       const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}${elsewhere}${incomplete}`;
@@ -75,8 +79,9 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
           redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : ""
         }</tr>`;
       }
-      // Each run's own growth, median: the two medians beside it can come from different runs.
-      const grew = r.rendererGrowth ?? (r.rendererRss != null && r.rendererRssReady != null ? r.rendererRss - r.rendererRssReady : null);
+      // Each run's own growth, median. Without it nothing is shown: the two medians beside it can
+      // come from different runs, and their difference was once −29 MB where the runs said +25 MB.
+      const grew = r.rendererGrowth ?? null;
       const settled = frame ? "n/a" : r.settledMs == null && r.settleTimedOut ? "still busy after 180 s" : ms(r.settledMs);
       return `<tr><td>${name}</td>
       <td class="n">${ms(r.loadMs)}</td>

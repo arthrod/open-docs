@@ -101,3 +101,10 @@ Deno.test("run properties written with whitespace or attributes in the tag are m
       `<w:r><w:rPr>${marks}</w:rPr><w:t>c</w:t></w:r>`,
   );
 });
+
+Deno.test("a deleted run whose own strike is explicitly off, written as a pair, is still struck", () => {
+  const out = flattenRevisions(
+    `<w:del w:id="1" w:author="A"><w:r><w:rPr><w:strike w:val="false"></w:strike><w:b/></w:rPr><w:delText>x</w:delText></w:r></w:del>`,
+  );
+  assertEquals(out, `<w:r><w:rPr><w:b/><w:strike/><w:color w:val="C00000"/></w:rPr><w:t>x</w:t></w:r>`);
+});

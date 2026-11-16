@@ -20,7 +20,7 @@ Deno.test("the redline table says how each engine treats tracked changes; a fail
   };
   const html = samplesBand(editors, data);
   assertEquals(html.includes(REVISION_NOTES.folio), true);
-  assertEquals(html.includes("420 MB <small>(+120 MB)</small>"), true);
+  assertEquals(html.includes("420 MB <small>("), false); // this row has no paired growth: none is invented
   assertEquals(html.includes("<b>did not open it</b>: Error: boom"), true);
   assertEquals(html.includes(" at x"), false); // first line of the error only
   assertEquals(html.includes('id="sample-lorem-500"'), false); // not measured: not shown
@@ -40,7 +40,7 @@ Deno.test("memory growth shown is the median of each run's own growth, when the 
   };
   const html = samplesBand(editors, data);
   assertEquals(html.includes("420 MB <small>(+16 MB)</small>"), true); // folio: paired
-  assertEquals(html.includes("420 MB <small>(+120 MB)</small>"), true); // docen: an older file without the field
+  assertEquals(html.includes("(+120 MB)"), false); // docen: a file without the field shows no growth
 });
 
 Deno.test("a row says so when it never settled, when its readings are incomplete, and when it was measured elsewhere", () => {
@@ -61,4 +61,22 @@ Deno.test("a row says so when it never settled, when its readings are incomplete
   assertEquals(html.includes(" at y"), false);
   assertEquals(html.includes("measured 2026-11-20: Linux x86_64"), true);
   assertEquals((html.match(/<small class="prov">/g) ?? []).length, 1); // only the row that differs from the heading
+});
+
+Deno.test("no paired growth: none is shown, rather than the difference of two medians", () => {
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-15", environment: "test",
+    samples: { redline: { folio: row(), docen: row({ rendererGrowth: null }), plate: row({ rendererGrowth: -3 * 1048576 }) } },
+  };
+  const html = samplesBand(editors, data);
+  assertEquals(html.includes("(+120 MB)"), false); // 420 − 300: medians of different runs
+  assertEquals(html.includes("420 MB <small>(−3 MB)</small>"), true);
+});
+
+Deno.test("a row measured against another site address says so", () => {
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-15", environment: "test", base: "https://editors.benchmarks.law",
+    samples: { redline: { folio: row({ measuredAt: "2026-11-15", environment: "test", base: "https://staging.example" }) } },
+  };
+  assertEquals(samplesBand(editors, data).includes("measured 2026-11-15: test · https://staging.example"), true);
 });

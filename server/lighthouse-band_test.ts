@@ -29,3 +29,10 @@ Deno.test("the 500-page table is dated by its own run when the file records one"
   const legacy = lighthouseBand(editors, data(docs));
   assertEquals(legacy.includes("Measured 2026-11-16"), false);
 });
+
+Deno.test("a page analysed in a different run from its table says when", () => {
+  const stamped = { ...{ desktop: page(), mobile: page() }, measuredAt: "2026-11-16", environment: "Lighthouse 13.6, 1 analyses" };
+  const html = lighthouseBand(editors, { measuredAt: "2026-11-10", environment: "Lighthouse 13.5", pages: { "e/folio": stamped, "e/docen": { desktop: page(), mobile: page(), measuredAt: "2026-11-10", environment: "Lighthouse 13.5" } } });
+  assertEquals(html.includes("measured 2026-11-16: Lighthouse 13.6, 1 analyses"), true);
+  assertEquals((html.match(/class="lh-part prov"/g) ?? []).length, 1);
+});

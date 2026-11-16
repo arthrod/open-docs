@@ -11,10 +11,12 @@ await init({ module_or_path: wasmBytes });          // dist/wc_render_bg.wasm.gz
 
 // One page at a time: read and lay out once, rasterise only the pages asked for.
 const doc = new Doc(docxBytes);
-const sizes = doc.page_sizes();                      // points: width, height, width, height, …
-const png: Uint8Array = doc.render_page(0, 2);       // page 1 at 2 pixels per point
-
-doc.free();                                          // release the document and its layout
+try {
+  const sizes = doc.page_sizes();                    // points: width, height, width, height, …
+  const png: Uint8Array = doc.render_page(0, 2);     // page 1 at 2 pixels per point
+} finally {
+  doc.free();                                        // release the document and its layout, also if a call threw
+}
 
 // Or every page in one call.
 const pngs: Uint8Array[] = render_docx(docxBytes, 2);

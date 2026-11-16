@@ -20,7 +20,7 @@ import {
   parseArenaMessage,
 } from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
-import { longTasksSupported, OpenOwner, settledMs as settledAfter } from "./open-timing.ts";
+import { LoadQueue, longTasksSupported, OpenOwner, settledMs as settledAfter } from "./open-timing.ts";
 
 const slug = document.body.dataset.slug ?? "";
 const editorName = document.body.dataset.name ?? slug;
@@ -352,7 +352,8 @@ const newDoc = () =>
   withAdapter("New document", async (a) => {
     if (a.viewOnly) return setStatus(`${a.name} is a view-only viewer`, "err");
     openOwner.start(); // a sample still being measured no longer owns the page
-    await a.load(await window.od.blankDocx());
+    const blank = await window.od.blankDocx();
+    await loads.run(() => a.load(blank));
     newDocument();
     setDocName("Untitled document");
     postChild(childOpened(slug, docName()));
@@ -383,8 +384,8 @@ const newDoc = () =>
  * asked for last; the time counted is still from the click.
  */
 const openOwner = new OpenOwner();
-/** The sample load in flight, if any: the next one starts when it has ended (see timedOpen). */
-let sampleLoad: Promise<unknown> = Promise.resolve();
+/** Every load into the editor (sample, New, Import), one at a time in the order asked. */
+const loads = new LoadQueue();
 async function timedOpen(doc: string, owner: number, open: () => Promise<void>, loaded: () => void): Promise<string | null> {
   const t0 = performance.now();
   let lastBusy = t0;
@@ -404,10 +405,7 @@ async function timedOpen(doc: string, owner: number, open: () => Promise<void>, 
     // One load at a time: two loads running into the same editor finish in either order, and the
     // slower document would win whichever was asked for last. An open that was overtaken while
     // it waited its turn does not load at all.
-    const before = sampleLoad;
-    const mine = before.then(() => (openOwner.owns(owner) ? open() : undefined));
-    sampleLoad = mine.catch(() => {});
-    await mine;
+    await loads.run(() => (openOwner.owns(owner) ? open() : Promise.resolve()));
     if (!openOwner.owns(owner)) return null;
     loaded();
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -435,6 +433,11 @@ async function timedOpen(doc: string, owner: number, open: () => Promise<void>, 
       ? ` (settled after ${fmtMs(settledMs)})`
       : "";
     return `in ${fmtMs(ms)}${settled}${heapBytes ? ` · JS heap ${fmtBytes(heapBytes)}` : ""}`;
+  } catch (err) {
+    // An open that was overtaken and then failed has nothing to say: its error must not be
+    // drawn over the newer document.
+    if (!openOwner.owns(owner)) return null;
+    throw err;
   } finally {
     // Also when the fetch or the adapter rejected: a failed open must not leave its observer registered.
     observer?.disconnect();
@@ -489,7 +492,8 @@ async function importFile(file: File) {
   const ok = await withAdapter(`Import ${file.name}`, async (a) => {
     try {
       openOwner.start(); // a sample still being measured no longer owns the page
-      await a.load(new Uint8Array(await file.arrayBuffer()));
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await loads.run(() => a.load(bytes));
     } catch (err) {
       openError = (err as Error)?.message ?? String(err);
       throw err;

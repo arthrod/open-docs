@@ -99,6 +99,7 @@ mod tests {
         // Premultiplied in, straight out: (100, 50, 0) at alpha 128 is stored as (50, 25, 0, 128).
         let img = Rendered { width: 2, height: 1, pixels: vec![50, 25, 0, 128, 9, 8, 7, 255] };
         let decoded = image::load_from_memory(&small_png(&img)).unwrap();
+        assert_eq!((decoded.width(), decoded.height()), (2, 1));
         assert_eq!(decoded.color(), ColorType::Rgba8);
         assert_eq!(decoded.to_rgba8().into_raw(), vec![100, 50, 0, 128, 9, 8, 7, 255]);
     }

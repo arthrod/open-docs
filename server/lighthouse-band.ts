@@ -20,13 +20,20 @@ export interface LighthousePage {
   performanceRuns: (number | null)[];
   error: string | null;
 }
+/** One page's medians per form factor, and the run that measured it when that is recorded. */
+export interface LighthouseEntry {
+  desktop: LighthousePage;
+  mobile: LighthousePage;
+  measuredAt?: string;
+  environment?: string;
+}
 export interface LighthouseResults {
   measuredAt: string | null;
   environment: string;
   /** "e/<slug>" → medians, per form factor */
-  pages: Record<string, { desktop: LighthousePage; mobile: LighthousePage }>;
+  pages: Record<string, LighthouseEntry>;
   /** The same pages opening a Menu sample (`?open=<file>`): sample id → page → medians. */
-  docs?: Record<string, Record<string, { desktop: LighthousePage; mobile: LighthousePage }>>;
+  docs?: Record<string, Record<string, LighthouseEntry>>;
   /** When and how each `docs` population was measured, when it was measured apart from `pages`. */
   docsMeta?: Record<string, { measuredAt: string; environment: string }>;
 }
@@ -39,7 +46,7 @@ const score = (n: number | null | undefined) =>
   n == null ? "n/a" : `<b class="lh ${n >= 90 ? "lh-good" : n >= 50 ? "lh-mid" : "lh-bad"}">${n}</b>`;
 
 export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATEST as LighthouseResults): string {
-  const table = (pages: LighthouseResults["pages"], q: string) => {
+  const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string }) => {
     const psi = (slug: string) => `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`https://editors.benchmarks.law/e/${slug}${q}`)}`;
     const row = (e: EditorMeta) => {
       const r = pages?.[`e/${e.slug}`];
@@ -53,7 +60,11 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
       };
       const partial = [part("desktop", d), part("mobile", m)].filter(Boolean).join(" · ");
       if (d.performance == null && m.performance == null) return `<tr><td>${name}</td><td colspan="8"><b>no result</b>: ${esc((d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
-      return `<tr><td>${name}${partial ? ` <small class="lh-part">${partial}</small>` : ""}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>
+      // A page analysed in another run than the table's heading (a partial re-run) says when.
+      const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment)
+        ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}</small>`
+        : "";
+      return `<tr><td>${name}${elsewhere}${partial ? ` <small class="lh-part">${partial}</small>` : ""}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>
       <td class="n hide-sm">${d.cls ?? "n/a"} · ${m.cls ?? "n/a"}</td><td class="n hide-sm">${score(d.accessibility)}</td><td class="n hide-sm">${score(d.bestPractices)}</td><td class="n hide-sm">${score(d.seo)}</td>
       <td class="hide-sm"><a href="${psi(e.slug)}" target="_blank" rel="noopener">run it →</a></td></tr>`;
     };
@@ -63,9 +74,9 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
     <th class="n hide-sm">Accessibility</th><th class="n hide-sm">Best practices</th><th class="n hide-sm">SEO</th><th class="hide-sm">PageSpeed</th>
   </tr></thead><tbody>${rows}</tbody></table></div>`;
   };
-  const blank = table(data.pages ?? {}, "");
+  const blank = table(data.pages ?? {}, "", data);
   if (!blank) return "";
-  const long = table(data.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx");
+  const long = table(data.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx", data.docsMeta?.["lorem-500"] ?? data);
   const longBlock = long
     ? `<h3 class="smp-h" id="lighthouse-lorem-500">Opening the 500 pages sample <small>each page with <code>?open=lorem-500.docx</code>, which presses the Menu's own button once the editor is ready</small></h3>
   <p class="sec-copy">PageSpeed gives a page a fixed time to load; an engine still working when it ends is scored on what it had drawn.${

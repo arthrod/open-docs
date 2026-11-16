@@ -26,3 +26,22 @@ Deno.test("only the newest open owns the page: an older one that finishes later 
   assertEquals(owner.owns(a), false);
   assertEquals(owner.owns(b), true);
 });
+
+Deno.test("queued loads run one at a time, in the order asked, and a failed one does not block the next", async () => {
+  const { LoadQueue } = await import("./open-timing.ts");
+  const q = new LoadQueue();
+  const log: string[] = [];
+  const slow = q.run(async () => {
+    log.push("a start");
+    await new Promise((r) => setTimeout(r, 30));
+    log.push("a end");
+    throw new Error("a failed");
+  });
+  const fast = q.run(() => {
+    log.push("b start");
+    return Promise.resolve("b");
+  });
+  assertEquals(await slow.catch((e) => e.message), "a failed");
+  assertEquals(await fast, "b");
+  assertEquals(log, ["a start", "a end", "b start"]);
+});

@@ -192,6 +192,7 @@ async def main():
     runs = int(sys.argv[3])
     opt = lambda k: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else None
     raw = []
+    stopped = None
     async with async_playwright() as pw:
         for r in range(runs):
             for s in samples:
@@ -199,10 +200,22 @@ async def main():
                     x = await one(pw, e, s, opt("--shots") if r == 0 else None)
                     raw.append(x)
                     print(json.dumps(x), file=sys.stderr, flush=True)
+                    if x.get("cleanup"):
+                        stopped = x["cleanup"]
+                        break
+                if stopped:
+                    break
+            if stopped:
+                # A Chrome that would not end is still using the machine: what was measured so far is
+                # written, and nothing more is measured beside it.
+                print(f"stopping: {stopped}", file=sys.stderr, flush=True)
+                break
     summary: dict = {}
     for s in samples:
         for e in engines:
-            summary.setdefault(s, {})[e] = sample_row([x for x in raw if x["engine"] == e and x["sample"] == s])
+            xs = [x for x in raw if x["engine"] == e and x["sample"] == s]
+            if xs:  # a run that was stopped early leaves the engines it never reached as they were
+                summary.setdefault(s, {})[e] = sample_row(xs)
     where = os.environ.get("MEASURE_WHERE") or f"{platform.system()} {platform.machine()}"
     result = {
         "measuredAt": datetime.date.today().isoformat(),

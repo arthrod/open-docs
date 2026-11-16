@@ -39,3 +39,18 @@ export class OpenOwner {
     return token === this.#n;
   }
 }
+
+/**
+ * Loads into the editor, one at a time and in the order asked. Two loads
+ * running into the same editor finish in either order, so the slower document
+ * would win whichever was asked for last. A load that fails does not hold up
+ * the one after it.
+ */
+export class LoadQueue {
+  #tail: Promise<unknown> = Promise.resolve();
+  run<T>(fn: () => Promise<T>): Promise<T> {
+    const mine = this.#tail.then(fn);
+    this.#tail = mine.catch(() => {});
+    return mine;
+  }
+}
