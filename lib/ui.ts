@@ -379,8 +379,12 @@ const newDoc = () =>
  *
  * Left on <html data-od-loaded> for scripts/measure_samples.py. An open that
  * was overtaken by a newer one (`owner`) writes nothing and returns null.
+ * Loads are run one after another, so the document on screen is the one
+ * asked for last; the time counted is still from the click.
  */
 const openOwner = new OpenOwner();
+/** The sample load in flight, if any: the next one starts when it has ended (see timedOpen). */
+let sampleLoad: Promise<unknown> = Promise.resolve();
 async function timedOpen(doc: string, owner: number, open: () => Promise<void>, loaded: () => void): Promise<string | null> {
   const t0 = performance.now();
   let lastBusy = t0;
@@ -397,7 +401,13 @@ async function timedOpen(doc: string, owner: number, open: () => Promise<void>, 
     }
   }
   try {
-    await open();
+    // One load at a time: two loads running into the same editor finish in either order, and the
+    // slower document would win whichever was asked for last. An open that was overtaken while
+    // it waited its turn does not load at all.
+    const before = sampleLoad;
+    const mine = before.then(() => (openOwner.owns(owner) ? open() : undefined));
+    sampleLoad = mine.catch(() => {});
+    await mine;
     if (!openOwner.owns(owner)) return null;
     loaded();
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
