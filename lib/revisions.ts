@@ -80,7 +80,7 @@ export function flattenRevisions(xml: string): string {
     if (open) {
       const end = rest.indexOf("</w:rPr>");
       // The run's own underline / strike / colour would win or duplicate: replace them.
-      const kept = rest.slice(open[0].length, end).replace(/<w:(u|strike|dstrike|color)\b[^>]*\/>/g, "");
+      const kept = rest.slice(open[0].length, end).replace(/<w:(u|strike|dstrike|color)\b[^>]*(\/>|>\s*<\/w:\1>)/g, "");
       out += `<w:rPr>${kept}${marks}</w:rPr>`;
       at += end + "</w:rPr>".length;
     } else if (empty) {

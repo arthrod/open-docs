@@ -69,3 +69,10 @@ Deno.test("a package with revisions is rewritten in document.xml only; other par
   assertEquals(text(strFromU8(files["word/document.xml"])), "new");
   assertEquals(files["word/comments.xml"], comments);
 });
+
+Deno.test("a run's own underline or colour written as an open/close pair is replaced too", () => {
+  const xml = `<w:p><w:ins w:id="1" w:author="A"><w:r><w:rPr><w:u w:val="double"></w:u><w:color w:val="00FF00"></w:color><w:b/></w:rPr><w:t>new</w:t></w:r></w:ins></w:p>`;
+  const out = flattenRevisions(xml);
+  if (out.includes("double") || out.includes("00FF00")) throw new Error(out);
+  if ((out.match(/<w:u /g) ?? []).length !== 1 || !out.includes("<w:b/>")) throw new Error(out);
+});
