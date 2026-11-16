@@ -531,6 +531,18 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
 - **Docxodus** edits one block at a time; typed text commits when the block
   loses focus or on Enter.
 
+## Tests
+
+```sh
+deno check --allow-import index.ts
+deno test -A lib/ server/ editors/
+uv run --with pytest pytest scripts/tests              # the measurement scripts' logic (scripts/measure_lib.py)
+```
+
+`.github/workflows/ci.yml` runs the same on every pull request, with coverage, and the Rust wrapper's tests
+when `tools/wordcraft-render` changes. The browser entry points (`editors/*/main.ts`) import by served path
+(`/lib/kit.ts`) and are not type-checked outside the browser.
+
 ## Development
 
 There's no build. Edit a file, `vt push`, refresh. The git repository is

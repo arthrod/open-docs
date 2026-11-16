@@ -35,6 +35,8 @@ import asyncio, datetime, json, os, platform, statistics, subprocess, sys, tempf
 
 from playwright.async_api import async_playwright
 
+# These scripts are run with `python -I`, which leaves the script's folder off the import path.
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from measure_lib import end_chrome, merge_latest, sample_row
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")

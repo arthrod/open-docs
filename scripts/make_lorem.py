@@ -19,6 +19,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, Inches, RGBColor
 
+# These scripts are run with `python -I`, which leaves the script's folder off the import path.
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from measure_lib import lorem_args
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent

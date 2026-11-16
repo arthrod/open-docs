@@ -23,6 +23,8 @@ import asyncio, datetime, json, os, statistics, sys, urllib.parse
 
 from playwright.async_api import async_playwright
 
+# These scripts are run with `python -I`, which leaves the script's folder off the import path.
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from measure_lib import merge_pagespeed, page_entry, summarize
 
 BASE = sys.argv[1].rstrip("/")
