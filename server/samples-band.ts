@@ -67,7 +67,7 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
   const tables = FIXTURES.map((f) => {
     const id = f.file.replace(/\.docx$/, "");
     const rows = data.samples?.[id];
-    if (!rows) return "";
+    if (!rows || !Object.keys(rows).length) return "";
     const redline = id === "redline";
     const row = (e: EditorMeta) => {
       const r = rows[e.slug];
@@ -78,10 +78,10 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
       const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && r.environment !== data.environment) || otherBase
         ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
-      const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(r.incomplete.split("\n")[0].slice(0, 120))}</small>` : "";
+      const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(String(r.incomplete).split("\n")[0].slice(0, 120))}</small>` : "";
       const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}${elsewhere}${incomplete}`;
       if (num(r.loadMs) == null) {
-        return `<tr><td>${name}</td><td colspan="${redline ? 4 : 5}"><b>did not open it</b>: ${esc((r.failed ?? "no answer").split("\n")[0].slice(0, 160))}</td>${
+        return `<tr><td>${name}</td><td colspan="${redline ? 4 : 5}"><b>did not open it</b>: ${esc(String(r.failed ?? "no answer").split("\n")[0].slice(0, 160))}</td>${
           redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : ""
         }</tr>`;
       }
@@ -91,7 +91,10 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
       const settled = frame ? "n/a" : num(r.settledMs) == null && r.settleTimedOut ? "still busy after 180 s" : ms(r.settledMs);
       return `<tr><td>${name}</td>
       <td class="n">${ms(r.loadMs)}</td>
-      <td class="n"><b>${settled}</b></td>
+      <td class="n"><b>${settled}</b>${
+        // Some runs settled and some never did: the median stands on the ones that did, and says so.
+        !frame && num(r.settledMs) != null && num(r.settleTimedOut) ? ` <small class="prov-warn">${num(r.settleTimedOut)} of ${(r.runs ?? []).filter((x) => x != null).length} runs still busy after 180 s</small>` : ""
+      }</td>
       <td class="n">${frame ? "n/a" : mb(r.heapBytes)}</td>
       <td class="n" title="before ${mb(r.rendererRssReady)}, after ${mb(r.rendererRss)}">${mb(r.rendererRss)}${grew != null ? ` <small>(${grew >= 0 ? "+" : "−"}${mb(Math.abs(grew))})</small>` : ""}</td>
       ${redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : `<td class="n hide-sm">${num(r.pages) ?? "n/a"}</td>`}

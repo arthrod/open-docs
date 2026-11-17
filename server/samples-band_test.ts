@@ -95,3 +95,10 @@ Deno.test("a results file with parts missing draws what it has instead of throwi
   const html = samplesBand(editors, { samples: { redline: { folio: row() } } } as unknown as SampleMeasurements);
   assertEquals(html.includes("folio"), true);
 });
+
+Deno.test("a settled median that leaves out runs which never settled says how many", () => {
+  const data: SampleMeasurements = { measuredAt: "2026-11-16", environment: "t", samples: { "lorem-500": { folio: row({ settledMs: 900, settleTimedOut: 1, runs: [1, 2, null] }) } } };
+  assertEquals(samplesBand(editors, data).includes("1 of 2 runs still busy after 180 s"), true);
+  assertEquals(samplesBand(editors, { measuredAt: "x", environment: "t", samples: { "lorem-500": {} } }), "");
+  assertEquals(samplesBand(editors, { measuredAt: "x", environment: "t", samples: { redline: { folio: row({ loadMs: null, failed: 42 as unknown as string }) } } }).includes("42"), true);
+});

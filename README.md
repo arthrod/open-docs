@@ -168,7 +168,7 @@ when, accept and reject, and comments.
 
 ### The samples, measured
 
-Every engine opening the two new samples from its own Menu. The table on the
+Every engine opening each sample from its own Menu. The table on the
 [landing page](https://editors.benchmarks.law/#samples) is
 [`docs/samples/latest.json`](docs/samples/latest.json); every run is in the dated
 file beside it.
@@ -225,7 +225,7 @@ Measured 2026-11-15: Google Chrome (installed, headed) via Playwright, fresh pro
 | Word Online viewer | 619 ms | n/a | n/a | 756 MB (+199 MB) | n/a | 3 of 3 |
 | Google viewer | 881 ms | n/a | n/a | 412 MB (+32 MB) | n/a | 5 of 6 |
 | Apryse WebViewer | 498 ms | 498 ms | 40 MB | 506 MB (+110 MB) | n/a | 3 of 3 |
-| Nutrient | 7.54 s | 7.54 s | 28 MB | 397 MB (−84 MB) | n/a | 3 of 3 |
+| Nutrient | 7.54 s | 7.54 s | 28 MB | 397 MB (−85 MB) | n/a | 3 of 3 |
 <!-- samples:end -->
 
 Read these with care:
@@ -286,17 +286,17 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | Page | Performance | LCP | TBT | CLS | FCP | Speed Index | Accessibility | Best practices | SEO | Performance, each analysis |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | canvas-editor | 100 · 73 | 218 ms · 1.82 s | 7 ms · 50 ms | 0 · 0.594 | 218 ms · 1.69 s | 924 ms · 4.61 s | 94 | 100 | 80 | 99/100/100 · 73/73/80 |
-| cite-check | 100 · 95 | 214 ms · 1.83 s | 4 ms · 0 ms | 0.0 · 0.006 | 214 ms · 1.83 s | 890 ms · 4.73 s | 94 | 100 | 80 | 100/100/100 · 99/95/95 |
+| cite-check | 100 · 95 | 214 ms · 1.83 s | 4 ms · 0 ms | 0 · 0.006 | 214 ms · 1.83 s | 890 ms · 4.73 s | 94 | 100 | 80 | 100/100/100 · 99/95/95 |
 | Docxodus | 66 · 48 | 1.07 s · 18.8 s | 828 ms · 905 ms | 0.006 · 0.018 | 230 ms · 1.72 s | 2.29 s · 6.09 s | 96 | 100 | 90 | 66/78/43 · 47/77/48 |
-| SuperDoc | 73 · 76 | 450 ms · 1.66 s | 516 ms · 499 ms | 0.001 · 0.0 | 450 ms · 1.66 s | 2.12 s · 8.58 s | 100 | 100 | 90 | 73/68/74 · 78/72/76 |
-| Plate | 99 · 98 | 213 ms · 762 ms | 58 ms · 34 ms | 0.0 · 0.018 | 213 ms · 762 ms | 994 ms · 3.74 s | 92 | 100 | 90 | 99/99/100 · 97/98/99 |
-| docen | 72 · 72 | 225 ms · 1.67 s | 539 ms · 734 ms | 0.0 · 0.024 | 225 ms · 1.67 s | 2.39 s · 8.79 s | 79 | 88 | 90 | 73/69/72 · 73/60/72 |
+| SuperDoc | 73 · 76 | 450 ms · 1.66 s | 516 ms · 499 ms | 0.001 · 0 | 450 ms · 1.66 s | 2.12 s · 8.58 s | 100 | 100 | 90 | 73/68/74 · 78/72/76 |
+| Plate | 99 · 98 | 213 ms · 762 ms | 58 ms · 34 ms | 0 · 0.018 | 213 ms · 762 ms | 994 ms · 3.74 s | 92 | 100 | 90 | 99/99/100 · 97/98/99 |
+| docen | 72 · 72 | 225 ms · 1.67 s | 539 ms · 734 ms | 0 · 0.024 | 225 ms · 1.67 s | 2.39 s · 8.79 s | 79 | 88 | 90 | 73/69/72 · 73/60/72 |
 | docx-editor.dev | 95 · 83 | 449 ms · 1.81 s | 80 ms · 123 ms | 0 · 0.018 | 449 ms · 1.66 s | 2.12 s · 8.38 s | 97 | 100 | 90 | 95/97/95 · 90/66/83 |
-| folio | 72 · 50 | 445 ms · 1.66 s | 563 ms · 777 ms | 0.0 · 0.598 | 445 ms · 1.66 s | 2.24 s · 7.21 s | 81 | 96 | 90 | 72/72/71 · 50/49/62 |
+| folio | 72 · 50 | 445 ms · 1.66 s | 563 ms · 777 ms | 0 · 0.598 | 445 ms · 1.66 s | 2.24 s · 7.21 s | 81 | 96 | 90 | 72/72/71 · 50/49/62 |
 | WordCraft | 100 · 97 | 567 ms · 2.40 s | 0 ms · 0 ms | 0.022 · 0.018 | 211 ms · 765 ms | 798 ms · 2.67 s | 100 | 96 | 90 | 100/100/100 · 97/97/97 |
-| Word Online viewer | 98 · 93 | 212 ms · 2.08 s | 0 ms · 0 ms | 0.001 · 0.0 | 212 ms · 2.08 s | 1.38 s · 6.53 s | 100 | 73 | 90 | 100/97/98 · 93/93/84 |
+| Word Online viewer | 98 · 93 | 212 ms · 2.08 s | 0 ms · 0 ms | 0.001 · 0 | 212 ms · 2.08 s | 1.38 s · 6.53 s | 100 | 73 | 90 | 100/97/98 · 93/93/84 |
 | Google viewer | 93 · 87 | 224 ms · 761 ms | 186 ms · 302 ms | 0.001 · 0.004 | 224 ms · 761 ms | 1.55 s · 6.43 s | 100 | 54 | 90 | 93/91/100 · 97/57/87 |
-| Apryse WebViewer | 70 · 79 | 212 ms · 777 ms | 506 ms · 644 ms | 0.0 · 0.003 | 212 ms · 777 ms | 4.74 s · 5.61 s | 100 | 96 | 90 | 70/60/70 · 79/98/74 |
+| Apryse WebViewer | 70 · 79 | 212 ms · 777 ms | 506 ms · 644 ms | 0 · 0.003 | 212 ms · 777 ms | 4.74 s · 5.61 s | 100 | 96 | 90 | 70/60/70 · 79/98/74 |
 | Nutrient | 75 · 61 | 2.19 s · 11.0 s | 279 ms · 341 ms | 0.002 · 0.007 | 211 ms · 2.10 s | 1.81 s · 6.90 s | 100 | 96 | 90 | 75/75/86 · 61/77/49 |
 
 **Opening the 500 pages sample (`?open=lorem-500.docx`)**
@@ -314,7 +314,7 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | WordCraft | 100 · 97 | 566 ms · 2.41 s | 0 ms · 0 ms | 0.022 · 0.018 | 225 ms · 776 ms | 755 ms · 2.85 s | 100 | 96 | 90 | 100/100/100 · 96/97/98 |
 | Word Online viewer | 93 · 96 | 223 ms · 772 ms | 0 ms · 0 ms | 0.075 · 0 | 223 ms · 772 ms | 2.48 s · 5.49 s | 100 | 73 | 90 | 93/90/93 · 96/95/96 |
 | Google viewer | 78 · 57 | 258 ms · 5.50 s | 438 ms · 296 ms | 0.001 · 0 | 211 ms · 5.50 s | 1.67 s · 7.15 s | 100 | 54 | 90 | 78/98/62 · 57/96/45 |
-| Apryse WebViewer | 60 · 66 | 211 ms · 1.58 s | 1.57 s · 1.59 s | 0.0 · 0 | 211 ms · 781 ms | 6.10 s · 9.72 s | 100 | 96 | 90 | 60/60/76 · 73/35/66 |
+| Apryse WebViewer | 60 · 66 | 211 ms · 1.58 s | 1.57 s · 1.59 s | 0 · 0 | 211 ms · 781 ms | 6.10 s · 9.72 s | 100 | 96 | 90 | 60/60/76 · 73/35/66 |
 | Nutrient | 72 · 78 | 514 ms · 776 ms | 573 ms · 383 ms | 0.002 · 0.007 | 225 ms · 776 ms | 1.64 s · 4.50 s | 100 | 96 | 90 | 72/75/71 · 89/78/49 |
 <!-- lighthouse:end -->
 

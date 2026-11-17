@@ -9,6 +9,7 @@ edited by hand: a table typed beside its data goes stale (the samples table once
 kept a memory growth of −29 MB after the data had been corrected to +25 MB).
 """
 import json
+import math
 import re
 import sys
 
@@ -27,18 +28,28 @@ SAMPLE_TITLES = (
 )
 
 
+def rnd(x: float) -> int:
+    """Round half up, as the landing page's Math.round does: Python's round() sends 84.5 to 84."""
+    return math.floor(x + 0.5)
+
+
+def num(x) -> str:
+    """A number as JavaScript prints it: 0.0 is "0"."""
+    return str(int(x)) if isinstance(x, float) and x.is_integer() else str(x)
+
+
 def ms(n) -> str:
     """A duration the way the landing page writes it."""
     if n is None:
         return "n/a"
-    return f"{round(n)} ms" if n < 1000 else f"{n / 1000:.2f} s" if n < 10000 else f"{n / 1000:.1f} s"
+    return f"{rnd(n)} ms" if n < 1000 else f"{n / 1000:.2f} s" if n < 10000 else f"{n / 1000:.1f} s"
 
 
 def mb(n) -> str:
     """A size in bytes the way the landing page writes it."""
     if n is None:
         return "n/a"
-    return f"{round(n / 1024)} KB" if n < 1048576 else f"{round(n / 1048576)} MB"
+    return f"{rnd(n / 1024)} KB" if n < 1048576 else f"{rnd(n / 1048576)} MB"
 
 
 def cell(text) -> str:
@@ -70,7 +81,10 @@ def samples_block(data: dict) -> str:
             frame = engine in FRAMES
             grew = r.get("rendererGrowth")
             growth = "" if grew is None else f" ({'+' if grew >= 0 else '−'}{mb(abs(grew))})"
-            settled = "n/a" if frame else "still busy after 180 s" if r.get("settledMs") is None and r.get("settleTimedOut") else ms(r.get("settledMs"))
+            busy = r.get("settleTimedOut") or 0
+            settled = "n/a" if frame else "still busy after 180 s" if r.get("settledMs") is None and busy else ms(r.get("settledMs"))
+            if not frame and r.get("settledMs") is not None and busy:
+                settled += f" ({busy} of {sum(1 for x in runs if x is not None)} runs still busy after 180 s)"
             out.append(
                 f"| {name} | {ms(r['loadMs'])} | {settled} | {'n/a' if frame else mb(r.get('heapBytes'))} | "
                 f"{mb(r.get('rendererRss'))}{growth} | {r.get('pages') or 'n/a'} | {loaded} |"
@@ -96,7 +110,7 @@ def lighthouse_line(label: str, r: dict, head: dict) -> str:
     runs = lambda x: "/".join("fail" if v is None else str(v) for v in x.get("performanceRuns") or [])
     one = lambda k: d[k] if d.get(k) is not None else "n/a"
     return (
-        f"| {label} | {two('performance')} | {two('lcpMs', ms)} | {two('tbtMs', ms)} | {two('cls')} | {two('fcpMs', ms)} | "
+        f"| {label} | {two('performance')} | {two('lcpMs', ms)} | {two('tbtMs', ms)} | {two('cls', num)} | {two('fcpMs', ms)} | "
         f"{two('speedIndexMs', ms)} | {one('accessibility')} | {one('bestPractices')} | {one('seo')} | {runs(d)} · {runs(m)} |"
     )
 
