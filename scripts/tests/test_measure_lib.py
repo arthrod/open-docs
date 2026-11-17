@@ -188,3 +188,9 @@ def test_pagespeed_options_are_parsed_before_anything_runs():
     for bad in ([], ["https://x.example"], ["https://x.example", "e/folio", "0"], ["https://x.example", "e/folio", "3", "--out"]):
         with pytest.raises(SystemExit):
             lib.pagespeed_args(bad)
+
+
+def test_the_heading_names_the_chrome_version_the_runs_recorded():
+    assert lib.chrome_note([{"chrome": "Chrome/157.0.8103.79"}, {"chrome": "Chrome/157.0.8103.79"}, {"engine": "x"}]) == "Google Chrome 157.0.8103.79"
+    assert lib.chrome_note([{"chrome": "Chrome/157.0.1.2"}, {"chrome": "Chrome/158.0.0.1"}]) == "Google Chrome 157.0.1.2 and 158.0.0.1"
+    assert lib.chrome_note([{"engine": "x"}]) == "Google Chrome"

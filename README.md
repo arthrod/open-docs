@@ -251,6 +251,12 @@ uv run --with playwright python -I scripts/measure_samples.py all showcase,redli
   --out docs/samples/$(date +%F).json --latest docs/samples/latest.json --shots .scratch/shots
 ```
 
+The published figures are taken on a GitHub-hosted macOS runner by the
+[Measure workflow](.github/workflows/measure.yml) (push a branch named
+`measure/<anything>`), because a timing taken on a laptop that is doing other
+work is slower than the engine. Every run records the machine's load average
+and the Chrome version, so the dated file shows both.
+
 One (engine, sample) per launch of the installed Google Chrome, headed, with a
 fresh profile. The page opens on its blank document, then the script clicks the
 Menu's own button. **Loaded** is the click until the adapter's `load()` returns

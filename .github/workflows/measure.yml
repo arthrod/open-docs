@@ -1,0 +1,60 @@
+name: Measure
+
+# Every editor opening the three samples, on a machine that does nothing else:
+# a GitHub-hosted macOS runner (Apple silicon), the installed Google Chrome,
+# headed. A timing taken on a busy laptop is slower than the engine; here the
+# load average recorded with every run shows the machine was idle.
+#
+# Runs when a branch named measure/<anything> is pushed (a workflow that is not
+# on the default branch cannot be started by hand), or by hand once it is. The
+# result files are the artifact "samples": download it over docs/samples/ and commit.
+on:
+  push:
+    branches: ["measure/**"]
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Runs per engine and sample"
+        default: "3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: measure
+  cancel-in-progress: false
+
+jobs:
+  samples:
+    runs-on: macos-latest
+    timeout-minutes: 150
+    env:
+      MEASURE_WHERE: GitHub Actions macos-latest runner (Apple silicon)
+      # docen keeps the main thread busy for minutes on the 500 pages: the page must be given time to answer.
+      OD_TIMEOUT_S: "600"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Google Chrome
+        run: |
+          [ -d "/Applications/Google Chrome.app" ] || uv run --with playwright python -m playwright install chrome
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --version
+          sysctl -n machdep.cpu.brand_string hw.ncpu hw.memsize
+      - name: Every engine, every sample
+        run: |
+          uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 "${{ inputs.runs || '3' }}" \
+            --out "docs/samples/$(date +%F).json" --latest docs/samples/latest.json --shots shots
+      - name: README tables from the new files
+        run: python3 scripts/readme_tables.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: samples
+          path: |
+            docs/samples/
+            README.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots/

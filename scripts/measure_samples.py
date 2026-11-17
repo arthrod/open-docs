@@ -44,7 +44,7 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import end_chrome, load_note, machine_load, merge_latest, runs_note, sample_row
+from measure_lib import chrome_note, end_chrome, load_note, machine_load, merge_latest, runs_note, sample_row
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
@@ -139,6 +139,7 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
                 out.update(ready or {"error": f"not ready within {TIMEOUT_S}s"})
                 raise StopIteration
             out["startupMs"] = ready["ms"]
+            out["chrome"] = (await asyncio.wait_for((await ctx.new_cdp_session(page)).send("Browser.getVersion"), 30)).get("product")
             if ready.get("polled"):
                 out["startupPolled"] = True  # a page without data-od-ready: late by up to one polling interval
             await asyncio.sleep(1.0)
@@ -231,7 +232,7 @@ async def main():
     where = os.environ.get("MEASURE_WHERE") or f"{platform.system()} {platform.machine()}"
     result = {
         "measuredAt": datetime.date.today().isoformat(),
-        "environment": f"Google Chrome (installed, headed) via Playwright, fresh profile per run (cold cache), {runs_note(runs, raw)}, median; {where}; {load_note(raw)}",
+        "environment": f"{chrome_note(raw)} (installed, headed) via Playwright, fresh profile per run (cold cache), {runs_note(runs, raw)}, median; {where}; {load_note(raw)}",
         "base": BASE,
         "samples": summary,
         "raw": raw,
