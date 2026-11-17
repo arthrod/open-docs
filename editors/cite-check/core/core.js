@@ -734,6 +734,7 @@ export function runCiteCheck(input) {
     const built = byId.get(quote.sourceId);
     const base = {
       id: quote.id,
+      text: quote.text,
       ...(quote.proposition !== undefined ? { proposition: quote.proposition } : {}),
     };
     if (!built) {

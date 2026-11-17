@@ -133,6 +133,8 @@ function readRels(xml: string | undefined): Map<string, string> {
 }
 
 type Ctx = {
+  /** Set by paragraphBlockOf for a paragraph on an unmarked list level. */
+  unmarked?: Block["counts"];
   styles: Map<string, StyleInfo>;
   numbering: Map<string, Map<number, Level>>;
   rels: Map<string, string>;
@@ -235,6 +237,12 @@ function paragraphRuns(p: Element, ctx: Ctx): Run[] {
 }
 
 function paragraphBlock(p: Element, ctx: Ctx): Block {
+  ctx.unmarked = undefined;
+  const b = paragraphBlockOf(p, ctx);
+  return ctx.unmarked ? { ...b, counts: ctx.unmarked } : b;
+}
+
+function paragraphBlockOf(p: Element, ctx: Ctx): Block {
   const pPr = kid(p, "pPr");
   const styleId = wAttr(kid(pPr, "pStyle"), "val");
   const styleChain = chain(ctx.styles, styleId ?? "Normal");
@@ -263,6 +271,7 @@ function paragraphBlock(p: Element, ctx: Ctx): Block {
     if (!lv?.none) {
       return { kind: "li", level: ilvl, ordered: !(lv?.bullet ?? true), list: numId, start: lv?.start, restart: lv?.restart, runs };
     }
+    ctx.unmarked = { list: numId, level: ilvl, start: lv?.start, restart: lv?.restart };
   }
   if (names.some((n) => /quote/.test(n))) {
     // Quote styles are italic; a quote whose every run is italic is that
@@ -287,6 +296,7 @@ function tableMarkdown(tbl: Element, ctx: Ctx, lists: ListState): string {
         // advances its list's counters for later body items.
         const b = paragraphBlock(p, ctx);
         if (b.kind === "li" && b.list !== undefined) advanceList(lists, b);
+        else if (b.counts) advanceList(lists, { kind: "li", runs: [], ...b.counts });
         return paragraphRuns(p, ctx);
       }).filter((r) => r.length)
         .flatMap((runs, i) => (i ? [{ text: "\n" } as Run, ...runs] : runs))

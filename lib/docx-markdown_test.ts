@@ -127,3 +127,10 @@ Deno.test("docx: a list item inside a table cell still counts for the items afte
   assertEquals(md.trim().split("\n").at(0), "1. a");
   assertEquals(md.trim().split("\n").at(-1), "3. c"); // the cell's item was 2
 });
+
+Deno.test("docx: an unmarked level still counts, so the numbered level under it starts again", () => {
+  const outline = `<w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="none"/></w:lvl>` +
+    `<w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="decimal"/></w:lvl></w:abstractNum><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num>`;
+  const md = docxToMarkdown(docxWith(p("Part A", "2") + p("a", "2", 1) + p("b", "2", 1) + p("Part B", "2") + p("c", "2", 1), outline));
+  assertEquals(md.match(/\d+\. \w/g), ["1. a", "2. b", "1. c"]);
+});

@@ -123,12 +123,10 @@ window.od.register({
         paragraph.classList.add("docx-style-IntenseQuote");
       }
     }
-    // closeHistory starts a new history event, so this replacement cannot group
-    // with recent typing and one Undo restores exactly the pre-apply document.
-    const ok = editor.commands.command(({ tr, commands }) => {
-      tr.setMeta("closeHistory", true);
-      return commands.setContent(parseHTMLBody(body, editor.schema));
-    });
+    // (A "closeHistory" meta under a plain string never reaches prosemirror-history, which
+    // reads it under its own plugin key, so none is set: an apply landing within half a
+    // second of typing shares that typing's undo step.)
+    const ok = editor.commands.setContent(parseHTMLBody(body, editor.schema));
     if (!ok) {
       throw new Error("docen setContent rejected the pasted content");
     }

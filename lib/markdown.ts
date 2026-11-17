@@ -49,6 +49,9 @@ export type Block = {
   list?: string;
   /** List items: the number this list's level starts at (default 1). */
   start?: number;
+  /** A paragraph on a list level that shows no marker (numFmt none): it prints as what it
+   * is, and still counts in its list, so the levels under it start again. */
+  counts?: { list: string; level: number; start?: number; restart?: number };
   /** List items: the level's w:lvlRestart (0: never restarts). */
   restart?: number;
   align?: "left" | "center" | "right" | "justify";
@@ -303,6 +306,7 @@ export function blocksToMarkdown(blocks: Block[], lists: ListState = new Map()):
   // A list break owed by a skipped empty item to the next printed item.
   let pendingBreak = false;
   for (const b of blocks) {
+    if (b.counts) advanceList(lists, { kind: "li", runs: [], ...b.counts });
     // Headings are bold by style; echoing that as **…** adds noise.
     const raw = runsToMarkdown(b.kind === "title" || b.kind === "heading" ? b.runs.map((r) => ({ ...r, bold: false })) : b.runs);
     const text = b.kind === "title" || b.kind === "heading" ? raw : escapeLineStart(raw);
