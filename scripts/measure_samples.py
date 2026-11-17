@@ -210,7 +210,12 @@ async def main():
         for r in range(runs):
             for s in samples:
                 for e in engines:
-                    x = await one(pw, e, s, opt("--shots") if r == 0 else None)
+                    try:
+                        x = await one(pw, e, s, opt("--shots") if r == 0 else None)
+                    except Exception as ex:
+                        # A Chrome that would not start, or gave no page: this run failed, and the runs
+                        # already made are still written (one() only catches what happens after setup).
+                        x = {"engine": e, "sample": s, **machine_load(), "error": f"{type(ex).__name__}: {ex}"[:300]}
                     raw.append(x)
                     print(json.dumps(x), file=sys.stderr, flush=True)
                     if x.get("cleanup"):

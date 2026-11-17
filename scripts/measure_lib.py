@@ -7,6 +7,7 @@ already published, and how a Chrome that will not close is ended.
 import argparse
 import json
 import os
+import re
 import statistics
 import subprocess
 import time
@@ -116,27 +117,34 @@ ENGINE_FAILED = "the engine failed on Google's machine, so there is no score"
 def summarize(l: dict) -> dict:
     """One Lighthouse report. A report Lighthouse or we rejected keeps its reason and none of its numbers."""
     out: dict = {"version": l.get("lighthouseVersion")}
-    if l.get("runtimeError"):
+    # A report of an unexpected shape is read as far as it goes: thrown, it was swallowed by the
+    # caller and the analysis then counted as "no result within 240 s".
+    audits = l.get("audits") if isinstance(l.get("audits"), dict) else {}
+    cats = l.get("categories") if isinstance(l.get("categories"), dict) else {}
+    part = lambda d, k: d.get(k) if isinstance(d.get(k), dict) else {}  # noqa: E731 - a one-line reader of nested dicts
+    if isinstance(l.get("runtimeError"), dict):
         out["error"] = f"{l['runtimeError'].get('code')}: {l['runtimeError'].get('message', '')}"[:200]
     final = l.get("finalDisplayedUrl") or l.get("finalUrl") or ""
-    if "challenge" in final or "Just a moment" in json.dumps(l.get("audits", {}).get("document-title", {})):
+    if "challenge" in str(final) or "Just a moment" in json.dumps(audits.get("document-title", {})):
         out["error"] = "the page Google got was a Cloudflare challenge"
     # The page's own console.error when its engine or its document failed ("[open-docs] WordCraft
     # failed to start"): Lighthouse then scores the error box, and scores it well, because an error
     # box paints fast. PageSpeed gave WordCraft 100 for a page showing "failed to start" (2026-11-16).
-    logged = [str(i.get("description", "")) for i in (l.get("audits", {}).get("errors-in-console", {}).get("details") or {}).get("items", [])]
-    own = [d for d in logged if d.startswith("[open-docs")]
-    if own:
+    items = part(part(audits, "errors-in-console"), "details").get("items")
+    logged = [str(i.get("description", "")) for i in (items if isinstance(items, list) else []) if isinstance(i, dict)]
+    # Exactly this site's two tags, at the start of the line: not another script's "[open-docs-…]".
+    own = [d for d in logged if re.match(r"\s*\[open-docs(-viewer)?\]", d)]
+    if own and "error" not in out:  # a rejected report keeps the first reason it was rejected for
         out["error"] = ENGINE_FAILED + ": " + " ".join(own[0].split())[:160]
     if "error" in out:
         return out
     for k, name in LH_CATS.items():
-        s = l.get("categories", {}).get(k, {}).get("score")
-        if s is not None:
+        s = part(cats, k).get("score")
+        if isinstance(s, (int, float)):
             out[name] = round(s * 100)
     for k, name in LH_AUDITS.items():
-        v = l.get("audits", {}).get(k, {}).get("numericValue")
-        if v is not None:
+        v = part(audits, k).get("numericValue")
+        if isinstance(v, (int, float)):
             out[name] = round(v, 3) if name == "cls" else round(v)
     return out
 
@@ -177,20 +185,31 @@ def merge_pagespeed(result: dict, entries: dict, label: str | None, meta: dict) 
     and `base`, and entries kept from before get the heading they were
     published under.
     """
+    root = {k: result[k] for k in PROVENANCE if k in result}
     if label:
         rows = result.setdefault("docs", {}).setdefault(label, {})
-        old = result.get("docsMeta", {}).get(label) or {k: result[k] for k in PROVENANCE if k in result}
-        result.setdefault("docsMeta", {})[label] = dict(meta)
-        for k, v in meta.items():
-            result.setdefault(k, v)
+        old = result.get("docsMeta", {}).get(label) or root
     else:
         rows = result.setdefault("pages", {})
-        old = {k: result[k] for k in PROVENANCE if k in result}
+        old = root
         # A labelled population from before docsMeta was published under this heading: it keeps it,
-        # or a later partial run of that population would date its untouched rows by this run.
+        # or a later run of the default table would redate it.
         for doc in result.get("docs", {}):
-            result.setdefault("docsMeta", {}).setdefault(doc, dict(old))
+            result.setdefault("docsMeta", {}).setdefault(doc, dict(root))
+    # The table's heading is the run that measured the whole table. A run of some of its pages
+    # must not head rows measured otherwise (two analyses heading rows that had five): its own
+    # rows say theirs.
+    whole = set(rows) <= set(entries)
+    if label:
+        heads = result.setdefault("docsMeta", {})
+        heads[label] = dict(meta) if whole else heads.get(label) or dict(old or meta)
+        for k, v in meta.items():
+            result.setdefault(k, v)
+    elif whole:
         result.update(meta)
+    else:
+        for k, v in meta.items():
+            result.setdefault(k, v)
     for row in rows.values():
         for k, v in old.items():
             row.setdefault(k, v)

@@ -17,7 +17,7 @@ on:
     inputs:
       runs:
         description: "Runs per engine and sample"
-        default: "3"
+        default: "5"
 
 permissions:
   contents: read

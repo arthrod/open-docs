@@ -249,3 +249,32 @@ def test_end_chrome_reports_a_pgrep_that_could_not_run(monkeypatch):
     monkeypatch.setattr(lib.time, "sleep", lambda s: None)
     left = lib.end_chrome("/tmp/p", wait_s=5)
     assert "pgrep exited 3" in left and "cannot read the process table" in left
+
+
+def test_a_malformed_report_is_summarised_not_thrown():
+    """A thrown summary was swallowed by the caller, and the analysis then read as 'no result within 240 s'."""
+    for audits in (None, [], {"errors-in-console": None}, {"errors-in-console": {"details": {"items": None}}},
+                   {"errors-in-console": {"details": {"items": {"a": 1}}}}, {"errors-in-console": {"details": {"items": ["text", 3, None]}}}):
+        out = lib.summarize({"lighthouseVersion": "13", "audits": audits, "categories": {"performance": {"score": 0.5}}})
+        assert out.get("performance") == 50 and "error" not in out, audits
+
+
+def test_only_this_sites_own_console_line_marks_an_engine_failure():
+    report = lambda text: {"audits": {"errors-in-console": {"details": {"items": [{"description": text}]}}}, "categories": {"performance": {"score": 1}}}  # noqa: E731 - a one-line fixture
+    assert lib.summarize(report("[open-docs] WordCraft failed to start"))["error"].startswith(lib.ENGINE_FAILED)
+    assert lib.summarize(report("  [open-docs-viewer] TypeError: Failed to fetch"))["error"].startswith(lib.ENGINE_FAILED)
+    for other in ("[open-docs-evil] something", "[open-docsx] y", "a library said [open-docs] in passing"):
+        assert lib.summarize(report(other)).get("performance") == 100, other
+
+
+def test_a_partial_rerun_keeps_the_heading_of_the_run_that_measured_the_table():
+    five = {"measuredAt": "2026-11-16", "environment": "5 analyses", "base": "b"}
+    two = {"measuredAt": "2026-11-16", "environment": "2 analyses", "base": "b"}
+    out = lib.merge_pagespeed({"pages": {}}, {"e/folio": {}, "e/plate": {}}, "lorem-500", five)
+    out = lib.merge_pagespeed(out, {"e/plate": {}}, "lorem-500", two)
+    assert out["docsMeta"]["lorem-500"]["environment"] == "5 analyses"
+    assert out["docs"]["lorem-500"]["e/plate"]["environment"] == "2 analyses"
+    root = lib.merge_pagespeed({"pages": {}}, {"e/a": {}, "e/b": {}}, None, five)
+    root = lib.merge_pagespeed(root, {"e/a": {}}, None, two)
+    assert root["environment"] == "5 analyses" and root["pages"]["e/a"]["environment"] == "2 analyses"
+    assert lib.merge_pagespeed(root, {"e/a": {}, "e/b": {}}, None, two)["environment"] == "2 analyses"
