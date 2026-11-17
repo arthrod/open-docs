@@ -18,14 +18,14 @@
 import { blob } from "https://esm.town/v/std/blob/main.ts";
 import { unzipSync } from "https://esm.sh/fflate@0.8.2";
 
-export const WORDCRAFT_VERSION = "0.17.0";
+export const WORDCRAFT_VERSION = "0.18.1";
 const ZIP_URL =
   `https://github.com/storytold/wordcraft/releases/download/v${WORDCRAFT_VERSION}/wordcraft-web-${WORDCRAFT_VERSION}.zip`;
-const ZIP_SHA256 = "713f5e4b01427eb262c70e280e55d1354fa530e5a351b9751ebbe37398ea2ed0";
+const ZIP_SHA256 = "3daa7c2d1f209a7eeb2527fcefa3fe31e875848fb1970d68f54edae55fe0bc9f";
 
 /** Runtime files (paths relative to the zip's site folder). */
-export const WORDCRAFT_GLUE = "wordcraft-web-d5f8e062bd3e686e.js";
-export const WORDCRAFT_WASM = "wordcraft-web-d5f8e062bd3e686e_bg.wasm";
+export const WORDCRAFT_GLUE = "wordcraft-web-bc9cdbc0b42827ee.js";
+export const WORDCRAFT_WASM = "wordcraft-web-bc9cdbc0b42827ee_bg.wasm";
 const FILES: Record<string, string> = {
   [WORDCRAFT_GLUE]: "text/javascript; charset=utf-8",
   [WORDCRAFT_WASM]: "application/wasm",
@@ -38,18 +38,32 @@ const key = (path: string) => `od_wordcraft_${WORDCRAFT_VERSION}_${path.replaceA
 
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
-async function gzip(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([new Uint8Array(bytes)]).stream().pipeThrough(new CompressionStream("gzip"));
+async function gzip(bytes: Uint8Array): Promise<Uint8Array<ArrayBuffer>> {
+  const stream = new Blob([bytes.slice()]).stream().pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 let installing: Promise<void> | undefined;
 
+async function fetchWithBackoff(url: string): Promise<Response> {
+  let lastErr: unknown;
+  for (const delay of [200, 600, undefined]) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+      lastErr = new Error(`wordcraft release download: ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+    if (delay !== undefined) await new Promise((r) => setTimeout(r, delay));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 /** Download, verify and store the release's runtime files (once per isolate). */
 function install(): Promise<void> {
   installing ??= (async () => {
-    const res = await fetch(ZIP_URL);
-    if (!res.ok) throw new Error(`wordcraft release download: ${res.status}`);
+    const res = await fetchWithBackoff(ZIP_URL);
     const zip = new Uint8Array(await res.arrayBuffer());
     const digest = hex(await crypto.subtle.digest("SHA-256", zip));
     if (digest !== ZIP_SHA256) throw new Error(`wordcraft release checksum mismatch: ${digest}`);
@@ -59,7 +73,7 @@ function install(): Promise<void> {
     for (const path of Object.keys(FILES)) {
       const bytes = files[root + path];
       if (!bytes) throw new Error(`wordcraft release is missing ${path}`);
-      await blob.set(key(path), new Uint8Array(await gzip(bytes)));
+      await blob.set(key(path), await gzip(bytes));
     }
   })().catch((err) => {
     installing = undefined; // let the next request retry

@@ -20,6 +20,7 @@ import { waitFor } from "/lib/kit.ts";
 import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 import { BUNDLE_URL, WASM_BASE } from "./assets.ts";
+import { stripImagesOutsideCode } from "/lib/markdown-images.ts";
 
 /** One block the engine addressed (dist/session.d.ts's AnchorRef). */
 interface AnchorRef {
@@ -197,19 +198,6 @@ function cellText(cell: Tokens.TableCell): string {
       return tok.tokens ? flatten(tok.tokens) : (tok.text ?? tok.raw ?? "");
     }).join("");
   return cell.tokens?.length ? flatten(cell.tokens) : cell.text;
-}
-
-/** Drop image syntax (`![alt](src)`) but never inside code: fenced blocks and
- * inline code spans are masked out first, so image-shaped text in code survives. */
-function stripImagesOutsideCode(markdown: string): string {
-  const code: string[] = [];
-  const masked = markdown.replace(/```[\s\S]*?(?:```|$)|`[^`\n]*`/g, (m) => {
-    code.push(m);
-    return `\u0000${code.length - 1}\u0000`;
-  });
-  return masked
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/\u0000(\d+)\u0000/g, (_, i) => code[Number(i)]);
 }
 
 /**

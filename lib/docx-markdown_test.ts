@@ -134,3 +134,10 @@ Deno.test("docx: an unmarked level still counts, so the numbered level under it 
   const md = docxToMarkdown(docxWith(p("Part A", "2") + p("a", "2", 1) + p("b", "2", 1) + p("Part B", "2") + p("c", "2", 1), outline));
   assertEquals(md.match(/\d+\. \w/g), ["1. a", "2. b", "1. c"]);
 });
+
+Deno.test("docx: a cell paragraph inside a content control is read, and its list item counts", () => {
+  const table = `<w:tbl><w:tr><w:tc><w:sdt><w:sdtContent>${p("in a control", "2")}</w:sdtContent></w:sdt></w:tc></w:tr></w:tbl>`;
+  const md = docxToMarkdown(docxWith(p("a", "2") + table + p("c", "2"), decimal("1", "2")));
+  assertEquals(md.includes("in a control"), true);
+  assertEquals(md.trim().split("\n").at(-1), "3. c");
+});

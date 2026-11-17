@@ -12,7 +12,8 @@ crate-type = ["cdylib"]
 [dependencies]
 wordcraft-doc = { workspace = true }
 wordcraft-docx = { workspace = true }
-wordcraft-layout = { workspace = true }
+wordcraft-fonts = { workspace = true, default-features = false, features = ["minimal-wasm-fonts"] }
+wordcraft-layout = { workspace = true, default-features = false }
 wordcraft-render = { workspace = true }
 image = { workspace = true }
 wasm-bindgen = "0.2"

@@ -11,7 +11,7 @@
  *                would otherwise download
  *   app → page   `wordcraft:ready` / `wordcraft:failed`
  *
- * v0.17.0 exposes window.wordcraft: assistant edits select the whole story
+ * Since v0.17.0 WordCraft exposes window.wordcraft: assistant edits select the whole story
  * and paste HTML in one native history command. Undo/redo use that API too.
  * Export still uses host-mode F12 / Save As to obtain WordCraft's own .docx;
  * getMarkdown reads that file through lib/docx-markdown.ts. WordCraft's
@@ -21,10 +21,11 @@ import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { waitFor } from "/lib/kit.ts";
 import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
+import { cachedFetch, WORDCRAFT_BASE, WORDCRAFT_GLUE, WORDCRAFT_WASM } from "./prefetch.ts";
 
-const BASE = "/vendor/wordcraft/0.17.0/";
-const GLUE = BASE + "wordcraft-web-d5f8e062bd3e686e.js";
-const WASM = BASE + "wordcraft-web-d5f8e062bd3e686e_bg.wasm";
+const BASE = WORDCRAFT_BASE;
+const GLUE = BASE + WORDCRAFT_GLUE;
+const WASM = BASE + WORDCRAFT_WASM;
 
 interface WordcraftApi {
   execute(command: string, params?: Record<string, unknown>): Promise<unknown>;
@@ -112,7 +113,7 @@ window.od.register({
 
   async mount() {
     canvas = await waitFor<HTMLCanvasElement>("#wordcraft_canvas");
-    window.od.progress("Loading WordCraft (Rust → WebAssembly, 22 MB compressed)…");
+    window.od.progress("Loading WordCraft (Rust → WebAssembly, ~7 MB compressed)…");
     // Listeners first: WordCraft announces itself while init() is still running.
     const ready = new Promise<void>((resolve, reject) => {
       canvas.addEventListener("wordcraft:ready", () => resolve(), { once: true });
@@ -122,14 +123,19 @@ window.od.register({
         { once: true },
       );
     });
-    const glue = await import(GLUE);
-    // Resolved against this module, not the page: on a view-only page served
-    // by another val the .wasm still comes straight from open-docs.
-    await glue.default({ module_or_path: new URL(WASM, import.meta.url).href });
-    await ready;
+    try {
+      const glue = await import(GLUE);
+      // Resolved against this module, not the page: on a view-only page served
+      // by another val the .wasm still comes straight from open-docs.
+      const wasmRes = await cachedFetch(new URL(WASM, import.meta.url).href);
+      await glue.default({ module_or_path: wasmRes });
+      await ready;
+    } finally {
+      document.getElementById("wc-skeleton")?.classList.add("wc-done");
+    }
     // WordCraft follows the OS appearance. The shell is light, so force its
-    // own theme command (v0.17.0 prefs: ui.theme {value}). A failure here must
-    // not stop the mount.
+    // own theme command (prefs: ui.theme {value}). A failure here must not
+    // stop the mount.
     try {
       await window.wordcraft.execute("ui.theme", { value: "light" });
     } catch (err) {
@@ -145,6 +151,11 @@ window.od.register({
 
   load: (bytes) =>
     driving(async () => {
+      const api = (window as unknown as { wordcraft?: { loadDocx?: (b: Uint8Array) => Promise<unknown> } }).wordcraft;
+      if (api?.loadDocx) {
+        await api.loadDocx(bytes);
+        return;
+      }
       open(`${docName}.docx`, bytes);
       await settle();
     }),
@@ -164,9 +175,23 @@ window.od.register({
       await window.wordcraft.execute("edit.paste", { html, text: "" });
     }),
 
-  getMarkdown: () => driving(async () => docxToMarkdown(await saveAsDocx())),
+  getMarkdown: () =>
+    driving(async () => {
+      const api = (window as unknown as { wordcraft?: { getMarkdown?: () => Promise<string> } }).wordcraft;
+      if (api?.getMarkdown) {
+        return await api.getMarkdown();
+      }
+      return docxToMarkdown(await saveAsDocx());
+    }),
 
-  exportDocx: () => driving(() => saveAsDocx()),
+  exportDocx: () =>
+    driving(async () => {
+      const api = (window as unknown as { wordcraft?: { exportDocx?: () => Promise<Uint8Array> } }).wordcraft;
+      if (api?.exportDocx) {
+        return await api.exportDocx();
+      }
+      return saveAsDocx();
+    }),
 
   undo: () => driving(async () => {
     await window.wordcraft.execute("edit.undo");

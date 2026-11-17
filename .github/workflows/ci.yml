@@ -72,9 +72,11 @@ jobs:
       - name: Test the wrapper inside WordCraft
         if: steps.changed.outputs.run == 'true'
         run: |
-          git clone https://github.com/storytold/wordcraft /tmp/wordcraft
+          # The fork's branch wordcraft-web: the wrapper asks wordcraft-fonts for its
+          # minimal-wasm-fonts feature, which upstream WordCraft does not have.
+          git clone https://github.com/arthrod/wordcraft-web /tmp/wordcraft
           cd /tmp/wordcraft
-          git checkout d40d1b27181b61990c84c75f77d5fd23ef81d452
+          git checkout 49d2f021fc120d4cac896931e75eb3810f4e5b58
           mkdir -p apps/wc-render
           cp -r "$GITHUB_WORKSPACE/tools/wordcraft-render/Cargo.toml" "$GITHUB_WORKSPACE/tools/wordcraft-render/src" apps/wc-render/
           cargo test -p wc-render

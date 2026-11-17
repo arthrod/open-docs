@@ -287,11 +287,19 @@ function paragraphBlockOf(p: Element, ctx: Ctx): Block {
   return { kind: "p", align: align as Block["align"], runs };
 }
 
+/** The paragraphs of a table cell in document order, including those inside block-level
+ * content controls (the body reader unwraps the same wrappers). */
+function cellParagraphs(el: Element): Element[] {
+  return [...el.children].flatMap((c) =>
+    c.namespaceURI !== W ? [] : c.localName === "p" ? [c] : c.localName === "sdt" || c.localName === "sdtContent" ? cellParagraphs(c) : []
+  );
+}
+
 function tableMarkdown(tbl: Element, ctx: Ctx, lists: ListState): string {
   // Paragraphs within a cell are joined by a line break.
   const rows = kids(tbl, "tr").map((tr) =>
     kids(tr, "tc").map((tc) =>
-      kids(tc, "p").map((p) => {
+      cellParagraphs(tc).map((p) => {
         // A list item inside a cell prints as plain text, but it still
         // advances its list's counters for later body items.
         const b = paragraphBlock(p, ctx);
