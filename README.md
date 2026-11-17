@@ -174,75 +174,81 @@ Every engine opening each sample from its own Menu. The table on the
 file beside it.
 
 <!-- samples:start -->
-Measured 2026-11-15: Google Chrome (installed, headed) via Playwright, fresh profile per run (cold cache), median of the runs that loaded (3 each; a combination with a failed run was run 3 more times); Darwin arm64.
+Measured 2026-11-17: Google Chrome 156.0.8078.80 (installed, headed) via Playwright, fresh profile per run (cold cache), 5 runs, median; GitHub Actions macos-latest runner (Apple silicon); machine load (1-minute average) median 4.8, highest 10.6, on 3 cores.
 
 **Rich sample (`showcase.docx`, 3 pages)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 306 ms | 306 ms | 9 MB | 313 MB (+21 MB) | 3 | 3 of 3 |
-| Docxodus | 483 ms | 483 ms | 9 MB | 404 MB (+16 MB) | n/a | 3 of 3 |
-| SuperDoc | 505 ms | 505 ms | 21 MB | 468 MB (+27 MB) | 3 | 3 of 3 |
-| Plate | 479 ms | 479 ms | 10 MB | 308 MB (−2 MB) | n/a | 5 of 6 |
-| docen | 185 ms | 185 ms | 26 MB | 360 MB (−2 MB) | n/a | 3 of 3 |
-| docx-editor.dev | 112 ms | 391 ms | 31 MB | 328 MB (+16 MB) | n/a | 3 of 3 |
-| folio | 244 ms | 244 ms | 21 MB | 354 MB (+41 MB) | 3 | 3 of 3 |
-| WordCraft | 480 ms | 480 ms | 3 MB | 470 MB (−109 MB) | n/a | 3 of 3 |
-| Word Online viewer | 222 ms | n/a | n/a | 872 MB (+149 MB) | n/a | 3 of 3 |
-| Google viewer | 410 ms | n/a | n/a | 364 MB (−28 MB) | n/a | 3 of 3 |
-| Apryse WebViewer | 93 ms | 93 ms | 18 MB | 450 MB (−107 MB) | n/a | 3 of 3 |
-| Nutrient | 1.45 s | 1.45 s | 25 MB | 683 MB (+154 MB) | n/a | 3 of 3 |
+| canvas-editor | 842 ms | 842 ms | 9 MB | 546 MB (+67 MB) | 3 | 5 of 5 |
+| Docxodus | 986 ms | 986 ms | 8 MB | 722 MB (+44 MB) | n/a | 5 of 5 |
+| SuperDoc | 1.13 s | 1.13 s | 18 MB | 785 MB (+107 MB) | 3 | 5 of 5 |
+| Plate | 766 ms | 766 ms | 11 MB | 532 MB (+59 MB) | n/a | 5 of 5 |
+| docen | 405 ms | 405 ms | 24 MB | 600 MB (+39 MB) | n/a | 5 of 5 |
+| docx-editor.dev | 255 ms | 1.02 s | 31 MB | 639 MB (+102 MB) | n/a | 5 of 5 |
+| folio | 449 ms | 541 ms | 21 MB | 604 MB (+71 MB) | 3 | 5 of 5 |
+| WordCraft | 582 ms | 582 ms | 3 MB | 1011 MB (+51 MB) | n/a | 5 of 5 |
+| Word Online viewer | 541 ms | n/a | n/a | 925 MB (+94 MB) | n/a | 5 of 5 |
+| Google viewer | 904 ms | n/a | n/a | 643 MB (+20 MB) | n/a | 5 of 5 |
+| Apryse WebViewer | 206 ms | 206 ms | 18 MB | 792 MB (+22 MB) | n/a | 4 of 5 |
+| Nutrient | 4.44 s | 4.44 s | 25 MB | 1143 MB (+268 MB) | n/a | 5 of 5 |
 
 **Redline (`redline.docx`, 3 pages)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 312 ms | 312 ms | 8 MB | 315 MB (+5 MB) | 3 | 3 of 3 |
-| Docxodus | 475 ms | 475 ms | 9 MB | 589 MB (+47 MB) | n/a | 3 of 3 |
-| SuperDoc | 556 ms | 556 ms | 23 MB | 688 MB (+123 MB) | 3 | 3 of 3 |
-| Plate | 440 ms | 440 ms | 12 MB | 338 MB (+41 MB) | n/a | 3 of 3 |
-| docen | 248 ms | 248 ms | 29 MB | 328 MB (−13 MB) | n/a | 4 of 6 |
-| docx-editor.dev | 105 ms | 473 ms | 30 MB | 351 MB (+32 MB) | n/a | 5 of 6 |
-| folio | 239 ms | 239 ms | 17 MB | 372 MB (+25 MB) | 3 | 3 of 3 |
-| WordCraft | 488 ms | 488 ms | 3 MB | 477 MB (−250 MB) | n/a | 5 of 6 |
-| Word Online viewer | 270 ms | n/a | n/a | 723 MB (+132 MB) | n/a | 5 of 6 |
-| Google viewer | 527 ms | n/a | n/a | 397 MB (−13 MB) | n/a | 5 of 6 |
-| Apryse WebViewer | 302 ms | 302 ms | 18 MB | 464 MB (−2 MB) | n/a | 3 of 3 |
-| Nutrient | 1.85 s | 1.85 s | 26 MB | 524 MB (+41 MB) | n/a | 3 of 3 |
+| canvas-editor | 770 ms | 770 ms | 8 MB | 540 MB (+62 MB) | 3 | 5 of 5 |
+| Docxodus | 998 ms | 998 ms | 9 MB | 725 MB (+46 MB) | n/a | 5 of 5 |
+| SuperDoc | 1.44 s | 1.44 s | 19 MB | 824 MB (+150 MB) | 3 | 5 of 5 |
+| Plate | 691 ms | 691 ms | 12 MB | 536 MB (+62 MB) | n/a | 5 of 5 |
+| docen | 420 ms | 420 ms | 28 MB | 608 MB (+46 MB) | n/a | 5 of 5 |
+| docx-editor.dev | 248 ms | 988 ms | 28 MB | 639 MB (+105 MB) | n/a | 4 of 5 |
+| folio | 486 ms | 659 ms | 18 MB | 608 MB (+78 MB) | 3 | 5 of 5 |
+| WordCraft | 513 ms | 513 ms | 4 MB | 1082 MB (+117 MB) | n/a | 5 of 5 |
+| Word Online viewer | 492 ms | n/a | n/a | 1122 MB (+349 MB) | n/a | 5 of 5 |
+| Google viewer | 795 ms | n/a | n/a | 644 MB (+21 MB) | n/a | 5 of 5 |
+| Apryse WebViewer | 305 ms | 305 ms | 19 MB | 790 MB (+22 MB) | n/a | 4 of 5 |
+| Nutrient | 4.44 s | 4.44 s | 25 MB | 1075 MB (+197 MB) | n/a | 5 of 5 |
 
 **500 pages (`lorem-500.docx`)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 9.28 s | 9.36 s | 699 MB | 883 MB (+594 MB) | 637 | 4 of 6 |
-| Docxodus | 2.66 s | 2.66 s | 10 MB | 599 MB (+18 MB) | n/a | 3 of 3 |
-| SuperDoc | 4.88 s | 4.88 s | 37 MB | 778 MB (+320 MB) | 25 | 3 of 3 |
-| Plate | 22.0 s | 22.0 s | 82 MB | 469 MB (+142 MB) | n/a | 5 of 6 |
-| docen | 2.23 s | 284.9 s | 128 MB | 1435 MB (+1069 MB) | n/a | 1 of 4 |
-| docx-editor.dev | 292 ms | 1.03 s | 152 MB | 524 MB (+213 MB) | n/a | 3 of 3 |
-| folio | 9.68 s | 9.68 s | 45 MB | 1371 MB (+1063 MB) | 500 | 3 of 3 |
-| WordCraft | 2.73 s | 2.73 s | 3 MB | 361 MB (−349 MB) | n/a | 3 of 3 |
-| Word Online viewer | 619 ms | n/a | n/a | 756 MB (+199 MB) | n/a | 3 of 3 |
-| Google viewer | 881 ms | n/a | n/a | 412 MB (+32 MB) | n/a | 5 of 6 |
-| Apryse WebViewer | 498 ms | 498 ms | 40 MB | 506 MB (+110 MB) | n/a | 3 of 3 |
-| Nutrient | 7.54 s | 7.54 s | 28 MB | 397 MB (−85 MB) | n/a | 3 of 3 |
+| canvas-editor | 17.1 s | 17.4 s | 699 MB | 1564 MB (+1086 MB) | 637 | 5 of 5 |
+| Docxodus | 4.62 s | 4.62 s | 10 MB | 945 MB (+244 MB) | n/a | 5 of 5 |
+| SuperDoc | 8.31 s | 8.31 s | 37 MB | 1280 MB (+602 MB) | 25 | 5 of 5 |
+| Plate | 36.3 s | 36.9 s | 67 MB | 712 MB (+236 MB) | n/a | 5 of 5 |
+| docen | 5.30 s | still busy after 180 s | 128 MB | 1926 MB (+1364 MB) | n/a | 5 of 5 |
+| docx-editor.dev | 310 ms | 1.68 s | 150 MB | 831 MB (+296 MB) | n/a | 5 of 5 |
+| folio | 9.17 s | 9.17 s | 46 MB | 2569 MB (+2035 MB) | 500 | 5 of 5 |
+| WordCraft | 3.11 s | 3.11 s | 3 MB | 1188 MB (+206 MB) | n/a | 5 of 5 |
+| Word Online viewer | 20.4 s | n/a | n/a | 927 MB (+235 MB) | n/a | 5 of 5 |
+| Google viewer | 1.15 s | n/a | n/a | 664 MB (+39 MB) | n/a | 5 of 5 |
+| Apryse WebViewer | 758 ms | 838 ms | 26 MB | 939 MB (+170 MB) | n/a | 5 of 5 |
+| Nutrient | 14.1 s | 14.1 s | 26 MB | 1093 MB (+213 MB) | n/a | 5 of 5 |
 <!-- samples:end -->
 
 Read these with care:
 
-- **docen on 500 pages** answers "loaded" after 2.2 s and shows page 1, but its
-  main thread stays busy for 4 min 45 s afterwards (one run with a 15-minute
-  limit; the three runs with the usual 4-minute limit all ended with the page
-  not answering). The tab is not usable during that time.
+- **docen on 500 pages** answers "loaded" after about 5 s on the runner and shows
+  page 1, but in all five runs its main thread was still busy when the wait gave
+  up at 180 s, so it has no Settled figure. On an M-series Mac (one run by hand,
+  2026-11-16, not in the data files) it answered after 2.0 s, paused about a
+  second, then ran one task of 162 s and was settled 170 s after the click. The
+  tab is not usable during that time.
 - **canvas-editor** draws 637 pages for the 500 and holds about 700 MB of
-  JavaScript heap; one of its six runs stopped answering.
+  JavaScript heap.
 - **Pages shown** counts what is in the DOM: SuperDoc keeps only the pages near
   the viewport (25), so its number is not a page count of the document.
 - **Renderer memory growth** can be negative: the "before" reading is taken one
   second after startup, when the engine's start-up garbage is still resident.
-- Runs that did not load on the short samples were network failures (the page
-  or a CDN module did not arrive), not the engine refusing the file; they are
-  kept in the dated file.
+- Three of the 180 runs did not load, all on the short samples: docx-editor.dev
+  once (its adapter module never registered, so one of its imports did not
+  arrive), Apryse once with "could not open the document" and once with the
+  page itself answering an error status. Each reason is in the dated file.
+- **Settled cannot see everything**: see the definition below. An engine that
+  starts work more than two seconds after it last kept the thread busy would
+  read as settled before that work.
 
 Re-measure with:
 
@@ -256,10 +262,11 @@ The published figures are taken on a GitHub-hosted macOS runner by the
 `measure/<anything>`), because a timing taken on a laptop that is doing other
 work is slower than the engine. Every run records the machine's load average
 and the Chrome version, so the dated file shows both.
-That runner is a 3-core virtual machine: slower than a recent laptop (about half the speed of the
-M-series Mac the earlier figures came from) and not idle (its load average sits around 2 to 8 on 3 cores, part
-of it Chrome itself). It is used because it runs none of our other work and anyone can repeat the run. Read the
-figures as that machine's; what carries to another machine is the order between engines, not the seconds.
+That runner is a 3-core virtual machine: slower than a recent laptop and not idle (the heading of the tables
+gives the load average over the runs, part of it Chrome itself; a fresh runner starts far busier, which the
+workflow waits out before measuring). It is used because it runs none of our other work and anyone can repeat
+the run. Read the figures as that machine's; what carries to another machine is the order between engines, not
+the seconds.
 
 One (engine, sample) per launch of the installed Google Chrome, headed, with a
 fresh profile. The page opens on its blank document, then the script clicks the
