@@ -1,0 +1,1128 @@
+{
+ "measuredAt": "2026-11-16",
+ "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+ "base": "https://editors.benchmarks.law",
+ "query": "open=lorem-500.docx",
+ "raw": [
+  {
+   "page": "e/superdoc",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 78,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1657,
+    "lcpMs": 1657,
+    "tbtMs": 439,
+    "cls": 0.067,
+    "speedIndexMs": 10909
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 73,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 447,
+    "lcpMs": 447,
+    "tbtMs": 640,
+    "cls": 0.001,
+    "speedIndexMs": 1619
+   }
+  },
+  {
+   "page": "e/docxodus",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 34,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 2268,
+    "lcpMs": 43706,
+    "tbtMs": 5968,
+    "cls": 0.018,
+    "speedIndexMs": 8392
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 36,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 225,
+    "lcpMs": 10837,
+    "tbtMs": 10748,
+    "cls": 0.006,
+    "speedIndexMs": 3918
+   }
+  },
+  {
+   "page": "e/canvas-editor",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/cite-check",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/plate",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/wordcraft",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   }
+  },
+  {
+   "page": "e/eigenpal",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 58,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 454,
+    "lcpMs": 454,
+    "tbtMs": 1016,
+    "cls": 0.122,
+    "speedIndexMs": 4474
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 35,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1814,
+    "lcpMs": 23079,
+    "tbtMs": 2734,
+    "cls": 0.018,
+    "speedIndexMs": 21284
+   }
+  },
+  {
+   "page": "e/docen",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/word-online",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 90,
+    "fcpMs": 222,
+    "lcpMs": 222,
+    "tbtMs": 0,
+    "cls": 0.001,
+    "speedIndexMs": 1842
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 91,
+    "fcpMs": 760,
+    "lcpMs": 760,
+    "tbtMs": 0,
+    "cls": 0.006,
+    "speedIndexMs": 4870
+   }
+  },
+  {
+   "page": "e/google-viewer",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 94,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 91,
+    "fcpMs": 761,
+    "lcpMs": 761,
+    "tbtMs": 214,
+    "cls": 0.004,
+    "speedIndexMs": 4044
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 83,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 90,
+    "fcpMs": 231,
+    "lcpMs": 231,
+    "tbtMs": 334,
+    "cls": 0.001,
+    "speedIndexMs": 1805
+   }
+  },
+  {
+   "page": "e/folio",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 61,
+    "accessibility": 84,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 446,
+    "lcpMs": 446,
+    "tbtMs": 16013,
+    "cls": 0.001,
+    "speedIndexMs": 4668
+   }
+  },
+  {
+   "page": "e/nutrient",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   }
+  },
+  {
+   "page": "e/apryse",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 68,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 222,
+    "lcpMs": 222,
+    "tbtMs": 960,
+    "cls": 0.0,
+    "speedIndexMs": 1995
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 67,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 790,
+    "lcpMs": 790,
+    "tbtMs": 1592,
+    "cls": 0.003,
+    "speedIndexMs": 6717
+   }
+  },
+  {
+   "page": "e/superdoc",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 73,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1657,
+    "lcpMs": 1657,
+    "tbtMs": 865,
+    "cls": 0.007,
+    "speedIndexMs": 6546
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 69,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 483,
+    "lcpMs": 1013,
+    "tbtMs": 750,
+    "cls": 0.001,
+    "speedIndexMs": 1839
+   }
+  },
+  {
+   "page": "e/docxodus",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 36,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 214,
+    "lcpMs": 10841,
+    "tbtMs": 10834,
+    "cls": 0.006,
+    "speedIndexMs": 3947
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "error": "PAGE_HUNG: Lighthouse was unable to reliably load the URL you requested because the page stopped responding."
+   }
+  },
+  {
+   "page": "e/docen",
+   "error": "Error: Page.goto: net::ERR_ABORTED at https://pagespeed.web.dev/analysis?url=https%3A%2F%2Feditors.benchmarks.law%2Fe%2Fdocen%3Fopen%3Dlorem-500.docx\nCall log:\n  - navigating to \"https://pagespeed.web"
+  },
+  {
+   "page": "e/canvas-editor",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 70,
+    "accessibility": 94,
+    "bestPractices": 100,
+    "seo": 80,
+    "fcpMs": 217,
+    "lcpMs": 217,
+    "tbtMs": 9980,
+    "cls": 0.004,
+    "speedIndexMs": 698
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+   }
+  },
+  {
+   "page": "e/eigenpal",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 59,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 454,
+    "lcpMs": 454,
+    "tbtMs": 938,
+    "cls": 0.122,
+    "speedIndexMs": 4238
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 34,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 2566,
+    "lcpMs": 23046,
+    "tbtMs": 2047,
+    "cls": 0.018,
+    "speedIndexMs": 19307
+   }
+  },
+  {
+   "page": "e/folio",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 61,
+    "accessibility": 84,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 445,
+    "lcpMs": 445,
+    "tbtMs": 10614,
+    "cls": 0.001,
+    "speedIndexMs": 3808
+   }
+  },
+  {
+   "page": "e/wordcraft",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   }
+  },
+  {
+   "page": "e/word-online",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 96,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 91,
+    "fcpMs": 762,
+    "lcpMs": 762,
+    "tbtMs": 0,
+    "cls": 0.006,
+    "speedIndexMs": 5119
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 95,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 90,
+    "fcpMs": 222,
+    "lcpMs": 222,
+    "tbtMs": 0,
+    "cls": 0.074,
+    "speedIndexMs": 2008
+   }
+  },
+  {
+   "page": "e/google-viewer",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 125,
+    "cls": 0.001,
+    "speedIndexMs": 1226
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 84,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 91,
+    "fcpMs": 774,
+    "lcpMs": 774,
+    "tbtMs": 510,
+    "cls": 0.004,
+    "speedIndexMs": 4548
+   }
+  },
+  {
+   "page": "e/nutrient",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 86,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 300,
+    "cls": 0.002,
+    "speedIndexMs": 1383
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   }
+  },
+  {
+   "page": "e/apryse",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 70,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 764,
+    "lcpMs": 764,
+    "tbtMs": 1090,
+    "cls": 0,
+    "speedIndexMs": 7160
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 68,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 222,
+    "lcpMs": 222,
+    "tbtMs": 848,
+    "cls": 0.0,
+    "speedIndexMs": 2118
+   }
+  },
+  {
+   "page": "e/cite-check",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/plate",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/superdoc",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 44,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 16217,
+    "lcpMs": 16217,
+    "tbtMs": 428,
+    "cls": 0.067,
+    "speedIndexMs": 16217
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 75,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 447,
+    "lcpMs": 447,
+    "tbtMs": 427,
+    "cls": 0.011,
+    "speedIndexMs": 2741
+   }
+  },
+  {
+   "page": "e/docxodus",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 35,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 7926,
+    "tbtMs": 4672,
+    "cls": 0.006,
+    "speedIndexMs": 6172
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 36,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 781,
+    "lcpMs": 43562,
+    "tbtMs": 11158,
+    "cls": 0.018,
+    "speedIndexMs": 9344
+   }
+  },
+  {
+   "page": "e/canvas-editor",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+   }
+  },
+  {
+   "page": "e/cite-check",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/plate",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/eigenpal",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 63,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 452,
+    "lcpMs": 452,
+    "tbtMs": 923,
+    "cls": 0.04,
+    "speedIndexMs": 4059
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 63,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1659,
+    "lcpMs": 1659,
+    "tbtMs": 1519,
+    "cls": 0.018,
+    "speedIndexMs": 18121
+   }
+  },
+  {
+   "page": "e/wordcraft",
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   }
+  },
+  {
+   "page": "e/folio",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 36,
+    "accessibility": 86,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 1660,
+    "lcpMs": 17298,
+    "tbtMs": 9498,
+    "cls": 0.018,
+    "speedIndexMs": 8910
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 61,
+    "accessibility": 84,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 448,
+    "lcpMs": 448,
+    "tbtMs": 11684,
+    "cls": 0.001,
+    "speedIndexMs": 4001
+   }
+  },
+  {
+   "page": "e/docen",
+   "desktop": {
+    "version": "13.6.0",
+    "error": "PAGE_HUNG: Lighthouse was unable to reliably load the URL you requested because the page stopped responding."
+   }
+  },
+  {
+   "page": "e/word-online",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 98,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 91,
+    "fcpMs": 776,
+    "lcpMs": 776,
+    "tbtMs": 0,
+    "cls": 0.006,
+    "speedIndexMs": 4294
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 95,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 90,
+    "fcpMs": 209,
+    "lcpMs": 488,
+    "tbtMs": 0,
+    "cls": 0.076,
+    "speedIndexMs": 2056
+   }
+  },
+  {
+   "page": "e/google-viewer",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 124,
+    "cls": 0.001,
+    "speedIndexMs": 1219
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 94,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 91,
+    "fcpMs": 759,
+    "lcpMs": 759,
+    "tbtMs": 222,
+    "cls": 0.004,
+    "speedIndexMs": 4047
+   }
+  },
+  {
+   "page": "e/nutrient",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 90,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 759,
+    "lcpMs": 759,
+    "tbtMs": 349,
+    "cls": 0.007,
+    "speedIndexMs": 4086
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   }
+  },
+  {
+   "page": "e/apryse",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 77,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 209,
+    "lcpMs": 209,
+    "tbtMs": 492,
+    "cls": 0.0,
+    "speedIndexMs": 1461
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 77,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 1595,
+    "lcpMs": 1595,
+    "tbtMs": 652,
+    "cls": 0,
+    "speedIndexMs": 6442
+   }
+  },
+  {
+   "page": "e/superdoc",
+   "error": "PageSpeed refused the address: Unable to resolve https://editors.benchmarks.law/e/superdoc?open=lorem-500.docx. Try checking the URL for validity."
+  },
+  {
+   "page": "e/docxodus",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 35,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 2270,
+    "lcpMs": 43844,
+    "tbtMs": 5549,
+    "cls": 0.018,
+    "speedIndexMs": 7799
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 35,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 7927,
+    "tbtMs": 4939,
+    "cls": 0.006,
+    "speedIndexMs": 6209
+   }
+  },
+  {
+   "page": "e/docen",
+   "error": "PageSpeed refused the address: Oops! Something went wrong."
+  },
+  {
+   "page": "e/cite-check",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/canvas-editor",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/plate",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/wordcraft",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   }
+  },
+  {
+   "page": "e/word-online",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 758,
+    "lcpMs": 758,
+    "tbtMs": 0,
+    "cls": 0.006,
+    "speedIndexMs": 1129
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 96,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 90,
+    "fcpMs": 222,
+    "lcpMs": 222,
+    "tbtMs": 0,
+    "cls": 0.075,
+    "speedIndexMs": 1809
+   }
+  },
+  {
+   "page": "e/google-viewer",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 805,
+    "lcpMs": 805,
+    "tbtMs": 0,
+    "cls": 0.005,
+    "speedIndexMs": 1398
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 90,
+    "fcpMs": 239,
+    "lcpMs": 239,
+    "tbtMs": 112,
+    "cls": 0.001,
+    "speedIndexMs": 1510
+   }
+  },
+  {
+   "page": "e/eigenpal",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 60,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 451,
+    "lcpMs": 451,
+    "tbtMs": 2022,
+    "cls": 0.04,
+    "speedIndexMs": 5870
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 35,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1810,
+    "lcpMs": 22989,
+    "tbtMs": 3398,
+    "cls": 0.018,
+    "speedIndexMs": 23161
+   }
+  },
+  {
+   "page": "e/nutrient",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   }
+  },
+  {
+   "page": "e/folio",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 37,
+    "accessibility": 86,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 1655,
+    "lcpMs": 1655,
+    "tbtMs": 18432,
+    "cls": 0.598,
+    "speedIndexMs": 20712
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 60,
+    "accessibility": 84,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 445,
+    "lcpMs": 445,
+    "tbtMs": 15676,
+    "cls": 0.001,
+    "speedIndexMs": 4860
+   }
+  },
+  {
+   "page": "e/apryse",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 68,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 222,
+    "lcpMs": 222,
+    "tbtMs": 852,
+    "cls": 0.0,
+    "speedIndexMs": 2192
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 64,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 787,
+    "lcpMs": 787,
+    "tbtMs": 1408,
+    "cls": 0.076,
+    "speedIndexMs": 11993
+   }
+  },
+  {
+   "page": "e/superdoc",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 77,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1716,
+    "lcpMs": 1716,
+    "tbtMs": 599,
+    "cls": 0.0,
+    "speedIndexMs": 7539
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 71,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 447,
+    "lcpMs": 447,
+    "tbtMs": 716,
+    "cls": 0.001,
+    "speedIndexMs": 1870
+   }
+  },
+  {
+   "page": "e/docxodus",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 34,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 2269,
+    "lcpMs": 43711,
+    "tbtMs": 7744,
+    "cls": 0.018,
+    "speedIndexMs": 9070
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 36,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 218,
+    "lcpMs": 9669,
+    "tbtMs": 8167,
+    "cls": 0.006,
+    "speedIndexMs": 4131
+   }
+  },
+  {
+   "page": "e/canvas-editor",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+   }
+  },
+  {
+   "page": "e/cite-check",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/plate",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/eigenpal",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 39,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1661,
+    "lcpMs": 21858,
+    "tbtMs": 1368,
+    "cls": 0.018,
+    "speedIndexMs": 19706
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 60,
+    "accessibility": 97,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 452,
+    "lcpMs": 452,
+    "tbtMs": 1542,
+    "cls": 0.04,
+    "speedIndexMs": 4989
+   }
+  },
+  {
+   "page": "e/wordcraft",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://editors.benchmarks.law/vendor/wordcraft/0.17.0/wordcraft-web-d5f8"
+   }
+  },
+  {
+   "page": "e/docen",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/word-online",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 91,
+    "fcpMs": 788,
+    "lcpMs": 788,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 4440
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 97,
+    "accessibility": 100,
+    "bestPractices": 73,
+    "seo": 90,
+    "fcpMs": 222,
+    "lcpMs": 222,
+    "tbtMs": 0,
+    "cls": 0.075,
+    "speedIndexMs": 1457
+   }
+  },
+  {
+   "page": "e/google-viewer",
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 56,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 91,
+    "fcpMs": 5142,
+    "lcpMs": 5142,
+    "tbtMs": 420,
+    "cls": 0,
+    "speedIndexMs": 6471
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 89,
+    "accessibility": 100,
+    "bestPractices": 54,
+    "seo": 90,
+    "fcpMs": 240,
+    "lcpMs": 240,
+    "tbtMs": 152,
+    "cls": 0.001,
+    "speedIndexMs": 3334
+   }
+  },
+  {
+   "page": "e/folio",
+   "mobile": {
+    "version": "13.6.0",
+    "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 61,
+    "accessibility": 84,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 446,
+    "lcpMs": 446,
+    "tbtMs": 15142,
+    "cls": 0.001,
+    "speedIndexMs": 4700
+   }
+  },
+  {
+   "page": "e/nutrient",
+   "desktop": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/nutrient-viewer-lib/gdpicture-ee16ef49/"
+   }
+  },
+  {
+   "page": "e/apryse",
+   "desktop": {
+    "version": "13.6.0",
+    "performance": 77,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 209,
+    "lcpMs": 209,
+    "tbtMs": 438,
+    "cls": 0.0,
+    "speedIndexMs": 1960
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "performance": 63,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 1623,
+    "lcpMs": 1623,
+    "tbtMs": 1919,
+    "cls": 0,
+    "speedIndexMs": 8379
+   }
+  }
+ ]
+}

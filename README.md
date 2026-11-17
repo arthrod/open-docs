@@ -285,42 +285,58 @@ computer that asks. The four category scores (0 to 100) and the lab metrics, sho
 <!-- lighthouse:start -->
 **Blank document (the page as it opens)**
 
-Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 3 analyses per page, median. Cells read desktop · mobile; accessibility, best practices and SEO are the desktop scores.
+Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result. Cells read desktop · mobile; accessibility, best practices and SEO are the desktop scores.
 
 | Page | Performance | LCP | TBT | CLS | FCP | Speed Index | Accessibility | Best practices | SEO | Performance, each analysis |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| canvas-editor | 100 · 73 | 218 ms · 1.82 s | 7 ms · 50 ms | 0 · 0.594 | 218 ms · 1.69 s | 924 ms · 4.61 s | 94 | 100 | 80 | 99/100/100 · 73/73/80 |
-| cite-check | 100 · 95 | 214 ms · 1.83 s | 4 ms · 0 ms | 0 · 0.006 | 214 ms · 1.83 s | 890 ms · 4.73 s | 94 | 100 | 80 | 100/100/100 · 99/95/95 |
-| Docxodus | 66 · 48 | 1.07 s · 18.8 s | 828 ms · 905 ms | 0.006 · 0.018 | 230 ms · 1.72 s | 2.29 s · 6.09 s | 96 | 100 | 90 | 66/78/43 · 47/77/48 |
-| SuperDoc | 73 · 76 | 450 ms · 1.66 s | 516 ms · 499 ms | 0.001 · 0 | 450 ms · 1.66 s | 2.12 s · 8.58 s | 100 | 100 | 90 | 73/68/74 · 78/72/76 |
-| Plate | 99 · 98 | 213 ms · 762 ms | 58 ms · 34 ms | 0 · 0.018 | 213 ms · 762 ms | 994 ms · 3.74 s | 92 | 100 | 90 | 99/99/100 · 97/98/99 |
-| docen | 72 · 72 | 225 ms · 1.67 s | 539 ms · 734 ms | 0 · 0.024 | 225 ms · 1.67 s | 2.39 s · 8.79 s | 79 | 88 | 90 | 73/69/72 · 73/60/72 |
-| docx-editor.dev | 95 · 83 | 449 ms · 1.81 s | 80 ms · 123 ms | 0 · 0.018 | 449 ms · 1.66 s | 2.12 s · 8.38 s | 97 | 100 | 90 | 95/97/95 · 90/66/83 |
-| folio | 72 · 50 | 445 ms · 1.66 s | 563 ms · 777 ms | 0 · 0.598 | 445 ms · 1.66 s | 2.24 s · 7.21 s | 81 | 96 | 90 | 72/72/71 · 50/49/62 |
-| WordCraft | 100 · 97 | 567 ms · 2.40 s | 0 ms · 0 ms | 0.022 · 0.018 | 211 ms · 765 ms | 798 ms · 2.67 s | 100 | 96 | 90 | 100/100/100 · 97/97/97 |
-| Word Online viewer | 98 · 93 | 212 ms · 2.08 s | 0 ms · 0 ms | 0.001 · 0 | 212 ms · 2.08 s | 1.38 s · 6.53 s | 100 | 73 | 90 | 100/97/98 · 93/93/84 |
-| Google viewer | 93 · 87 | 224 ms · 761 ms | 186 ms · 302 ms | 0.001 · 0.004 | 224 ms · 761 ms | 1.55 s · 6.43 s | 100 | 54 | 90 | 93/91/100 · 97/57/87 |
-| Apryse WebViewer | 70 · 79 | 212 ms · 777 ms | 506 ms · 644 ms | 0 · 0.003 | 212 ms · 777 ms | 4.74 s · 5.61 s | 100 | 96 | 90 | 70/60/70 · 79/98/74 |
-| Nutrient | 75 · 61 | 2.19 s · 11.0 s | 279 ms · 341 ms | 0.002 · 0.007 | 211 ms · 2.10 s | 1.81 s · 6.90 s | 100 | 96 | 90 | 75/75/86 · 61/77/49 |
+| canvas-editor | 100 · 95 | 231 ms · 1.84 s | 10 ms · 6 ms | 0 · 0 | 231 ms · 1.84 s | 813 ms · 4.73 s | 94 | 100 | 80 | 100/100/100/100/100 · 95/82/95/96/72 |
+| cite-check | 100 · 95 | 214 ms · 1.82 s | 20 ms · 0 ms | 0 · 0 | 214 ms · 1.82 s | 656 ms · 4.69 s | 94 | 100 | 80 | 100/100/100/100/100 · 95/95/95/95/96 |
+| Docxodus | 59 · 77 | 3.37 s · 783 ms | 559 ms · 837 ms | 0.006 · 0.018 | 214 ms · 778 ms | 1.77 s · 4.61 s | 96 | 100 | 90 | 72/59/50/67/45 · 78/87/70/51/77 |
+| SuperDoc | 71 · 69 | 447 ms · 1.66 s | 720 ms · 547 ms | 0.001 · 0.067 | 447 ms · 1.66 s | 1.98 s · 10.6 s | 100 | 100 | 90 | 71/76/72/68/68 · 69/71/43/75/45 |
+| Plate | 100 · 99 | 228 ms · 772 ms | 81 ms · 27 ms | 0 · 0.018 | 228 ms · 772 ms | 878 ms · 3.35 s | 92 | 100 | 90 | 100/97/96/100/100 · 99/99/99/98/99 |
+| docen | 73 · 75 | 224 ms · 773 ms | 585 ms · 748 ms | 0 · 0.024 | 224 ms · 773 ms | 1.85 s · 6.82 s | 79 | 88 | 90 | 74/71/75/71/73 · 77/75/75/70/82 |
+| docx-editor.dev | 97 · 67 | 449 ms · 19.4 s | 57 ms · 51 ms | 0 · 0.018 | 449 ms · 1.66 s | 1.69 s · 7.09 s | 97 | 100 | 90 | 96/97/98/94/100 · 92/93/59/67/66 |
+| folio | 89 · 61 | 445 ms · 1.66 s | 256 ms · 379 ms | 0 · 0.037 | 445 ms · 1.66 s | 1.63 s · 5.92 s | 81 | 96 | 90 | 91/81/89/78/89 · 50/40/63/61/99 |
+| WordCraft | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://edit | | | | | | | | | |
+| Word Online viewer | 96 · 97 | 212 ms · 1.60 s | 0 ms · 0 ms | 0.074 · 0 | 212 ms · 1.42 s | 1.80 s · 4.30 s | 100 | 73 | 90 | 96/96/95/97/96 · 92/100/97/90/99 |
+| Google viewer | 98 · 96 | 212 ms · 1.22 s | 100 ms · 56 ms | 0.001 · 0 | 212 ms · 1.22 s | 1.37 s · 3.90 s | 100 | 54 | 90 | 99/100/88/98/89 · 99/100/61/89/96 |
+| Apryse WebViewer | 68 · 73 | 224 ms · 769 ms | 858 ms · 848 ms | 0 · 0.003 | 224 ms · 769 ms | 2.08 s · 6.50 s | 100 | 96 | 90 | 70/68/68/72/66 · 77/74/69/72/73 |
+| Nutrient | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.co | | | | | | | | | |
 
 **Opening the 500 pages sample (`?open=lorem-500.docx`)**
 
 | Page | Performance | LCP | TBT | CLS | FCP | Speed Index | Accessibility | Best practices | SEO | Performance, each analysis |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| canvas-editor | 70 · 12 | 216 ms · 7.01 s | 10.0 s · 10.2 s | 0.004 · 0.827 | 216 ms · 1.62 s | 739 ms · 22.8 s | 94 | 100 | 80 | fail/70/fail · fail/12/fail |
+| canvas-editor | 70 · n/a | 217 ms · n/a | 9.98 s · n/a | 0.004 · n/a | 217 ms · n/a | 698 ms · n/a | 94 | 100 | 80 | fail/70/fail/fail/fail · fail/fail/fail/fail/fail |
 | cite-check | **no result**: PageSpeed gave no result within 240 s: the page never finished loading for it | | | | | | | | | |
-| Docxodus | 36 · 35 | 10.2 s · 43.8 s | 9.74 s · 8.38 s | 0.006 · 0.018 | 224 ms · 1.53 s | 3.70 s · 8.94 s | 96 | 100 | 90 | 35/37/36 · 37/34/fail |
-| SuperDoc | 71 · 70 | 450 ms · 1.66 s | 683 ms · 671 ms | 0.001 · 0.001 | 450 ms · 1.66 s | 1.83 s · 8.04 s | 100 | 100 | 90 | 77/69/71 · 70/49/78 |
+| Docxodus | 36 · 34 | 9.67 s · 43.7 s | 8.17 s · 6.86 s | 0.006 · 0.018 | 214 ms · 2.27 s | 4.13 s · 8.73 s | 96 | 100 | 90 | 36/36/35/35/36 · 34/fail/36/35/34 |
+| SuperDoc | 72 · 75 | 447 ms · 1.69 s | 678 ms · 519 ms | 0.001 · 0.037 | 447 ms · 1.69 s | 1.85 s · 9.22 s | 100 | 100 | 90 | 73/69/75/fail/71 · 78/73/44/fail/77 |
 | Plate | **no result**: PageSpeed gave no result within 240 s: the page never finished loading for it | | | | | | | | | |
-| docen | **no result**: PageSpeed gave no result within 240 s: the page never finished loading for it | | | | | | | | | |
-| docx-editor.dev | 60 · 40 | 452 ms · 18.3 s | 1.15 s · 2.06 s | 0.122 · 0.018 | 452 ms · 1.66 s | 4.68 s · 20.9 s | 97 | 100 | 90 | 57/60/60 · 59/40/36 |
-| folio | 60 · 37 | 448 ms · 1.66 s | 12.9 s · 10.3 s | 0.001 · 0.598 | 448 ms · 1.66 s | 4.89 s · 16.1 s | 84 | 96 | 91 | 60/61/60 · 37/37/37 |
-| WordCraft | 100 · 97 | 566 ms · 2.41 s | 0 ms · 0 ms | 0.022 · 0.018 | 225 ms · 776 ms | 755 ms · 2.85 s | 100 | 96 | 90 | 100/100/100 · 96/97/98 |
-| Word Online viewer | 93 · 96 | 223 ms · 772 ms | 0 ms · 0 ms | 0.075 · 0 | 223 ms · 772 ms | 2.48 s · 5.49 s | 100 | 73 | 90 | 93/90/93 · 96/95/96 |
-| Google viewer | 78 · 57 | 258 ms · 5.50 s | 438 ms · 296 ms | 0.001 · 0 | 211 ms · 5.50 s | 1.67 s · 7.15 s | 100 | 54 | 90 | 78/98/62 · 57/96/45 |
-| Apryse WebViewer | 60 · 66 | 211 ms · 1.58 s | 1.57 s · 1.59 s | 0 · 0 | 211 ms · 781 ms | 6.10 s · 9.72 s | 100 | 96 | 90 | 60/60/76 · 73/35/66 |
-| Nutrient | 72 · 78 | 514 ms · 776 ms | 573 ms · 383 ms | 0.002 · 0.007 | 225 ms · 776 ms | 1.64 s · 4.50 s | 100 | 96 | 90 | 72/75/71 · 89/78/49 |
+| docen | **no result**: PAGE_HUNG: Lighthouse was unable to reliably load the URL you requested because the page stopped responding. | | | | | | | | | |
+| docx-editor.dev | 60 · 35 | 452 ms · 23.0 s | 1.02 s · 2.05 s | 0.04 · 0.018 | 452 ms · 1.81 s | 4.47 s · 19.7 s | 97 | 100 | 90 | 58/59/63/60/60 · 35/34/63/35/39 |
+| folio | 61 · 36 | 446 ms · 9.48 s | 15.1 s · 14.0 s | 0.001 · 0.308 | 446 ms · 1.66 s | 4.67 s · 14.8 s | 84 | 96 | 91 | 61/61/61/60/61 · fail/fail/36/37/fail |
+| WordCraft | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://edit | | | | | | | | | |
+| Word Online viewer | 96 · 97 | 222 ms · 762 ms | 0 ms · 0 ms | 0.075 · 0.006 | 222 ms · 762 ms | 1.84 s · 4.44 s | 100 | 73 | 90 | 97/95/95/96/97 · 97/96/98/100/97 |
+| Google viewer | 97 · 94 | 231 ms · 774 ms | 125 ms · 222 ms | 0.001 · 0.004 | 231 ms · 774 ms | 1.51 s · 4.05 s | 100 | 54 | 90 | 83/97/97/97/89 · 94/84/94/100/56 |
+| Apryse WebViewer | 68 · 67 | 222 ms · 790 ms | 848 ms · 1.41 s | 0 · 0 | 222 ms · 790 ms | 2.00 s · 7.16 s | 100 | 96 | 90 | 68/68/77/68/77 · 67/70/77/64/63 |
+| Nutrient | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.co | | | | | | | | | |
 <!-- lighthouse:end -->
+
+Read these with care:
+
+- **WordCraft and Nutrient have no score.** On Google's machine their engines (about 60 and 70 MB) do not
+  download, the page shows "failed to start", and an error box paints fast: the scores published here before
+  2026-11-16 (WordCraft 100, Nutrient 74) were of that failure page. The measuring script now reads the page's
+  own console error from the report and records such an analysis as a failure. Why the download fails there is
+  not known; the same files download normally in a browser and with `curl`.
+- **A score is a median of five analyses, and the analyses disagree**: the last column lists each one. Mobile
+  scores of the same page ten minutes apart differ by 30 points or more for several engines.
+- **PageSpeed sometimes refuses an address** ("Unable to resolve …") that it analyses a minute later. Those are
+  listed as `fail`, with PageSpeed's own words in the data file.
+- **On the 500 pages, LCP is mostly this site's frame**, which paints before any document. What the document
+  costs shows in TBT and in the analyses that never finished (`fail`).
+- **`?open=<file>`**: an editor mounts on a blank document and then opens the file from its Menu; a view-only
+  engine starts on the file. Before 2026-11-16 a view-only engine loaded the rich sample first and then the file.
 
 ## The assistant
 

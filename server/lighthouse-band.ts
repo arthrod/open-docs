@@ -98,8 +98,10 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
   if (!blank) return "";
   const long = table(data.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx", data.docsMeta?.["lorem-500"] ?? data);
   const longBlock = long
-    ? `<h3 class="smp-h" id="lighthouse-lorem-500">Opening the 500 pages sample <small>each page with <code>?open=lorem-500.docx</code>, which presses the Menu's own button once the editor is ready</small></h3>
-  <p class="sec-copy">PageSpeed gives a page a fixed time to load; an engine still working when it ends is scored on what it had drawn.${
+    ? `<h3 class="smp-h" id="lighthouse-lorem-500">Opening the 500 pages sample <small>each page with <code>?open=lorem-500.docx</code>: an editor opens it from its Menu once it is ready, a view-only engine starts on it</small></h3>
+  <p class="sec-copy">PageSpeed gives a page a fixed time to load; an engine still working when it ends is scored on what it had drawn.
+  LCP here is mostly this site's own frame, which paints before any document: what the 500 pages cost shows in TBT, and in the analyses that never finished.
+  An engine that could not start on Google's machine has no score: a failed page paints fast, and its score would flatter it.${
       data.docsMeta?.["lorem-500"] ? ` Measured ${esc(data.docsMeta["lorem-500"].measuredAt)}: ${esc(data.docsMeta["lorem-500"].environment)}.` : ""
     }</p>
   ${long}`
