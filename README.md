@@ -256,6 +256,10 @@ The published figures are taken on a GitHub-hosted macOS runner by the
 `measure/<anything>`), because a timing taken on a laptop that is doing other
 work is slower than the engine. Every run records the machine's load average
 and the Chrome version, so the dated file shows both.
+That runner is a 3-core virtual machine: slower than a recent laptop (about half the speed of the
+M-series Mac the earlier figures came from) and not idle (its load average sits around 2 to 8 on 3 cores, part
+of it Chrome itself). It is used because it runs none of our other work and anyone can repeat the run. Read the
+figures as that machine's; what carries to another machine is the order between engines, not the seconds.
 
 One (engine, sample) per launch of the installed Google Chrome, headed, with a
 fresh profile. The page opens on its blank document, then the script clicks the

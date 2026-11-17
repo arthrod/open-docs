@@ -1,9 +1,10 @@
 name: Measure
 
-# Every editor opening the three samples, on a machine that does nothing else:
+# Every editor opening the three samples, on a machine that runs none of our other work
+# (3 cores, slower than a laptop, and not idle: every run records its load):
 # a GitHub-hosted macOS runner (Apple silicon), the installed Google Chrome,
-# headed. A timing taken on a busy laptop is slower than the engine; here the
-# load average recorded with every run shows the machine was idle.
+# headed. A timing taken on a busy laptop is slower than the engine; the
+# load average is recorded with every run.
 #
 # Runs when a branch named measure/<anything> is pushed (a workflow that is not
 # on the default branch cannot be started by hand), or by hand once it is. The
@@ -31,7 +32,7 @@ jobs:
     env:
       MEASURE_WHERE: GitHub Actions macos-latest runner (Apple silicon)
       # docen keeps the main thread busy for minutes on the 500 pages: the page must be given time to answer.
-      OD_TIMEOUT_S: "600"
+      OD_TIMEOUT_S: "300"
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
@@ -42,7 +43,7 @@ jobs:
           sysctl -n machdep.cpu.brand_string hw.ncpu hw.memsize
       - name: Every engine, every sample
         run: |
-          uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 "${{ inputs.runs || '3' }}" \
+          uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 "${{ inputs.runs || '5' }}" \
             --out "docs/samples/$(date +%F).json" --latest docs/samples/latest.json --shots shots
       - name: README tables from the new files
         run: python3 scripts/readme_tables.py
