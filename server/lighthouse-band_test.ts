@@ -77,3 +77,17 @@ Deno.test("a page analysed on another address says so, and its link analyses tha
   assertEquals(html.includes("https://open-docs.val.run</small>"), true);
   assertEquals(html.includes(encodeURIComponent("https://open-docs.val.run/e/folio")), true);
 });
+
+Deno.test("a 500-page row is compared with its own table's address, not the default table's", () => {
+  const meta = { measuredAt: "2026-11-10", environment: "Lighthouse 13.5" };
+  const html = lighthouseBand(editors, {
+    ...meta, base: "https://a.example", pages: { "e/folio": { desktop: page(), mobile: page() } },
+    docsMeta: { "lorem-500": { ...meta, base: "https://b.example" } },
+    docs: { "lorem-500": {
+      "e/folio": { desktop: page(), mobile: page(), ...meta, base: "https://a.example" },
+      "e/plate": { desktop: page(), mobile: page(), ...meta, base: "https://b.example" },
+    } },
+  } as unknown as LighthouseResults);
+  assertEquals(html.includes("https://a.example</small>"), true); // measured on the other address than its table
+  assertEquals(html.includes("https://b.example</small>"), false); // on its table's own address: nothing to say
+});

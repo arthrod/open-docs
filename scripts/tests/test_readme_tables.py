@@ -65,3 +65,12 @@ def test_a_row_measured_on_another_machine_the_same_day_says_so():
     page = {"performance": 66, "accessibility": 96, "bestPractices": 100, "seo": 90, "fcpMs": 230, "lcpMs": 1072, "tbtMs": 828, "cls": 0.006, "speedIndexMs": 2292, "performanceRuns": [66], "error": None}
     lh = {"measuredAt": "2026-11-16", "environment": "PSI", "pages": {"e/folio": {"desktop": page, "mobile": page, "measuredAt": "2026-11-16", "environment": "PSI, 2 analyses"}}}
     assert "| folio (measured 2026-11-16: PSI, 2 analyses) |" in rt.lighthouse_block(lh)
+
+
+def test_a_lighthouse_row_analysed_on_another_address_says_so():
+    page = {"performance": 66, "performanceRuns": [66], "error": None}
+    lh = {"measuredAt": "2026-11-16", "environment": "PSI", "base": "https://a.example",
+          "pages": {"e/folio": {"desktop": page, "mobile": page, "measuredAt": "2026-11-16", "environment": "PSI", "base": "https://b.example"},
+                    "e/plate": {"desktop": page, "mobile": page, "measuredAt": "2026-11-16", "environment": "PSI", "base": "https://a.example"}}}
+    out = rt.lighthouse_block(lh)
+    assert "| folio (measured 2026-11-16 on https://b.example) |" in out and "| Plate |" in out

@@ -44,7 +44,7 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import chrome_note, end_chrome, load_note, machine_load, merge_latest, runs_note, sample_row
+from measure_lib import chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, stopped_path
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
@@ -93,9 +93,14 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
         ctx = await pw.chromium.launch_persistent_context(
             profile, channel="chrome", headless=False, viewport={"width": 1280, "height": 900}
         )
-        # Keep these page loads out of the site's own metrics table.
-        await ctx.add_init_script("try { localStorage.setItem('od:no-metrics', '1') } catch {}")
-        page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+        try:
+            # Keep these page loads out of the site's own metrics table.
+            await ctx.add_init_script("try { localStorage.setItem('od:no-metrics', '1') } catch {}")
+            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+        except Exception as e:
+            # Chrome started and gave no page: it is still there, and is closed like any other run's.
+            left = await close_context(ctx, profile)
+            return {**out, "error": f"{type(e).__name__}: {e}"[:300], **({"cleanup": left} if left else {})}
         sizes: list[int] = []
 
         async def finished(req):
@@ -188,14 +193,10 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
                 pass
         out["bytes"] = sum(sizes)
         out["requests"] = len(sizes)
-        try:
-            await asyncio.wait_for(ctx.close(), 20)
-        except Exception:
-            # A renderer that never yields does not close either: end that Chrome.
-            left = end_chrome(profile)
-            if left:
-                out["cleanup"] = left
-                print(f"{slug}/{sample}: {left}", file=sys.stderr, flush=True)
+        left = await close_context(ctx, profile)
+        if left:
+            out["cleanup"] = left
+            print(f"{slug}/{sample}: {left}", file=sys.stderr, flush=True)
     return out
 
 
@@ -253,8 +254,10 @@ async def main():
             f.write(json.dumps(merge_latest(latest, summary, result), indent=1) + "\n")
     text = json.dumps(result, indent=1) + "\n"
     if opt("--out"):
-        os.makedirs(os.path.dirname(opt("--out")) or ".", exist_ok=True)
-        open(opt("--out"), "w").write(text)
+        # A stopped run's runs go beside the day's file: the rows it did not reach keep theirs.
+        dest = stopped_path(opt("--out")) if stopped else opt("--out")
+        os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+        open(dest, "w").write(text)
     else:
         print(text)
 

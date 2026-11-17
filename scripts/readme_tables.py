@@ -60,9 +60,11 @@ def cell(text) -> str:
 def elsewhere(row: dict, head: dict) -> str:
     """" (measured DATE)" for a row from another day than its table, with the environment when that differs."""
     when, where = row.get("measuredAt") or head.get("measuredAt"), row.get("environment") or head.get("environment")
+    # Another address than its table's (the site under another name) is another measurement too.
+    on = f" on {row['base']}" if row.get("base") and head.get("base") and row["base"] != head["base"] else ""
     if where != head.get("environment"):
-        return f" (measured {when}: {cell(where)})"
-    return f" (measured {when})" if when != head.get("measuredAt") else ""
+        return f" (measured {when}{on}: {cell(where)})"
+    return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
 
 
 def samples_block(data: dict) -> str:
@@ -129,7 +131,7 @@ def lighthouse_block(data: dict) -> str:
     out += [lighthouse_line(label(k), r, data) for k, r in data["pages"].items()]
     big = data.get("docs", {}).get("lorem-500")
     if big:
-        head = data.get("docsMeta", {}).get("lorem-500") or data
+        head = {"base": data.get("base"), **(data.get("docsMeta", {}).get("lorem-500") or data)}
         out += ["", "**Opening the 500 pages sample (`?open=lorem-500.docx`)**", ""]
         if (head.get("measuredAt"), head.get("environment")) != (data.get("measuredAt"), data.get("environment")):
             out += [said(head), ""]

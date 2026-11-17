@@ -38,7 +38,7 @@ export interface LighthouseResults {
   /** The same pages opening a Menu sample (`?open=<file>`): sample id → page → medians. */
   docs?: Record<string, Record<string, LighthouseEntry>>;
   /** When and how each `docs` population was measured, when it was measured apart from `pages`. */
-  docsMeta?: Record<string, { measuredAt: string; environment: string }>;
+  docsMeta?: Record<string, { measuredAt: string; environment: string; base?: string }>;
 }
 
 const esc = (s: string) =>
@@ -66,9 +66,9 @@ const spread = (f: string, p: LighthousePage): string => {
 };
 
 export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATEST as LighthouseResults): string {
-  const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string }) => {
+  const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string; base?: string }) => {
     // The link analyses the address the row was measured on.
-    const psi = (slug: string, base?: string) => `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`${base ?? data.base ?? "https://editors.benchmarks.law"}/e/${slug}${q}`)}`;
+    const psi = (slug: string, base?: string) => `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`${base ?? head.base ?? data.base ?? "https://editors.benchmarks.law"}/e/${slug}${q}`)}`;
     const row = (e: EditorMeta) => {
       const r = pages?.[`e/${e.slug}`];
       if (!r) return "";
@@ -85,7 +85,8 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
       const partial = [part("desktop", d), part("mobile", m), spread("desktop", d), spread("mobile", m)].filter(Boolean).join(" · ");
       // A page analysed in another run than the table's heading (a partial re-run), or on another
       // address, says so, whether or not it got a result.
-      const otherBase = !!r.base && !!data.base && r.base !== data.base;
+      const tableBase = head.base ?? data.base; // the 500-page table has its own heading, and its own address
+      const otherBase = !!r.base && !!tableBase && r.base !== tableBase;
       const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment) || otherBase
         ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
