@@ -20,6 +20,9 @@ import { blocksToMd, diffSummary, mdToBlocks, mdToHtml } from "./md.ts";
 import { blankDocx, sampleDocx, sampleMarkdown } from "./samples.ts";
 
 const noop = () => {};
+// The default Resource Timing buffer (250 entries) fills on the heavier
+// editors, and "Re-measure now" would then undercount what the page loaded.
+performance.setResourceTimingBufferSize?.(5000);
 
 /** Adapters that registered before the chrome subscribed. */
 const queue: EditorAdapter[] = [];

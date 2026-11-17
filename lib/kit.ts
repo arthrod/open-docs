@@ -29,6 +29,18 @@ export interface EditorAdapter {
    * by engines that have none; Export then says so instead of writing one.
    */
   exportDocx?(): Promise<Uint8Array>;
+  /**
+   * The editor's own undo / redo, one step of its own history. The assistant's
+   * Undo / Redo buttons drive these; nothing is restored by hand.
+   */
+  undo?(): Promise<void> | void;
+  redo?(): Promise<void> | void;
+  /**
+   * True when `applyMarkdown` is an edit inside the engine's own history, so
+   * `undo()` reverts it. Only then does the assistant offer Undo / Redo: on
+   * any other engine, native undo would step through the user's own edits.
+   */
+  applyInHistory?: boolean;
   /** Human note about how faithful `applyMarkdown` is. */
   mergeQuality?: "native" | "html-paste" | "rebuild";
   /**
@@ -53,6 +65,12 @@ export interface EditorAdapter {
    * URL rather than bytes.
    */
   loadUrl?(path: string): Promise<void>;
+  /**
+   * How this engine treats a document's tracked changes, in a few words; the
+   * status line shows it after the redline sample opens. Measured, not assumed:
+   * see the README's "Tracked changes" table.
+   */
+  revisions?: string;
   /** false: can't open the user's own files (only public links). */
   acceptsFiles?: boolean;
   /**

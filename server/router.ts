@@ -5,6 +5,8 @@
  *   GET  /e/<slug>             the editor page (shared chrome + editor body)
  *   GET  /api/sample.docx      the shared fixture, byte-for-byte
  *   GET  /api/showcase.docx    the rich sample (scripts/make_showcase.py)
+ *   GET  /api/redline.docx     the rich sample with tracked changes and comments
+ *   GET  /api/lorem-500.docx   500 pages of lorem ipsum (scripts/make_lorem.py)
  *   GET  /api/blank.docx       a valid empty .docx
  *   POST /api/import           .docx → { title, markdown }
  *   POST /api/agent            { document, prompt, history } → { reply, edit? }
@@ -14,15 +16,16 @@
 import type { Hono } from "npm:hono@4";
 import { bodyLimit } from "npm:hono@4/body-limit";
 import { serveFile } from "https://esm.town/v/std/utils/index.ts";
-import { editors } from "./registry.ts";
+import { editors, type Maker } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
+import { fixtureBytes, FIXTURES } from "./fixtures.ts";
 import { buildDocx, looksLikeZip, textFromDocx, textToParagraphs } from "./docx.ts";
 import { DOCX_PREVIEW_MAX_BYTES, renderDocxPages } from "../editors/wordcraft/render.ts";
 import { DOCX_IO_SRI, DOCX_IO_URL } from "../lib/plate-docx-pin.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
 import { recordMetric, summarizeMetrics } from "./metrics.ts";
-import { SHELL_CSS } from "./styles.ts";
+import { FONT_MONO_URL, FONT_SANS_URL, SHELL_CSS } from "./styles.ts";
 
 export interface EditorShell {
   slug: string;
@@ -35,6 +38,11 @@ export interface EditorShell {
   title: string;
   /** Extra import-map entries (bare specifiers / URL remaps) for this editor. */
   importMap?: Record<string, string>;
+  /**
+   * Render NO assistant panel and NO toggle button (page works standalone —
+   * e.g. cite-check, whose owner explicitly does not want the agent there).
+   */
+  noAgent?: boolean;
 }
 
 /** React, resolved once, for every adapter that loads a React package with `?external=react,react-dom`. */
@@ -46,7 +54,7 @@ export const REACT_IMPORTS: Record<string, string> = {
 };
 
 export function registerEditor(app: Hono, opts: EditorShell) {
-  app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts)));
+  app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts, c.req.query("embed") === "1")));
   // The editor folder's own client modules + assets.
   app.get(`/e/${opts.slug}/*`, (c) => serveFile(c.req.path));
 }
@@ -54,7 +62,67 @@ export function registerEditor(app: Hono, opts: EditorShell) {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function shell(o: EditorShell): string {
+/**
+ * The #od-menu panel. Shared by the bar (non-embed) and the floating embed
+ * panel. `embed` drops "Editors arena →" (we are already inside it) and opens
+ * "All editors & measurements" in a new tab so the iframe does not navigate.
+ * The non-embed string is the historical markup, whitespace included.
+ */
+/** A maker's link: LinkedIn when verified, GitHub otherwise. */
+const makerHref = (m: Maker) => m.linkedin ?? m.github ?? "#";
+const makerVia = (m: Maker) => (m.linkedin ? "LinkedIn" : "GitHub");
+
+/** "/ Made by" menu section; empty when the registry credits nobody. */
+function madeBySection(makers: Maker[]): string {
+  if (!makers.length) return "";
+  const items = makers.map((m) =>
+    `<a role="menuitem" href="${esc(makerHref(m))}" target="_blank" rel="noopener">${esc(m.name)} →<small>${m.kind === "company" ? "Company" : "Developer"} · ${makerVia(m)}</small></a>`
+  ).join("\n        ");
+  return `
+        <hr />
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Made by</div>
+        ${items}`;
+}
+
+function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string, makers: Maker[] = []): string {
+  const allEditors = embed
+    ? `<a role="menuitem" href="/" target="_blank" rel="noopener">All editors &amp; measurements</a>`
+    : `<a role="menuitem" href="/">All editors &amp; measurements</a>`;
+  const arena = embed
+    ? ""
+    : `\n        <a role="menuitem" href="https://arena.benchmarks.law" target="_blank" rel="noopener">Editors arena →</a>`;
+  return `      <div class="od-menu" id="od-menu" role="menu" hidden>
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Document</div>
+        ${viewer ? "" : `<button role="menuitem" id="od-rename">Rename document…</button>`}
+        ${viewer ? "" : `<button role="menuitem" id="od-new">New blank document<kbd>⌥N</kbd></button>`}
+        ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import">Open .docx from your computer…<kbd>⌘O</kbd></button>`}
+        ${viewer ? "" : `<button role="menuitem" id="od-export">Export this document as .docx<kbd>⌘S</kbd></button>`}
+        <hr />
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Samples</div>
+        <button role="menuitem" id="od-showcase">Load the rich sample<small>tables, lists, image, styles</small></button>
+${FIXTURES.map((f) => `        <button role="menuitem" class="od-fixture" data-file="${f.file}" data-title="${esc(f.title)}" data-label="${esc(f.label)}">Load the ${esc(f.label)} sample<small>${esc(f.note)}</small></button>\n`).join("")}        <button role="menuitem" id="od-sample">Load the short sample</button>
+        <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx">Download the rich sample ↓</a>
+        <hr />
+        <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / View</div>
+        <button role="menuitem" id="od-metrics-item">Performance of this load</button>
+        <button role="menuitem" id="od-reload">Reload editor</button>${madeBySection(makers)}
+        <hr />
+        ${allEditors}${arena}
+        <a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
+        <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
+        <a role="menuitem" class="od-contact" href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
+      </div>`;
+}
+
+/**
+ * The editor page. `embed` (from ?embed=1): editors-arena loads the page in an
+ * iframe with no bar at all (the arena's slot header is the only one). The
+ * menu panel still renders, without the #od-more button, so the arena can
+ * open it. The stage, the file input, and the metrics dialog stay, because
+ * lib/ui.ts looks them up. The postMessage channel lives in lib/ui.ts;
+ * lib/embed.ts holds the message shapes.
+ */
+function shell(o: EditorShell, embed = false): string {
   const meta = editors.find((e) => e.slug === o.slug);
   const packages = meta?.packages ?? [];
   // Every page: React (Plate's esm.sh modules leave it bare) and the SRI hash
@@ -65,11 +133,33 @@ function shell(o: EditorShell): string {
     integrity: { [DOCX_IO_URL]: DOCX_IO_SRI },
   })}</script>`;
   const viewer = meta?.kind === "viewer";
+  const noAgent = !!o.noAgent; // viewer pages never get the agent either
+  const agentless = viewer || noAgent;
   const opensFiles = meta?.opensFiles !== false;
   const option = (e: typeof editors[number]) =>
     `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
   const switcher = `<optgroup label="Open-source editors">${editors.filter((e) => e.kind !== "viewer").map(option).join("")}</optgroup>` +
     `<optgroup label="Proprietary viewers (view-only)">${editors.filter((e) => e.kind === "viewer").map(option).join("")}</optgroup>`;
+  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#", meta?.makers ?? []);
+  // Leading spaces live on the template line, so a non-embed page stays byte-identical.
+  const embedMenu = embed
+    ? `<div class="od-menu-wrap od-embed-menu">\n${panel}\n    </div>\n`
+    : "";
+  const renameDialog = viewer
+    ? ""
+    : `<dialog class="od-dialog od-name-dialog" id="od-rename-dialog" aria-labelledby="od-rename-title">
+    <form id="od-rename-form">
+      <header><h3 id="od-rename-title">Rename document</h3><button class="od-btn icon" type="button" data-od-rename-cancel aria-label="Cancel">×</button></header>
+      <div class="od-name-body">
+        <label for="od-rename-input">Document name</label>
+        <input id="od-rename-input" type="text" spellcheck="false" autocomplete="off" />
+      </div>
+      <footer>
+        <button class="od-btn" type="button" data-od-rename-cancel>Cancel</button>
+        <button class="od-btn primary" type="submit">Save</button>
+      </footer>
+    </form>
+  </dialog>`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -77,71 +167,54 @@ function shell(o: EditorShell): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${esc(o.title)} · open-docs</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231e3a8a'/><path d='M10 8h9l5 5v11H10z' fill='white'/><path d='M19 8v5h5' fill='%2393c5fd'/></svg>" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230A0A0A'/><rect x='4' y='20' width='24' height='7' fill='%23FFD400'/></svg>" />
 ${importMap}
 <script>window.__OD_T0 = performance.now();</script>
 <!-- First thing on the page: reports browser errors to /api/log. -->
 <script src="/lib/report.ts"></script>
 <link rel="preconnect" href="https://esm.sh" crossorigin />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="preload" href="${FONT_SANS_URL}" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="${FONT_MONO_URL}" as="font" type="font/woff2" crossorigin />
 ${o.head ?? ""}
 <style>${SHELL_CSS}</style>
 <!-- The kit must exist before any adapter module runs. -->
 <script type="module" src="/lib/boot.ts"></script>
 </head>
-<body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}">
-  <header class="od-bar">
-    <a class="od-brand" href="/" title="All editors">
-      <span class="od-logo" aria-hidden="true"></span><span>open-docs</span>
+<body data-slug="${o.slug}" data-name="${esc(meta?.name ?? o.title)}" data-kind="${viewer ? "viewer" : "editor"}"${embed ? ' class="od-embed"' : ""}>
+  ${embedMenu}${embed ? "" : `<header class="site-nav od-bar">
+    <a class="wm" href="/" title="All editors">
+      <span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH
     </a>
-    <span class="od-sep"></span>
+    <span class="crumb">/ editors</span>
+    <span class="od-spacer"></span>
     <label class="od-switch" title="Switch editor">
+      <img class="od-switch-ico" src="/lib/icons/numpad.svg" alt="" width="16" height="16" />
       <select id="od-switch" aria-label="Editor">${switcher}</select>
     </label>
-    <input id="od-docname" class="od-docname" value="Untitled document" spellcheck="false" aria-label="Document name" />
-    <span class="od-spacer"></span>
-    <button class="od-metrics" id="od-metrics" title="Measured on this page load — click for details" aria-haspopup="dialog">
+    <button class="od-metrics" id="od-metrics" title="Measured on this page load. Click for details." aria-haspopup="dialog">
       <span class="m"><i class="dot"></i><b id="od-m-time">—</b><small>startup</small></span>
       <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
       <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
     </button>
-    ${viewer ? "" : `<button class="od-btn icon" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">
-      <svg class="ic" viewBox="0 0 20 20"><path d="M10 2.5l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z M15.5 13l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
-    </button>`}
+    ${agentless ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
     <div class="od-menu-wrap">
-      <button class="od-btn od-menu-btn" id="od-more" title="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
-        <svg class="ic" viewBox="0 0 20 20"><path d="M3.5 5.5h13 M3.5 10h13 M3.5 14.5h13"/></svg><span>Menu</span>
+      <button class="od-btn od-menu-btn" id="od-more" type="button" title="Menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
+        <span class="od-burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="od-menu-lbl">MENU</span>
       </button>
-      <div class="od-menu" id="od-menu" role="menu" hidden>
-        <div class="od-menu-label">Document</div>
-        ${viewer ? "" : `<button role="menuitem" id="od-new"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h6.5L16 7v10.5H5z M11.5 2.5V7H16" /></svg>New blank document<kbd>⌥N</kbd></button>`}
-        ${!opensFiles ? `<div class="od-menu-note">This viewer fetches documents from a public link, so it can't open your own file without publishing it. It shows this site's samples.</div>` : `<button role="menuitem" id="od-import"><svg class="ic" viewBox="0 0 20 20"><path d="M10 13V3 M6 7l4-4 4 4 M3.5 12.5v4h13v-4" /></svg>Open .docx from your computer…<kbd>⌘O</kbd></button>`}
-        ${viewer ? "" : `<button role="menuitem" id="od-export"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Export this document as .docx<kbd>⌘S</kbd></button>`}
-        <hr />
-        <div class="od-menu-label">Samples</div>
-        <button role="menuitem" id="od-showcase"><svg class="ic" viewBox="0 0 20 20"><path d="M3 4.5h14v11H3z M3 12l4-3.5 3 2.5 3-3 4 3.5"/></svg>Load the rich sample<small>tables, lists, image, styles</small></button>
-        <button role="menuitem" id="od-sample"><svg class="ic" viewBox="0 0 20 20"><path d="M5 2.5h10v15H5z M8 6.5h4 M8 9.5h4 M8 12.5h2"/></svg>Load the short sample</button>
-        <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx"><svg class="ic" viewBox="0 0 20 20"><path d="M10 3v10 M6 9l4 4 4-4 M3.5 12.5v4h13v-4" /></svg>Download the rich sample</a>
-        <hr />
-        <div class="od-menu-label">View</div>
-        <button role="menuitem" id="od-metrics-item"><svg class="ic" viewBox="0 0 20 20"><path d="M3.5 16.5v-5 M8 16.5v-9 M12.5 16.5v-6 M17 16.5V3.5"/></svg>Performance of this load</button>
-        <button role="menuitem" id="od-reload"><svg class="ic" viewBox="0 0 20 20"><path d="M16 10a6 6 0 1 1-1.8-4.3 M16 3.5v3.5h-3.5"/></svg>Reload editor</button>
-        <hr />
-        <a role="menuitem" href="/">All editors &amp; measurements</a>
-        <a role="menuitem" href="${esc(meta?.repo ?? "#")}" target="_blank" rel="noopener">Library on GitHub ↗</a>
-        <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo ↗</a>
-      </div>
+${panel}
     </div>
-  </header>
-  <div class="od-sub">
+  </header>`}
+  ${embed ? "" : `<div class="od-sub">
     <span class="od-pkg">${packages.map((p) => `<code>${esc(p)}</code>`).join(" + ")}</span>
     ${meta?.license ? `<span class="od-lic">${esc(meta.license)}</span>` : ""}
-    ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer — not an editor</span>` : ""}
+    ${meta?.makers?.length ? `<span class="od-makers">by ${meta.makers.map((m) => `<a href="${esc(makerHref(m))}" target="_blank" rel="noopener" title="${esc(m.name)} on ${makerVia(m)}">${esc(m.name)}</a>`).join(", ")}</span>` : ""}
+    ${viewer ? `<span class="od-viewonly" title="${esc(meta?.metricsNote ?? "")}">View-only · proprietary viewer, not an editor</span>` : ""}
     <span class="od-blurb">${esc(meta?.blurb ?? "")}</span>
     <span class="od-spacer"></span>
     <span class="od-status" id="od-status" role="status" aria-live="polite"></span>
-  </div>
-  <div class="od-layout${viewer ? " no-agent" : ""}" id="od-layout">
+  </div>`}
+  <div class="od-layout${agentless || embed ? " no-agent" : ""}" id="od-layout">
     <main class="od-stage" id="od-stage">
       ${o.body}
       <div class="od-loading" id="od-loading">
@@ -149,37 +222,36 @@ ${o.head ?? ""}
         <div><strong>Loading ${esc(meta?.name ?? o.title)}…</strong><span id="od-loading-detail">Fetching the editor from the CDN</span></div>
       </div>
     </main>
-    ${viewer ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
+    ${agentless || embed ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
       <div class="od-aside-head">
         <div>
-          <h2>Assistant</h2>
+          <h2><span class="sq" aria-hidden="true"></span> / Assistant</h2>
           <span class="od-model">${esc(AGENT_MODEL)} · via Val Town</span>
         </div>
         <label class="od-auto" title="Apply edits as soon as the assistant proposes them (you can still undo)">
           <input type="checkbox" id="od-autoapply" checked /> Auto-apply
         </label>
-        <button class="od-btn icon od-aside-close" id="od-aside-close" type="button" aria-label="Close the assistant">✕</button>
+        <button class="od-btn icon od-aside-close" id="od-aside-close" type="button" aria-label="Close the assistant">×</button>
       </div>
       <div class="od-log" id="od-log">
-        <div class="od-msg bot"><span class="who">Assistant</span>I can read and edit the document open in <b>${esc(meta?.name ?? o.title)}</b>. Ask me to draft, rewrite, restructure or summarise — every change can be undone.</div>
+        <div class="od-msg bot"><span class="who">Assistant</span>I can read and edit the document open in <b>${esc(meta?.name ?? o.title)}</b>. Ask me to draft, rewrite, restructure or summarise. Every change can be undone.</div>
       </div>
       <div class="od-suggestions" id="od-suggestions"></div>
       <form class="od-input" id="od-form">
-        <textarea id="od-prompt" rows="2" placeholder="Ask the assistant to write or edit… (⌘↵ to send)"></textarea>
-        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)">
-          <svg class="ic" viewBox="0 0 20 20"><path d="M3 10l14-6-5 14-2.5-5.5z"/></svg>
-        </button>
+        <textarea id="od-prompt" rows="2" placeholder="Ask the assistant to write or edit (⌘↵ to send)"></textarea>
+        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)" aria-label="Send"><span class="arr" aria-hidden="true">→</span></button>
       </form>
     </aside>`}
   </div>
   <dialog class="od-dialog" id="od-metrics-dialog">
     <form method="dialog">
-      <header><h3>Performance of ${esc(meta?.name ?? o.title)}</h3><button class="od-btn icon" value="close" aria-label="Close">✕</button></header>
+      <header><h3>Performance of ${esc(meta?.name ?? o.title)}</h3><button class="od-btn icon" value="close" aria-label="Close">×</button></header>
       <div id="od-metrics-body"></div>
       ${meta?.metricsNote ? `<p class="od-note" style="padding:0 18px 12px">${esc(meta.metricsNote)}</p>` : ""}
       <footer><a href="/#metrics">Compare all editors →</a></footer>
     </form>
   </dialog>
+  ${renameDialog}
   <input type="file" id="od-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden />
   <script src="https://esm.town/v/std/catch"></script>
   <!-- Adapter first (it registers synchronously), chrome second. -->
@@ -194,7 +266,7 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 /** Mount every shared API route onto the app. */
 export function mountShared(app: Hono) {
   app.get("/api/sample.docx", () =>
-    new Response(sampleDocx().slice(), {
+    new Response(new Uint8Array(sampleDocx()), {
       headers: {
         "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-sample.docx"',
@@ -203,7 +275,7 @@ export function mountShared(app: Hono) {
     }));
 
   app.get("/api/showcase.docx", () =>
-    new Response(showcaseDocx().slice(), {
+    new Response(new Uint8Array(showcaseDocx()), {
       headers: {
         "content-type": DOCX_MIME,
         "content-disposition": 'attachment; filename="open-docs-showcase.docx"',
@@ -211,12 +283,33 @@ export function mountShared(app: Hono) {
       },
     }));
 
+  // The large samples: fetched from Hugging Face at a pinned commit (server/fixtures.ts).
+  for (const f of FIXTURES) {
+    app.get(`/api/${f.file}`, async (c) => {
+      let bytes: Uint8Array;
+      try {
+        bytes = await fixtureBytes(f);
+      } catch (err) {
+        // 4xx on purpose: Val Town's edge replaces 5xx bodies, which would hide why.
+        return c.text(`could not load ${f.file}: ${(err as Error).message}`, 424);
+      }
+      return new Response(bytes as Uint8Array<ArrayBuffer>, {
+        headers: {
+          "content-type": DOCX_MIME,
+          "content-disposition": `attachment; filename="open-docs-${f.file}"`,
+          "cache-control": "public, max-age=86400, immutable",
+          "access-control-allow-origin": "*",
+        },
+      });
+    });
+  }
+
   app.get("/api/sample.txt", (c) =>
     c.json({ title: "Quarterly Report — Acme Robotics", markdown: sampleText }));
 
   /** A valid, empty .docx (one empty paragraph), built by the same writer as the sample. */
   app.get("/api/blank.docx", () =>
-    new Response(buildDocx([{ text: "" }], "Untitled document").slice(), {
+    new Response(new Uint8Array(buildDocx([{ text: "" }], "Untitled document")), {
       headers: { "content-type": DOCX_MIME, "cache-control": "no-cache" },
     }));
 

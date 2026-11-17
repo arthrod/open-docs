@@ -14,7 +14,7 @@
  * never inferred from numbering text.
  */
 import { strFromU8, unzipSync } from "https://esm.sh/fflate@0.8.2?target=es2022";
-import { type Block, blocksToMarkdown, type Run, tableToMarkdown } from "./markdown.ts";
+import { advanceList, type Block, blocksToMarkdown, type ListState, type Run, tableToMarkdown } from "./markdown.ts";
 
 const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
 const R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -78,24 +78,44 @@ function chain(styles: Map<string, StyleInfo>, id: string | null | undefined): S
   return out;
 }
 
-/** numId → per-level "is this level a bullet?". */
-function readNumbering(doc: Document | undefined): Map<string, Map<number, boolean>> {
-  const out = new Map<string, Map<number, boolean>>();
+type Level = { bullet: boolean; none?: boolean; start?: number; restart?: number };
+
+/** numId → per level: is it a bullet, and the number it starts at. */
+function readNumbering(doc: Document | undefined): Map<string, Map<number, Level>> {
+  const out = new Map<string, Map<number, Level>>();
   if (!doc) return out;
-  const abstract = new Map<string, Map<number, boolean>>();
+  const start = (el: Element | undefined) => {
+    const v = wAttr(el, "val");
+    return v == null || v === "" ? undefined : Number(v);
+  };
+  const level = (l: Element): Level => {
+    // numFmt "none" means no marker at all — not a bullet, not a decimal list.
+    const fmt = wAttr(kid(l, "numFmt"), "val") ?? "bullet";
+    return {
+      bullet: fmt === "bullet",
+      none: fmt === "none",
+      start: start(kid(l, "start")),
+      restart: start(kid(l, "lvlRestart")),
+    };
+  };
+  const abstract = new Map<string, Map<number, Level>>();
   for (const a of kids(doc.documentElement, "abstractNum")) {
-    const lvls = new Map<number, boolean>();
-    for (const l of kids(a, "lvl")) {
-      lvls.set(Number(wAttr(l, "ilvl") ?? 0), (wAttr(kid(l, "numFmt"), "val") ?? "bullet") === "bullet");
-    }
+    const lvls = new Map<number, Level>();
+    for (const l of kids(a, "lvl")) lvls.set(Number(wAttr(l, "ilvl") ?? 0), level(l));
     abstract.set(wAttr(a, "abstractNumId") ?? "", lvls);
   }
   for (const n of kids(doc.documentElement, "num")) {
     const lvls = new Map(abstract.get(wAttr(kid(n, "abstractNumId"), "val") ?? "") ?? []);
-    // <w:lvlOverride><w:lvl> replaces a level's format for this list only.
+    // <w:lvlOverride> changes a level for this list only: a whole <w:lvl>
+    // and/or a <w:startOverride>.
     for (const o of kids(n, "lvlOverride")) {
-      const fmt = wAttr(kid(kid(o, "lvl"), "numFmt"), "val");
-      if (fmt) lvls.set(Number(wAttr(o, "ilvl") ?? 0), fmt === "bullet");
+      const ilvl = Number(wAttr(o, "ilvl") ?? 0);
+      const base = lvls.get(ilvl) ?? { bullet: true };
+      const own = kid(o, "lvl");
+      const fmt = wAttr(kid(own, "numFmt"), "val");
+      // A whole <w:lvl> replaces the level (start defaults to 1, numFmt to decimal).
+      const lv = own ? { ...level(own), bullet: fmt === "bullet", none: fmt === "none" } : base;
+      lvls.set(ilvl, { ...lv, start: start(kid(o, "startOverride")) ?? lv.start });
     }
     out.set(wAttr(n, "numId") ?? "", lvls);
   }
@@ -113,8 +133,10 @@ function readRels(xml: string | undefined): Map<string, string> {
 }
 
 type Ctx = {
+  /** Set by paragraphBlockOf for a paragraph on an unmarked list level. */
+  unmarked?: Block["counts"];
   styles: Map<string, StyleInfo>;
-  numbering: Map<string, Map<number, boolean>>;
+  numbering: Map<string, Map<number, Level>>;
   rels: Map<string, string>;
 };
 
@@ -215,6 +237,12 @@ function paragraphRuns(p: Element, ctx: Ctx): Run[] {
 }
 
 function paragraphBlock(p: Element, ctx: Ctx): Block {
+  ctx.unmarked = undefined;
+  const b = paragraphBlockOf(p, ctx);
+  return ctx.unmarked ? { ...b, counts: ctx.unmarked } : b;
+}
+
+function paragraphBlockOf(p: Element, ctx: Ctx): Block {
   const pPr = kid(p, "pPr");
   const styleId = wAttr(kid(pPr, "pStyle"), "val");
   const styleChain = chain(ctx.styles, styleId ?? "Normal");
@@ -237,8 +265,13 @@ function paragraphBlock(p: Element, ctx: Ctx): Block {
   const numId = wAttr(kid(numPr, "numId"), "val") ?? styleChain.find((s) => s.numId)?.numId;
   if (numId && numId !== "0") {
     const ilvl = Number(wAttr(kid(numPr, "ilvl"), "val") ?? styleChain.find((s) => s.ilvl !== undefined)?.ilvl ?? 0);
-    const bullet = ctx.numbering.get(numId)?.get(ilvl) ?? true;
-    return { kind: "li", level: ilvl, ordered: !bullet, runs };
+    const lv = ctx.numbering.get(numId)?.get(ilvl);
+    // numFmt="none": the paragraph belongs to a list but shows no marker —
+    // keep it a plain paragraph instead of giving it a decimal number.
+    if (!lv?.none) {
+      return { kind: "li", level: ilvl, ordered: !(lv?.bullet ?? true), list: numId, start: lv?.start, restart: lv?.restart, runs };
+    }
+    ctx.unmarked = { list: numId, level: ilvl, start: lv?.start, restart: lv?.restart };
   }
   if (names.some((n) => /quote/.test(n))) {
     // Quote styles are italic; a quote whose every run is italic is that
@@ -254,11 +287,26 @@ function paragraphBlock(p: Element, ctx: Ctx): Block {
   return { kind: "p", align: align as Block["align"], runs };
 }
 
-function tableMarkdown(tbl: Element, ctx: Ctx): string {
+/** The paragraphs of a table cell in document order, including those inside block-level
+ * content controls (the body reader unwraps the same wrappers). */
+function cellParagraphs(el: Element): Element[] {
+  return [...el.children].flatMap((c) =>
+    c.namespaceURI !== W ? [] : c.localName === "p" ? [c] : c.localName === "sdt" || c.localName === "sdtContent" ? cellParagraphs(c) : []
+  );
+}
+
+function tableMarkdown(tbl: Element, ctx: Ctx, lists: ListState): string {
   // Paragraphs within a cell are joined by a line break.
   const rows = kids(tbl, "tr").map((tr) =>
     kids(tr, "tc").map((tc) =>
-      kids(tc, "p").map((p) => paragraphRuns(p, ctx)).filter((r) => r.length)
+      cellParagraphs(tc).map((p) => {
+        // A list item inside a cell prints as plain text, but it still
+        // advances its list's counters for later body items.
+        const b = paragraphBlock(p, ctx);
+        if (b.kind === "li" && b.list !== undefined) advanceList(lists, b);
+        else if (b.counts) advanceList(lists, { kind: "li", runs: [], ...b.counts });
+        return paragraphRuns(p, ctx);
+      }).filter((r) => r.length)
         .flatMap((runs, i) => (i ? [{ text: "\n" } as Run, ...runs] : runs))
     )
   );
@@ -279,10 +327,14 @@ export function docxToMarkdown(bytes: Uint8Array): string {
   const body = kid(doc.documentElement, "body");
   const parts: string[] = [];
   let pending: Block[] = [];
+  // One set of list counters for the whole body: a list continues past a table.
+  const lists: ListState = new Map();
   const flush = () => {
-    // Empty paragraphs are spacing, not content.
-    const blocks = pending.filter((b) => b.kind === "hr" || b.runs.some((r) => r.text.trim()));
-    if (blocks.length) parts.push(blocksToMarkdown(blocks));
+    // Empty paragraphs are spacing, not content; an empty numbered item still
+    // takes its number.
+    const blocks = pending.filter((b) => b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()));
+    const md = blocks.length ? blocksToMarkdown(blocks, lists) : "";
+    if (md) parts.push(md);
     pending = [];
   };
   const visit = (el: Element) => {
@@ -291,7 +343,7 @@ export function docxToMarkdown(bytes: Uint8Array): string {
       if (c.localName === "p") pending.push(paragraphBlock(c, ctx));
       else if (c.localName === "tbl") {
         flush();
-        const t = tableMarkdown(c, ctx);
+        const t = tableMarkdown(c, ctx, lists);
         if (t) parts.push(t);
       } else if (c.localName === "sdt" || c.localName === "sdtContent" || c.localName === "customXml") visit(c);
     }

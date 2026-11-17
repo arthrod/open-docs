@@ -2,3 +2,10 @@
 .claude/
 .DS_Store
 node_modules/
+.scratch/
+.impeccable/
+*.zip
+__pycache__/
+.pytest_cache/
+cov/
+.ruff_cache/

@@ -13,22 +13,22 @@
  */
 import React, { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { DocxEditor } from "https://esm.sh/@docx-editor.dev/react@2.35.0?external=react,react-dom";
+import { DocxEditor, type DocxEditorRef } from "https://esm.sh/@docx-editor.dev/react@2.35.0?external=react,react-dom";
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 // The vendor's open-licensed substitutes for Word's fonts (Carlito for Calibri,
 // Liberation for Arial/Times/Courier…). Loaded from jsDelivr, not esm.sh: the
 // package finds its .ttf files relative to import.meta.url.
 import { packagedFonts } from "https://cdn.jsdelivr.net/npm/@docx-editor.dev/fonts@2.35.0/dist/index.js";
+import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-type EditorRef = {
-  load(doc: Uint8Array | "blank"): void;
-  save(): Promise<ArrayBuffer | null>;
-  getEditor(): unknown;
-};
+type EditorRef = DocxEditorRef;
 
 let ref: EditorRef | null = null;
+// Exposed for the probes in /lib/probes (read-only use).
+(window as any).__eigenpal = () => ref;
 const FONTS = packagedFonts();
 
 function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "blank"; view: boolean }) {
@@ -63,6 +63,14 @@ function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "b
 
 window.od.register({
   name: "docx-editor.dev",
+  // Its layout takes `proposed` when no review module is registered, and the
+  // review module is in the paid @docx-editor.dev/pro. Forcing
+  // reviewDisplayMode="all-markup" without it stops the editor from starting
+  // (tried 2026-11-15). So the free tier is shown as the vendor ships it.
+  revisions: REVISION_NOTES["eigenpal"],
+  // selectAll + its own paste of its own DOCX clipboard fragment: one entry
+  // in its history, with the styles/numbering of the .docx it was given.
+  applyInHistory: true,
   mergeQuality: "rebuild",
 
   async mount() {
@@ -89,10 +97,44 @@ window.od.register({
 
   async applyMarkdown(markdown: string) {
     if (!ref) throw new Error("docx-editor.dev not mounted");
-    // docx-editor.dev imports only .docx (markdown is export-only): the markdown
-    // becomes a Word document through Plate's own markdown reader and .docx
-    // exporter (lib/plate-docx.ts), opened with docx-editor.dev's own parser.
-    ref.load(await markdownToDocx(markdown));
+    let html = "";
+    if (markdown.trim()) {
+      const bytes = await markdownToDocx(markdown);
+      // 2.35.0's native clipboard codec accepts a base64 DOCX package. Its paste
+      // transaction imports styles/numbering and replaces the selection atomically.
+      // Keep the old DOCX conversion, but never load it over the live document.
+      if (bytes.byteLength > 16 * 1024 * 1024) throw new Error("Edit exceeds the engine's 16 MiB clipboard limit");
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 32768) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+      }
+      // The vendor's own copy format: the package plus its rendered HTML inside
+      // the div, so a refused fragment falls back to the engine's HTML import
+      // (and then to the text) instead of to nothing.
+      const rendered = await marked.parse(markdown);
+      html = `<div data-docx-fragment="${btoa(binary)}" data-docx-fragment-end="covered">${rendered}</div>`;
+    }
+    ref.focus();
+    const selected = ref.exec({ type: "selectAll" });
+    if (!selected.ok) throw new Error(`Select all failed: ${JSON.stringify(selected)}`);
+    const pasted = ref.exec(html
+      ? { type: "paste", text: markdown, html }
+      : { type: "deleteText" });
+    // An empty edit on a document that is already empty: select-all selects nothing and the
+    // engine refuses the delete. The document is what was asked for.
+    if (!html && !pasted.ok && /nothing is selected/.test(String((pasted as { reason?: unknown }).reason ?? ""))) return;
+    // `ok` only means the command ran: a paste every lane declined (view mode,
+    // a header story, a cell selection) answers {ok: true, changed: false}.
+    // The delete branch may legitimately change nothing on an already-empty document.
+    if (!pasted.ok || (html && !pasted.changed)) throw new Error(`Paste did not change the document: ${JSON.stringify(pasted)}`);
+  },
+
+  // docx-editor.dev's own history commands.
+  undo() {
+    ref?.exec({ type: "undo" });
+  },
+  redo() {
+    ref?.exec({ type: "redo" });
   },
 
   async exportDocx() {

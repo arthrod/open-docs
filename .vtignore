@@ -7,3 +7,11 @@ vendor
 .gitignore
 tools/wordcraft-render/dist/*.gz
 tools/plate-docx-io/
+benchmarks-law-design-system-v2.zip
+.scratch
+.impeccable
+__pycache__
+.pytest_cache
+cov
+.github
+.ruff_cache

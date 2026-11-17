@@ -7,6 +7,8 @@
  * separators, page breaks, search, zoom and print.
  */
 const CE = "https://esm.sh/@hufe921/canvas-editor@1.1.0?bundle&target=es2022";
+// markdown → HTML for applyMarkdown's in-history path (main.ts).
+const MARKED = "https://esm.sh/marked@18.1.3?target=es2022";
 const plugin = (name: string, v: string) =>
   `https://esm.sh/@hufe921/canvas-editor-plugin-${name}@${v}?bundle&external=@hufe921/canvas-editor&target=es2022`;
 
@@ -24,6 +26,7 @@ export default {
     "@hufe921/canvas-editor-plugin-docx": plugin("docx", "1.0.0"),
     "@hufe921/canvas-editor-plugin-markdown": plugin("markdown", "0.0.1"),
     "@hufe921/canvas-editor-plugin-floating-toolbar": plugin("floating-toolbar", "0.0.4"),
+    "marked": MARKED,
   },
   head: `<style>
   #ce-host { display: flex; flex-direction: column; height: 100%; min-height: 0; background: #eef1f5; }

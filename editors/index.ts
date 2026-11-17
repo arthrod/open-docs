@@ -7,6 +7,7 @@
  */
 export const editorMounts: string[] = [
   "canvas-editor",
+  "cite-check",
   "docxodus",
   "superdoc",
   "plate",
