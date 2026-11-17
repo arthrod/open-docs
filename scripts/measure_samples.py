@@ -10,23 +10,30 @@ Menu's own button (`.od-fixture`, `#od-showcase`), so the measured path is the
 shipped one.
 
 Per run:
-  startupMs      navigation start → the editor is ready (loading overlay gone)
+  startupMs      navigation start → the editor is ready: the page's own reading, taken
+                 when its mount() resolved (<html data-od-ready>, the figure its chip shows)
   loadMs         Menu click → two frames after the adapter's load() resolved
                  (lib/ui.ts `timedOpen`, read from <html data-od-loaded>)
   settledMs      Menu click → end of the last long main-thread task before a
                  quiet second: some loaders return before they draw, some keep
                  paginating after they return, so compare THIS on a long file
-  heapBytes      JSHeapUsedSize of the top page (Chrome DevTools Protocol), 3 s
-                 after the load: JavaScript objects only, no WebAssembly memory
+  heapBytes      JSHeapUsedSize of the top page (Chrome DevTools Protocol), 2 s
+                 after the page reported the load (which it does after a quiet
+                 second, or after 180 s of a main thread that never went quiet):
+                 JavaScript objects only, no WebAssembly memory
   rendererRss    resident memory of every renderer process of this Chrome
                  (`ps`), same moment: this one does include WebAssembly memory,
                  canvases and the DOM, and cross-origin frames.
                  rendererRssReady is the same reading before the sample was
-                 opened (the editor on its blank document), so the difference
-                 is what the document cost
+                 opened, one second after the editor was ready: an editor is
+                 then on its blank document, so the difference is what the
+                 document cost; a view-only engine already shows the rich
+                 sample, so for it the difference is what REPLACING that cost
   gpuRss         resident memory of Chrome's GPU process (WordCraft draws there)
   bytes/requests response bytes and finished requests, all frames, whole run
   pages          how many pages the engine shows, where the DOM says (see PAGES)
+  load1, cores   the machine's 1-minute load average when the run started, and its
+                 core count: a timing taken on a busy machine is slower than the engine
 
 Frame viewers (Microsoft, Google) render on their own servers: loadMs is the
 frame's load event and the heap is this page's, not theirs.
@@ -37,7 +44,7 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import end_chrome, merge_latest, sample_row
+from measure_lib import end_chrome, load_note, machine_load, merge_latest, runs_note, sample_row
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
@@ -81,7 +88,7 @@ def chrome_memory(profile: str) -> dict:
 
 
 async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
-    out: dict = {"engine": slug, "sample": sample}
+    out: dict = {"engine": slug, "sample": sample, **machine_load()}
     with tempfile.TemporaryDirectory() as profile:
         ctx = await pw.chromium.launch_persistent_context(
             profile, channel="chrome", headless=False, viewport={"width": 1280, "height": 900}
@@ -121,14 +128,19 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
                   if (/Just a moment|Attention Required/.test(document.title)) return {blocked: document.title};
                   const err = document.querySelector('.od-error pre');
                   if (err) return {error: err.textContent.slice(0, 300)};
+                  // The page's own reading of when it became ready; this poll only notices it later.
+                  const at = Number(document.documentElement.dataset.odReady);
+                  if (at > 0) return {ms: at};
                   const l = document.getElementById('od-loading');
-                  return l && l.hidden ? {ms: Math.round(performance.now())} : null;
+                  return l && l.hidden ? {ms: Math.round(performance.now()), polled: true} : null;
                 }"""
             )
             if not ready or "ms" not in ready:
                 out.update(ready or {"error": f"not ready within {TIMEOUT_S}s"})
                 raise StopIteration
             out["startupMs"] = ready["ms"]
+            if ready.get("polled"):
+                out["startupPolled"] = True  # a page without data-od-ready: late by up to one polling interval
             await asyncio.sleep(1.0)
             out["rendererRssReady"] = chrome_memory(profile)["rendererRss"]
             # Viewers open the rich sample themselves; clicking loads it again, measured the same way.
@@ -219,7 +231,7 @@ async def main():
     where = os.environ.get("MEASURE_WHERE") or f"{platform.system()} {platform.machine()}"
     result = {
         "measuredAt": datetime.date.today().isoformat(),
-        "environment": f"Google Chrome (installed, headed) via Playwright, fresh profile per run (cold cache), {runs} runs, median; {where}",
+        "environment": f"Google Chrome (installed, headed) via Playwright, fresh profile per run (cold cache), {runs_note(runs, raw)}, median; {where}; {load_note(raw)}",
         "base": BASE,
         "samples": summary,
         "raw": raw,

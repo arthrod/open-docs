@@ -118,7 +118,7 @@ has no zoom API in the released build, so on a phone its page scrolls sideways.
 | Menu item | File | What it is for |
 | --- | --- | --- |
 | Load the rich sample | `showcase.docx`, 47,871 B, 3 pages | Rendering fidelity: styles, run formatting, lists, a table with a merged cell, a chart, header and footer. Built by [`scripts/make_showcase.py`](scripts/make_showcase.py). |
-| Load the redline sample | `redline.docx`, 80,450 B, 3 pages | The rich sample after review by two people (Ana Lee, Sam Ortiz): 23 tracked changes (insertions, deletions, replacements, one inserted and one deleted paragraph, changes inside table cells, one formatting change) and 6 comments (one reply, one resolved). Made with `jubarte`, so the revisions are the ones Word itself writes. |
+| Load the redline sample | `redline.docx`, 80,450 B, 3 pages | The rich sample after review by two people (Ana Lee, Sam Ortiz): 23 tracked changes (insertions, deletions, replacements, one inserted and one deleted paragraph, changes inside table cells, one formatting change) and 6 comments (one reply, one resolved). Word itself counts 37 revisions in it and the file holds 42 revision elements: a replacement is a deletion plus an insertion, counted here as one change. Made with `jubarte`, so the revisions are the ones Word itself writes. |
 | Load the 500-page sample | `lorem-500.docx`, 467,814 B, 500 pages | A load test: 50 chapters, 2,726 justified paragraphs, about 224,000 words, header and `PAGE`/`NUMPAGES` footer. Built by [`scripts/make_lorem.py`](scripts/make_lorem.py). |
 | Load the short sample | `sample.docx`, 3,778 B | The original four-section report. |
 
@@ -176,39 +176,56 @@ file beside it.
 <!-- samples:start -->
 Measured 2026-11-15: Google Chrome (installed, headed) via Playwright, fresh profile per run (cold cache), median of the runs that loaded (3 each; a combination with a failed run was run 3 more times); Darwin arm64.
 
+**Rich sample (`showcase.docx`, 3 pages)**
+
+| Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| canvas-editor | 306 ms | 306 ms | 9 MB | 313 MB (+21 MB) | 3 | 3 of 3 |
+| Docxodus | 483 ms | 483 ms | 9 MB | 404 MB (+16 MB) | n/a | 3 of 3 |
+| SuperDoc | 505 ms | 505 ms | 21 MB | 468 MB (+27 MB) | 3 | 3 of 3 |
+| Plate | 479 ms | 479 ms | 10 MB | 308 MB (−2 MB) | n/a | 5 of 6 |
+| docen | 185 ms | 185 ms | 26 MB | 360 MB (−2 MB) | n/a | 3 of 3 |
+| docx-editor.dev | 112 ms | 391 ms | 31 MB | 328 MB (+16 MB) | n/a | 3 of 3 |
+| folio | 244 ms | 244 ms | 21 MB | 354 MB (+41 MB) | 3 | 3 of 3 |
+| WordCraft | 480 ms | 480 ms | 3 MB | 470 MB (−109 MB) | n/a | 3 of 3 |
+| Word Online viewer | 222 ms | n/a | n/a | 872 MB (+149 MB) | n/a | 3 of 3 |
+| Google viewer | 410 ms | n/a | n/a | 364 MB (−28 MB) | n/a | 3 of 3 |
+| Apryse WebViewer | 93 ms | 93 ms | 18 MB | 450 MB (−107 MB) | n/a | 3 of 3 |
+| Nutrient | 1.45 s | 1.45 s | 25 MB | 683 MB (+154 MB) | n/a | 3 of 3 |
+
 **Redline (`redline.docx`, 3 pages)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 312 ms | 312 ms | 8 MB | 315 MB (−6 MB) | 3 | 3 of 3 |
-| Docxodus | 475 ms | 475 ms | 9 MB | 589 MB (+48 MB) | n/a | 3 of 3 |
-| SuperDoc | 556 ms | 556 ms | 23 MB | 688 MB (+124 MB) | 3 | 3 of 3 |
-| Plate | 440 ms | 440 ms | 12 MB | 338 MB (+2 MB) | n/a | 3 of 3 |
-| docen | 248 ms | 248 ms | 29 MB | 328 MB (−5 MB) | n/a | 4 of 6 |
-| docx-editor.dev | 105 ms | 473 ms | 30 MB | 351 MB (+27 MB) | n/a | 5 of 6 |
-| folio | 239 ms | 239 ms | 17 MB | 372 MB (−29 MB) | 3 | 3 of 3 |
-| WordCraft | 488 ms | 488 ms | 3 MB | 477 MB (−215 MB) | n/a | 5 of 6 |
-| Word Online viewer | 270 ms | n/a | n/a | 723 MB (+83 MB) | n/a | 5 of 6 |
-| Google viewer | 527 ms | n/a | n/a | 397 MB (−5 MB) | n/a | 5 of 6 |
+| canvas-editor | 312 ms | 312 ms | 8 MB | 315 MB (+5 MB) | 3 | 3 of 3 |
+| Docxodus | 475 ms | 475 ms | 9 MB | 589 MB (+47 MB) | n/a | 3 of 3 |
+| SuperDoc | 556 ms | 556 ms | 23 MB | 688 MB (+123 MB) | 3 | 3 of 3 |
+| Plate | 440 ms | 440 ms | 12 MB | 338 MB (+41 MB) | n/a | 3 of 3 |
+| docen | 248 ms | 248 ms | 29 MB | 328 MB (−13 MB) | n/a | 4 of 6 |
+| docx-editor.dev | 105 ms | 473 ms | 30 MB | 351 MB (+32 MB) | n/a | 5 of 6 |
+| folio | 239 ms | 239 ms | 17 MB | 372 MB (+25 MB) | 3 | 3 of 3 |
+| WordCraft | 488 ms | 488 ms | 3 MB | 477 MB (−250 MB) | n/a | 5 of 6 |
+| Word Online viewer | 270 ms | n/a | n/a | 723 MB (+132 MB) | n/a | 5 of 6 |
+| Google viewer | 527 ms | n/a | n/a | 397 MB (−13 MB) | n/a | 5 of 6 |
 | Apryse WebViewer | 302 ms | 302 ms | 18 MB | 464 MB (−2 MB) | n/a | 3 of 3 |
-| Nutrient | 1.85 s | 1.85 s | 26 MB | 524 MB (+40 MB) | n/a | 3 of 3 |
+| Nutrient | 1.85 s | 1.85 s | 26 MB | 524 MB (+41 MB) | n/a | 3 of 3 |
 
 **500 pages (`lorem-500.docx`)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 9.28 s | 9.36 s | 699 MB | 883 MB (+592 MB) | 637 | 4 of 6 |
-| Docxodus | 2.66 s | 2.66 s | 10 MB | 599 MB (+22 MB) | n/a | 3 of 3 |
+| canvas-editor | 9.28 s | 9.36 s | 699 MB | 883 MB (+594 MB) | 637 | 4 of 6 |
+| Docxodus | 2.66 s | 2.66 s | 10 MB | 599 MB (+18 MB) | n/a | 3 of 3 |
 | SuperDoc | 4.88 s | 4.88 s | 37 MB | 778 MB (+320 MB) | 25 | 3 of 3 |
-| Plate | 22.0 s | 22.0 s | 82 MB | 469 MB (+141 MB) | n/a | 5 of 6 |
+| Plate | 22.0 s | 22.0 s | 82 MB | 469 MB (+142 MB) | n/a | 5 of 6 |
 | docen | 2.23 s | 284.9 s | 128 MB | 1435 MB (+1069 MB) | n/a | 1 of 4 |
-| docx-editor.dev | 292 ms | 1.03 s | 152 MB | 524 MB (+193 MB) | n/a | 3 of 3 |
+| docx-editor.dev | 292 ms | 1.03 s | 152 MB | 524 MB (+213 MB) | n/a | 3 of 3 |
 | folio | 9.68 s | 9.68 s | 45 MB | 1371 MB (+1063 MB) | 500 | 3 of 3 |
-| WordCraft | 2.73 s | 2.73 s | 3 MB | 361 MB (−328 MB) | n/a | 3 of 3 |
-| Word Online viewer | 619 ms | n/a | n/a | 756 MB (+231 MB) | n/a | 3 of 3 |
-| Google viewer | 881 ms | n/a | n/a | 412 MB (+19 MB) | n/a | 5 of 6 |
-| Apryse WebViewer | 498 ms | 498 ms | 40 MB | 506 MB (+73 MB) | n/a | 3 of 3 |
-| Nutrient | 7.54 s | 7.54 s | 28 MB | 397 MB (−50 MB) | n/a | 3 of 3 |
+| WordCraft | 2.73 s | 2.73 s | 3 MB | 361 MB (−349 MB) | n/a | 3 of 3 |
+| Word Online viewer | 619 ms | n/a | n/a | 756 MB (+199 MB) | n/a | 3 of 3 |
+| Google viewer | 881 ms | n/a | n/a | 412 MB (+32 MB) | n/a | 5 of 6 |
+| Apryse WebViewer | 498 ms | 498 ms | 40 MB | 506 MB (+110 MB) | n/a | 3 of 3 |
+| Nutrient | 7.54 s | 7.54 s | 28 MB | 397 MB (−84 MB) | n/a | 3 of 3 |
 <!-- samples:end -->
 
 Read these with care:

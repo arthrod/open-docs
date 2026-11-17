@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import measure_lib as lib  # noqa: E402
 
@@ -163,3 +165,26 @@ def test_end_chrome_is_quiet_once_the_process_is_gone(monkeypatch):
     monkeypatch.setattr(lib.subprocess, "run", run)
     monkeypatch.setattr(lib.time, "sleep", lambda s: None)
     assert lib.end_chrome("/tmp/p", wait_s=5) is None
+
+
+def test_every_run_can_say_how_busy_the_machine_was():
+    m = lib.machine_load()
+    assert m["cores"] >= 1 and m["load1"] >= 0
+    assert lib.load_note([{"load1": 2.0, "cores": 12}, {"load1": 9.5, "cores": 12}, {"load1": 3.0, "cores": 12}]) == "machine load (1-minute average) median 3.0, highest 9.5, on 12 cores"
+    assert lib.load_note([{"engine": "folio"}]) == ""
+
+
+def test_the_heading_says_how_many_runs_were_really_made():
+    full = [{"engine": e, "sample": "redline"} for e in ("a", "b") for _ in range(3)]
+    assert lib.runs_note(3, full) == "3 runs"
+    assert lib.runs_note(3, full[:4]) == "1 to 3 runs (3 asked; the measuring stopped early)"
+    assert lib.runs_note(3, full[:3]) == "3 runs"
+    assert lib.runs_note(3, [full[0], full[3]]) == "1 runs (3 asked; the measuring stopped early)"
+
+
+def test_pagespeed_options_are_parsed_before_anything_runs():
+    a = lib.pagespeed_args(["https://x.example", "e/folio,e/plate", "3", "--query", "open=a.docx", "--label", "lorem-500", "--out", "o.json"])
+    assert (a.base, a.pages, a.runs, a.query, a.label, a.out) == ("https://x.example", "e/folio,e/plate", 3, "open=a.docx", "lorem-500", "o.json")
+    for bad in ([], ["https://x.example"], ["https://x.example", "e/folio", "0"], ["https://x.example", "e/folio", "3", "--out"]):
+        with pytest.raises(SystemExit):
+            lib.pagespeed_args(bad)

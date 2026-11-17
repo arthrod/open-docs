@@ -80,3 +80,18 @@ Deno.test("a row measured against another site address says so", () => {
   };
   assertEquals(samplesBand(editors, data).includes("measured 2026-11-15: test · https://staging.example"), true);
 });
+
+Deno.test("a value that should be a number is not written into the page as markup", () => {
+  const evil = "<img src=x onerror=alert(1)>" as unknown as number;
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-15", environment: "test",
+    samples: { "lorem-500": { folio: row({ pages: evil, loadMs: 5, settledMs: evil, heapBytes: evil, rendererRss: evil, rendererGrowth: evil }) } },
+  };
+  assertEquals(samplesBand(editors, data).includes("<img"), false);
+});
+
+Deno.test("a results file with parts missing draws what it has instead of throwing", () => {
+  assertEquals(samplesBand(editors, {} as SampleMeasurements), "");
+  const html = samplesBand(editors, { samples: { redline: { folio: row() } } } as unknown as SampleMeasurements);
+  assertEquals(html.includes("folio"), true);
+});

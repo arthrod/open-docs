@@ -6,6 +6,7 @@ already published, and how a Chrome that will not close is ended.
 """
 import argparse
 import json
+import os
 import statistics
 import subprocess
 import time
@@ -163,3 +164,53 @@ def lorem_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--chapters", type=int, default=50)
     p.add_argument("--words", type=int, default=4450, help="words of body text per chapter")
     return p.parse_args(argv)
+
+
+def machine_load() -> dict:
+    """How busy the machine is right now: the 1-minute load average and the core count.
+
+    A timing taken while other work holds the processors is slower than the
+    engine is; every run records this so a reader can tell.
+    """
+    return {"load1": round(os.getloadavg()[0], 2), "cores": os.cpu_count() or 1}
+
+
+def load_note(runs: list[dict]) -> str:
+    """One phrase for the environment line: the load the runs were taken under."""
+    loads = sorted(r["load1"] for r in runs if isinstance(r.get("load1"), (int, float)))
+    if not loads:
+        return ""
+    cores = next((r["cores"] for r in runs if r.get("cores")), None)
+    return f"machine load (1-minute average) median {statistics.median(loads):.1f}, highest {loads[-1]:.1f}" + (f", on {cores} cores" if cores else "")
+
+
+def runs_note(asked: int, raw: list[dict], key: str = "engine") -> str:
+    """"3 runs" when every engine got the runs asked for; otherwise what was actually made."""
+    per: dict = {}
+    for r in raw:
+        k = (r.get(key), r.get("sample") or r.get("doc"))
+        per[k] = per.get(k, 0) + 1
+    counts = sorted(set(per.values()))
+    if not counts or counts == [asked]:
+        return f"{asked} runs"
+    return f"{counts[0]} to {counts[-1]} runs ({asked} asked; the measuring stopped early)" if len(counts) > 1 else f"{counts[0]} runs ({asked} asked; the measuring stopped early)"
+
+
+def pagespeed_args(argv: list[str]) -> argparse.Namespace:
+    """scripts/measure_pagespeed.py's command line."""
+    p = argparse.ArgumentParser(description="PageSpeed Insights on pages of one site, several analyses each.")
+    p.add_argument("base", help="the site, e.g. https://viewers.benchmarks.law")
+    p.add_argument("pages", help="comma-separated paths under it, e.g. v/docxodus,r/docxodus")
+    p.add_argument("runs", type=_positive, help="analyses per page and form factor")
+    p.add_argument("--out", metavar="PATH", help="merge the medians into this results file")
+    p.add_argument("--query", default="", help='appended to every page, e.g. "src=<docx url>"')
+    p.add_argument("--label", help="with --query: file the medians under docs.<label>, leaving the default table alone")
+    return p.parse_args(argv)
+
+
+def _positive(v: str) -> int:
+    """A count of at least one."""
+    n = int(v)
+    if n < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return n
