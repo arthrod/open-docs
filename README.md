@@ -23,7 +23,7 @@ step. Each one opens on a **blank document**, imports and exports real
 | [docen](https://editors.benchmarks.law/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | marked HTML → its paste parser (`parseHTMLBody`) → `setContent` (undoable) | its .docx → `lib/docx-markdown.ts` |
 | [docx-editor.dev](https://editors.benchmarks.law/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → its own DOCX clipboard-fragment paste (undoable) | its .docx → `lib/docx-markdown.ts` |
 | [folio](https://editors.benchmarks.law/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | its `fromMarkdown` → `mergeDocumentContent` → `toProseDoc`, one transaction (undoable) | its .docx (`save()`) → `lib/docx-markdown.ts` |
-| [WordCraft](https://editors.benchmarks.law/e/wordcraft) | `wordcraft-web` 0.17.0 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
+| [WordCraft](https://editors.benchmarks.law/e/wordcraft) | `wordcraft-web` 0.18.1 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
 ships one (Docxodus, SuperDoc, docen, docx-editor.dev, folio, WordCraft), and a
@@ -230,6 +230,9 @@ Measured 2026-11-17: Google Chrome 156.0.8078.80 (installed, headed) via Playwri
 
 Read these with care:
 
+- **WordCraft's figures are from release 0.17.0.** The site now serves 0.18.1 (since
+  2026-11-17). Its rows here and in the Lighthouse tables were not measured again after the
+  upgrade, so they describe the previous release.
 - **docen on 500 pages** answers "loaded" after about 5 s on the runner and shows
   page 1, but in all five runs its main thread was still busy when the wait gave
   up at 180 s, so it has no Settled figure. On an M-series Mac (one run by hand,
@@ -435,7 +438,7 @@ What is the vendors' (written down, worked around fairly, reportable upstream):
 | Docxodus | no markdown importer; `convertWmlToMarkdown` is an anchor-annotated projection for patching | .docx in, .docx read back |
 | docx-editor.dev | no markdown importer or exporter on the ref | .docx in, .docx read back |
 | folio | `@stll/folio-vue@0.28.0` `fromMarkdown` turns a fenced code block into unstyled Courier paragraphs (one per line); `toMarkdown` drops backticks from code in an opened .docx and escapes `<br>` in table cells | .docx in, .docx read back (every element survives) |
-| WordCraft | v0.17.0's `window.wordcraft` drives apply/undo/redo; its HTML paste turns a quote into an indented Normal paragraph (by design, `paste.rs`); Save writes the opened file's format | Save As (F12) → .docx in host mode |
+| WordCraft | `window.wordcraft` (since v0.17.0) drives apply/undo/redo; its HTML paste turns a quote into an indented Normal paragraph (by design, `paste.rs`); Save writes the opened file's format | Save As (F12) → .docx in host mode |
 
 Measured with [`lib/probes/md-mapping.js`](lib/probes/md-mapping.js): it applies
 a fixed markdown sample, exports the .docx, checks styles/marks/numbering/links
@@ -542,7 +545,7 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   Word opens the file without a repair prompt, in Compatibility Mode). It
   ignores a picture's width and writes its natural size.
 - **WordCraft**: val files are text-only and nothing mirrors release assets with
-  CORS, so `/vendor/wordcraft/0.17.0/*` installs itself on first request:
+  CORS, so `/vendor/wordcraft/0.18.1/*` installs itself on first request:
   it downloads the pinned release zip from GitHub, checks its SHA-256, stores
   the three runtime files gzipped in the val's blob storage, and from then on
   streams them with `content-encoding: gzip` (22 MB on the wire for a 60 MB
