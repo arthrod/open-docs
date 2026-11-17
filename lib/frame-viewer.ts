@@ -10,6 +10,7 @@
  * load event — not when the server finished rendering, nor its bytes/memory.
  */
 import { waitFor, type EditorAdapter } from "/lib/kit.ts";
+import { startPath } from "/lib/start-doc.ts";
 
 export function frameViewer(
   name: string,
@@ -62,7 +63,7 @@ export function frameViewer(
       window.od.progress(`Loading ${name} (rendered on its own servers)…`);
       const v = window.od.viewer;
       if (v) v.taken = true;
-      await show(v ? v.srcUrl : "/api/showcase.docx");
+      await show(v ? v.srcUrl : startPath());
     },
     loadUrl: show,
     load() {

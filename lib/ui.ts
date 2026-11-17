@@ -268,7 +268,12 @@ async function start(adapter: EditorAdapter) {
       const btn = want === "showcase.docx"
         ? $("od-showcase")
         : [...document.querySelectorAll<HTMLButtonElement>(".od-fixture")].find((b) => b.dataset.file === want);
-      if (btn) {
+      if (btn && adapter.viewOnly && !window.od.viewer) {
+        // A view-only engine already started on that file (lib/start-doc.ts): opening it again
+        // would make the page load two documents. Only its name is set.
+        autoOpened = true;
+        if (btn.dataset.title) setDocName(btn.dataset.title);
+      } else if (btn) {
         autoOpened = true;
         btn.click();
       }
