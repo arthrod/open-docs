@@ -48,6 +48,8 @@ let lastMeasurement: Measurement | undefined;
 /** "Re-measure now": the same reading taken again later, with when it was taken. */
 let nowMeasurement: { m: Measurement; at: Date } | undefined;
 let measureArgs: { adapter: EditorAdapter; mountStart: number; mountEnd: number } | undefined;
+/** True while an Undo or Redo walk runs: two walks on one editor would mix their steps. */
+let walking = false;
 /** True while a re-measure is in flight; lives outside the dialog so a re-rendered button stays disabled. */
 let measuring = false;
 const history: Array<{ role: "user" | "assistant"; content: string }> = [];
@@ -755,7 +757,7 @@ function editCard(markdown: string, summary: string, before: string) {
   apply.addEventListener("click", () => void doApply());
 
   undo.addEventListener("click", async () => {
-    if (!current || !native() || gen !== docGen || !isTop()) return refresh();
+    if (walking || !current || !native() || gen !== docGen || !isTop()) return refresh();
     // Native undo walks back through anything typed since, too; say so first.
     const now = await current.getMarkdown().catch(() => afterApply);
     if (!sameText(now, afterApply) && !confirmDiscard) {
@@ -769,8 +771,11 @@ function editCard(markdown: string, summary: string, before: string) {
       return;
     }
     undo.disabled = true;
+    walking = true;
     try {
       const steps = await stepHistory(current, "undo", beforeApply);
+      // A document opened during the walk emptied the stacks: this card is no longer about it.
+      if (gen !== docGen || !isTop()) return refresh();
       if (steps == null) {
         // stepHistory restored the document after failing to reach the target.
         undo.disabled = false;
@@ -796,18 +801,22 @@ function editCard(markdown: string, summary: string, before: string) {
     } catch (err) {
       undo.disabled = false;
       fail("Undo failed", err);
+    } finally {
+      walking = false;
     }
   });
 
   redo.addEventListener("click", async () => {
-    if (!current || !native() || gen !== docGen || appliedStack.includes(token) || !isLastUndone()) return refresh();
+    if (walking || !current || !native() || gen !== docGen || appliedStack.includes(token) || !isLastUndone()) return refresh();
     if (!afterOk) {
       setStatus("Redo refused: the post-edit text could not be read", "err");
       return;
     }
     redo.disabled = true;
+    walking = true;
     try {
       const steps = await stepHistory(current, "redo", afterApply);
+      if (gen !== docGen || !isLastUndone()) return refresh();
       if (steps == null) {
         // History moved on (e.g. the user typed after undoing): redo has nothing to replay.
         redo.hidden = true;
@@ -815,8 +824,9 @@ function editCard(markdown: string, summary: string, before: string) {
         apply.disabled = false;
         apply.textContent = "Re-apply";
         state.textContent = `${current.name} has nothing to redo; re-apply instead`;
-        // No longer redoable: leave the stack, so older undone cards are not stuck behind it.
-        undoneStack.splice(undoneStack.indexOf(token), 1);
+        // The engine has nothing to redo, so no undone card can be redone: empty the stack,
+        // and every one of them offers Re-apply.
+        undoneStack.length = 0;
         stackChanged();
         return;
       }
@@ -826,6 +836,8 @@ function editCard(markdown: string, summary: string, before: string) {
     } catch (err) {
       redo.disabled = false;
       fail("Redo failed", err);
+    } finally {
+      walking = false;
     }
   });
   return doApply;

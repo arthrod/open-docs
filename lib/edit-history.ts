@@ -15,6 +15,11 @@ const MAX_STEPS = 12;
  * Step the engine's OWN history (undo or redo) until the document reads
  * `target` again. Returns the steps taken, or restores the walk and returns
  * null if it never got there. Read failures also restore the walk before throwing.
+ *
+ * Limit: a step is counted only when the Markdown changed. An engine that keeps a history
+ * entry Markdown cannot show (formatting only) makes the walk stop there as if the history
+ * were empty; telling the two apart needs a history position from the engine, which the
+ * adapter contract does not have.
  */
 export async function stepHistory(a: HistoryAdapter, dir: "undo" | "redo", target: string): Promise<number | null> {
   const step = dir === "undo" ? a.undo : a.redo;
