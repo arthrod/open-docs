@@ -1086,4 +1086,15 @@ setTimeout(() => {
   }
 }, 45_000);
 
+document.addEventListener("pointerenter", (e) => {
+  if (e.target instanceof Element && e.target.closest('a[href="/e/wordcraft"], #od-switch')) {
+    import("/editors/wordcraft/prefetch.ts").then((m) => m.prefetchWordcraft()).catch(() => {});
+  }
+}, { capture: true, passive: true });
+document.addEventListener("focusin", (e) => {
+  if (e.target instanceof Element && e.target.closest('a[href="/e/wordcraft"], #od-switch')) {
+    import("/editors/wordcraft/prefetch.ts").then((m) => m.prefetchWordcraft()).catch(() => {});
+  }
+}, { capture: true, passive: true });
+
 export {};

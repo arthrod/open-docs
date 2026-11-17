@@ -414,6 +414,13 @@ for (const el of document.querySelectorAll("[data-slug]")) {
 document.getElementById("mnote").textContent = total
   ? total + " recent measured page loads (up to 200 per editor). Open an editor to add yours. The numbers in its top bar are your own."
   : "No measurements yet. Open an editor and its numbers appear here.";
+const warmWordcraft = (e) => {
+  if (e.target instanceof Element && e.target.closest('a[href="/e/wordcraft"]')) {
+    import("/editors/wordcraft/prefetch.ts").then((m) => m.prefetchWordcraft()).catch(() => {});
+  }
+};
+document.addEventListener("pointerenter", warmWordcraft, { capture: true, passive: true });
+document.addEventListener("focusin", warmWordcraft, { capture: true, passive: true });
 </script>
 </body></html>`;
 }
