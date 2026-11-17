@@ -51,6 +51,17 @@ const score = (v: number | null | undefined) => {
   return n == null ? "n/a" : `<b class="lh ${n >= 90 ? "lh-good" : n >= 50 ? "lh-mid" : "lh-bad"}">${n}</b>`;
 };
 
+/**
+ * "mobile analyses ranged 44 to 79" when a page's analyses differ by 10 points or more: a median of
+ * a few analyses of such a page moves from one day to the next, and the reader should see by how much.
+ */
+const spread = (f: string, p: LighthousePage): string => {
+  const runs = (p.performanceRuns ?? []).map(num).filter((n): n is number => n != null);
+  if (runs.length < 2) return "";
+  const lo = Math.min(...runs), hi = Math.max(...runs);
+  return hi - lo >= 10 ? `${f} analyses ranged ${lo} to ${hi}` : "";
+};
+
 export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATEST as LighthouseResults): string {
   const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string }) => {
     const psi = (slug: string) => `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`https://editors.benchmarks.law/e/${slug}${q}`)}`;
@@ -67,7 +78,7 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
         const got = runs.filter((n) => num(n) != null).length;
         return got === runs.length ? "" : `${f} ${got}/${runs.length} analyses${p.error ? `: ${esc(p.error.slice(0, 120))}` : ""}`;
       };
-      const partial = [part("desktop", d), part("mobile", m)].filter(Boolean).join(" · ");
+      const partial = [part("desktop", d), part("mobile", m), spread("desktop", d), spread("mobile", m)].filter(Boolean).join(" · ");
       if (num(d.performance) == null && num(m.performance) == null) return `<tr><td>${name}</td><td colspan="8"><b>no result</b>: ${esc((d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
       // A page analysed in another run than the table's heading (a partial re-run) says when.
       const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment)

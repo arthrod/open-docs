@@ -50,3 +50,11 @@ Deno.test("a results file with parts missing draws what it has instead of throwi
   const html = lighthouseBand(editors, { measuredAt: "2026-11-10", environment: "x", pages: { "e/folio": { desktop: bare } as never, "e/docen": { desktop: page(), mobile: page() } } });
   assertEquals(html.includes("docen"), true);
 });
+
+Deno.test("a page whose analyses disagree shows their range beside the median", () => {
+  const wide = { ...page(), performance: 71, performanceRuns: [79, 44, 71] };
+  const tight = { ...page(), performance: 98, performanceRuns: [97, 98, 98] };
+  const html = lighthouseBand(editors, { measuredAt: "2026-11-16", environment: "x", pages: { "e/folio": { desktop: tight, mobile: wide }, "e/docen": { desktop: tight, mobile: tight } } });
+  assertEquals(html.includes("mobile analyses ranged 44 to 79"), true);
+  assertEquals((html.match(/analyses ranged/g) ?? []).length, 1);
+});
