@@ -11,6 +11,7 @@
  */
 import { FFLATE, MAMMOTH } from "./deps.ts";
 import { imageNode, type Picture, pictureLayout } from "./pictures.ts";
+import { codeLines } from "./code-lines.ts";
 import { safeUrl } from "./safe-url.ts";
 
 type Descendant = any;
@@ -37,6 +38,8 @@ export async function importDocxToNodes(_editor: any, bytes: Uint8Array): Promis
         "p[style-name='Intense Quote'] => blockquote > p:fresh",
         "p[style-name='Code'] => pre:separator('\\n')",
         "r[style-name='Code Char'] => code",
+        // mammoth ignores underline unless told; Plate has the mark and the walker reads <u>.
+        "u => u",
       ],
     },
   );
@@ -109,7 +112,8 @@ export async function importDocxToNodes(_editor: any, bytes: Uint8Array): Promis
     else if (t === "PRE") {
       nodes.push({
         type: "code_block",
-        children: (el.textContent ?? "").split("\n").map((line) => ({ type: "code_line", children: [{ text: line }] })),
+        // From the marked leaves, not textContent: a tracked change in a Code paragraph stays visible.
+        children: codeLines(leaves(el)),
       });
     }
     else if (t === "TABLE") {

@@ -1,0 +1,80 @@
+name: CI
+
+# Type-check the server entry point and run every test, with coverage, for the
+# three runtimes this repository has: Deno/TypeScript, the Python measurement
+# helpers, and the Rust wrapper around WordCraft (only when it changes: it
+# builds WordCraft).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A pull request's newer push replaces the older run (its diff is cumulative). Pushes to main do
+# not cancel each other: the Rust job compares against the previous push, and a cancelled run
+# would leave that push's wrapper changes untested.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  deno:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      # The browser entry points (editors/*/main.ts) import by served path ("/lib/kit.ts"),
+      # which only resolves in the browser; the server entry and everything tested is checked.
+      - name: Type-check the server
+        run: deno check --allow-import index.ts
+      - name: Tests (type-checked) with coverage
+        run: deno test -A --coverage=cov lib/ server/ editors/
+      - name: Coverage
+        run: deno coverage cov
+
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Compile every script
+        run: uv run python -m compileall -q scripts
+      - name: Lint (ruff.toml says for what)
+        run: uvx ruff check scripts
+      - name: Type-check
+        run: uv run --with playwright --with python-docx --with matplotlib --with pytest --with pyrefly pyrefly check scripts/*.py scripts/tests/*.py
+      - name: Tests with coverage
+        run: uv run --with pytest --with pytest-cov pytest scripts/tests --cov=measure_lib --cov=readme_tables --cov-report=term-missing
+
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Did the wrapper change?
+        id: changed
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if git diff --quiet "$base" HEAD -- tools/wordcraft-render/src tools/wordcraft-render/Cargo.toml 2>/dev/null; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      # The wrapper is a member of WordCraft's workspace: build it there, at the commit its README pins.
+      - name: Test the wrapper inside WordCraft
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          git clone https://github.com/storytold/wordcraft /tmp/wordcraft
+          cd /tmp/wordcraft
+          git checkout d40d1b27181b61990c84c75f77d5fd23ef81d452
+          mkdir -p apps/wc-render
+          cp -r "$GITHUB_WORKSPACE/tools/wordcraft-render/Cargo.toml" "$GITHUB_WORKSPACE/tools/wordcraft-render/src" apps/wc-render/
+          cargo test -p wc-render

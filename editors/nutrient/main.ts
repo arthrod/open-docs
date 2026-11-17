@@ -8,6 +8,8 @@
  * .docx, not the .docx itself.
  */
 import { waitFor } from "/lib/kit.ts";
+import { startPath } from "/lib/start-doc.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 
 const BASE = "https://cdn.cloud.pspdfkit.com/pspdfkit-web@1.25.0/";
 
@@ -160,6 +162,7 @@ async function fetchBytes(path: string): Promise<Uint8Array> {
 
 window.od.register({
   name: "Nutrient Web SDK",
+  revisions: REVISION_NOTES["nutrient"],
   viewOnly: true,
   extraResources: WORKER_FILES,
 
@@ -170,7 +173,7 @@ window.od.register({
     // deno-lint-ignore no-explicit-any
     NV = (window as any).NutrientViewer;
     const v = window.od.viewer;
-    await open(() => (v ? v.initialDocx() : fetchBytes("/api/showcase.docx")));
+    await open(() => (v ? v.initialDocx() : fetchBytes(startPath())));
   },
 
   load: (bytes) => open(() => Promise.resolve(bytes)),

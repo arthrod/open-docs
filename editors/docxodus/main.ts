@@ -17,6 +17,7 @@
  */
 import { Lexer, type Tokens } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 import { BUNDLE_URL, WASM_BASE } from "./assets.ts";
 
@@ -336,6 +337,7 @@ window.od.register({
           paginationMode: mod.PaginationMode.Paginated,
           renderHeadersAndFooters: true,
           renderFootnotesAndEndnotes: true,
+          renderTrackedChanges: true,
         });
         target.innerHTML = "";
         await document.fonts.ready;
@@ -355,8 +357,14 @@ window.od.register({
       // "card" (the default) adds a border, radius and shadow meant for a
       // floating widget; "flush" fills our stage edge-to-edge.
       frame: "flush",
+      // Word's "All Markup": a document that arrives with tracked changes shows
+      // them as insertions and deletions (the default draws it as if accepted).
+      // How the user's own edits are recorded (`trackedChanges`) is left alone.
+      showRevisions: true,
     }) as Ribbon;
   },
+
+  revisions: REVISION_NOTES["docxodus"],
 
   async load(bytes: Uint8Array) {
     if (viewer) return viewer.reload(bytes);

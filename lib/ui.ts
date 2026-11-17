@@ -20,6 +20,7 @@ import {
   parseArenaMessage,
 } from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
+import { LoadQueue, longTasksSupported, OpenOwner, ownedLoad, quietSince, settledMs as settledAfter } from "./open-timing.ts";
 
 const slug = document.body.dataset.slug ?? "";
 const editorName = document.body.dataset.name ?? slug;
@@ -190,6 +191,9 @@ async function remeasure() {
   renderMetricsDialog();
 }
 
+/** Set when ?open= made this page load a sample on arrival. */
+let autoOpened = false;
+
 async function recordMetrics(adapter: EditorAdapter, mountStart: number, mountEnd: number) {
   measureArgs = { adapter, mountStart, mountEnd };
   // Let late chunks, fonts and workers arrive before we count bytes / heap.
@@ -212,6 +216,9 @@ async function recordMetrics(adapter: EditorAdapter, mountStart: number, mountEn
     sessionStorage.setItem("od:editor-seen", "1");
     // Test sessions set localStorage["od:no-metrics"] so they don't skew medians.
     if (localStorage.getItem("od:no-metrics")) return;
+    // A visit that opened a sample by itself (?open=) has that document's heap and downloads in
+    // this reading: it is not a startup, so it stays out of the startup figures.
+    if (autoOpened) return;
     void fetch("/api/metrics", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -242,6 +249,9 @@ async function start(adapter: EditorAdapter) {
     const mountEnd = performance.now();
     mounted = true;
     setLoading(false);
+    // The moment the editor became ready, for anything timing the page from outside (scripts/measure_samples.py):
+    // read here, it is the exact time; polled from outside, it is late by up to the polling interval.
+    document.documentElement.dataset.odReady = String(Math.round(mountEnd));
     // Viewers open on the rich sample (a blank page shows nothing about them).
     if (adapter.viewOnly) setDocName("Coastal Wind Farm — Spring Field Report");
     setStatus(`${adapter.name} ready`, "ok");
@@ -250,6 +260,24 @@ async function start(adapter: EditorAdapter) {
     const pending = pendingEmbedAction;
     pendingEmbedAction = undefined;
     pending?.();
+    // ?open=<file> opens one of the Menu's samples as soon as the editor is ready, by pressing
+    // its Menu button (so a page-load audit such as PageSpeed can see an engine open a file).
+    // Only a file the Menu already offers matches; anything else is ignored.
+    const want = new URLSearchParams(location.search).get("open");
+    if (want) {
+      const btn = want === "showcase.docx"
+        ? $("od-showcase")
+        : [...document.querySelectorAll<HTMLButtonElement>(".od-fixture")].find((b) => b.dataset.file === want);
+      if (btn && adapter.viewOnly && !window.od.viewer) {
+        // A view-only engine already started on that file (lib/start-doc.ts): opening it again
+        // would make the page load two documents. Only its name is set.
+        autoOpened = true;
+        if (btn.dataset.title) setDocName(btn.dataset.title);
+      } else if (btn) {
+        autoOpened = true;
+        btn.click();
+      }
+    }
     (window as unknown as { __odlog?: (k: string, m: string) => void }).__odlog?.(
       "ready",
       `${adapter.name} mounted in ${Math.round(mountEnd - mountStart)}ms (startup ${Math.round(mountEnd)}ms)`,
@@ -272,7 +300,7 @@ let fitNow = () => {};
 function watchFit(adapter: EditorAdapter) {
   const stage = $("od-stage");
   if (!stage || !adapter.fit) return;
-  let timer = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   fitNow = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
@@ -331,38 +359,135 @@ async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void
 const newDoc = () =>
   withAdapter("New document", async (a) => {
     if (a.viewOnly) return setStatus(`${a.name} is a view-only viewer`, "err");
-    await a.load(await window.od.blankDocx());
+    // The document is being replaced from this moment, as in openSiteSample: an assistant answer
+    // computed for the one on screen must not land on its successor while that one loads, and the
+    // sample timing left on <html> describes a document that is going away.
+    docGen++;
+    delete document.documentElement.dataset.odLoaded;
+    // A sample still being measured no longer owns the page; and a document opened while this
+    // blank one was being built stays: this open then loads nothing and says nothing.
+    if (!(await ownedLoad(openOwner, loads, () => window.od.blankDocx(), (blank) => a.load(blank)))) return;
     newDocument();
     setDocName("Untitled document");
     postChild(childOpened(slug, docName()));
     setStatus("New blank document", "ok");
   });
 
-const openShowcase = () =>
-  withAdapter("Load the rich sample", async (a) => {
-    if (a.loadUrl) await a.loadUrl("/api/showcase.docx");
-    else {
-      const res = await fetch("/api/showcase.docx");
-      if (!res.ok) throw new Error(`showcase.docx → HTTP ${res.status}`);
-      await a.load(new Uint8Array(await res.arrayBuffer()));
+/**
+ * How long opening a document took and what the JS heap is afterwards.
+ *
+ *   ms         from the click to two frames after the adapter's `load()`
+ *              resolved: the engine SAYS it is done.
+ *   settledMs  from the click to the end of the last long task (> 50 ms on
+ *              the main thread) before two quiet seconds (QUIET_MS): the page HAS
+ *              stopped working. Some loaders return before they draw
+ *              (docx-editor.dev's `ref.load` is fire-and-forget), and some
+ *              keep paginating after they return, so this is the number to
+ *              compare on a long document. Work in a worker or on the GPU is
+ *              not seen by it. Null where the browser has no Long Tasks API,
+ *              and null (with `settleTimedOut`) when the page was still busy
+ *              after 180 s: it never settled, so no time is claimed for it.
+ *
+ * `loaded` runs as soon as the adapter's `load()` resolved, before the wait
+ * for quiet: the document on screen is the new one from that moment.
+ *
+ * Left on <html data-od-loaded> for scripts/measure_samples.py. An open that
+ * was overtaken by a newer one (`owner`) writes nothing and returns null.
+ * Loads are run one after another, so the document on screen is the one
+ * asked for last; the time counted is still from the click.
+ */
+const openOwner = new OpenOwner();
+/** Every load into the editor (sample, New, Import), one at a time in the order asked. */
+const loads = new LoadQueue();
+async function timedOpen(doc: string, owner: number, open: () => Promise<void>, loaded: () => void): Promise<string | null> {
+  const t0 = performance.now();
+  let lastBusy = t0;
+  let observer: PerformanceObserver | undefined;
+  // observe() does not throw for an entry type the browser lacks (Firefox, Safari): ask first.
+  if (longTasksSupported()) {
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
+      });
+      observer.observe({ type: "longtask" });
+    } catch {
+      observer = undefined;
     }
-    newDocument();
-    setDocName("Coastal Wind Farm — Spring Field Report");
-    postChild(childOpened(slug, docName()));
-    fitNow();
-    setStatus("Loaded the rich sample .docx", "ok");
+  }
+  try {
+    // One load at a time: two loads running into the same editor finish in either order, and the
+    // slower document would win whichever was asked for last. An open that was overtaken while
+    // it waited its turn does not load at all.
+    await loads.run(() => (openOwner.owns(owner) ? open() : Promise.resolve()));
+    if (!openOwner.owns(owner)) return null;
+    loaded();
+    const loadDone = performance.now();
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const ms = Math.round(performance.now() - t0);
+    let settledMs: number | null = null;
+    let settleTimedOut = false;
+    if (observer) {
+      const GIVE_UP = 180_000;
+      while (!quietSince({ now: performance.now(), lastBusy, loadDone }) && performance.now() - t0 < GIVE_UP) {
+        await new Promise((r) => setTimeout(r, 100));
+        for (const e of observer.takeRecords()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
+        if (!openOwner.owns(owner)) return null;
+      }
+      const quiet = quietSince({ now: performance.now(), lastBusy, loadDone });
+      settleTimedOut = !quiet;
+      settledMs = settledAfter({ t0, ms, lastBusy, quiet });
+    }
+    if (!openOwner.owns(owner)) return null;
+    const heapBytes =
+      (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null;
+    document.documentElement.dataset.odLoaded = JSON.stringify({ doc, ms, settledMs, settleTimedOut, heapBytes });
+    const settled = settleTimedOut
+      ? " (still busy after 180 s)"
+      : settledMs != null && settledMs > ms + 250
+      ? ` (settled after ${fmtMs(settledMs)})`
+      : "";
+    return `in ${fmtMs(ms)}${settled}${heapBytes ? ` · JS heap ${fmtBytes(heapBytes)}` : ""}`;
+  } catch (err) {
+    // An open that was overtaken and then failed has nothing to say: its error must not be
+    // drawn over the newer document.
+    if (!openOwner.owns(owner)) return null;
+    throw err;
+  } finally {
+    // Also when the fetch or the adapter rejected: a failed open must not leave its observer registered.
+    observer?.disconnect();
+  }
+}
+
+/** Open one of this site's samples (a path under /api/). */
+const openSiteSample = (path: string, title: string, label: string) =>
+  withAdapter(`Load the ${label} sample`, async (a) => {
+    delete document.documentElement.dataset.odLoaded;
+    // This open owns the page from now on; one started earlier and still running is stale.
+    const mine = openOwner.start();
+    // The document is being replaced: an assistant answer computed for the one on screen must not
+    // land on its successor, however long the new one takes to load and settle.
+    docGen++;
+    const took = await timedOpen(path, mine, async () => {
+      if (a.loadUrl) return a.loadUrl(path);
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`${path} → HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      await a.load(new Uint8Array(await res.arrayBuffer()));
+    }, () => {
+      // Loaded: the new document's identity is set now, not after the settle measurement.
+      newDocument();
+      setDocName(title);
+      postChild(childOpened(slug, docName()));
+      fitNow();
+    });
+    if (took === null) return; // a newer open took over: its timing, title and status stand
+    const note = label === "redline" && a.revisions ? ` · tracked changes: ${a.revisions}` : "";
+    setStatus(`Loaded the ${label} sample ${took}${note}`, "ok");
   });
 
-const openSample = () =>
-  withAdapter("Load sample", async (a) => {
-    if (a.loadUrl) await a.loadUrl("/api/sample.docx");
-    else await a.load(await window.od.sampleDocx());
-    newDocument();
-    setDocName("Quarterly Report — Acme Robotics");
-    postChild(childOpened(slug, docName()));
-    fitNow();
-    setStatus("Loaded the sample .docx", "ok");
-  });
+const openShowcase = () =>
+  openSiteSample("/api/showcase.docx", "Coastal Wind Farm — Spring Field Report", "rich");
+
+const openSample = () => openSiteSample("/api/sample.docx", "Quarterly Report — Acme Robotics", "short");
 
 async function importFile(file: File) {
   if (!/\.docx$/i.test(file.name)) {
@@ -380,7 +505,11 @@ async function importFile(file: File) {
   let openError: string | undefined;
   const ok = await withAdapter(`Import ${file.name}`, async (a) => {
     try {
-      await a.load(new Uint8Array(await file.arrayBuffer()));
+      docGen++; // as in newDoc: the document on screen is being replaced from now on
+      delete document.documentElement.dataset.odLoaded;
+      // As in newDoc: a document opened while this file was being read stays.
+      const mine = await ownedLoad(openOwner, loads, async () => new Uint8Array(await file.arrayBuffer()), (bytes) => a.load(bytes));
+      if (!mine) return;
     } catch (err) {
       openError = (err as Error)?.message ?? String(err);
       throw err;
@@ -718,6 +847,10 @@ function wire() {
   $("od-new")?.addEventListener("click", () => void newDoc());
   $("od-showcase")?.addEventListener("click", () => void openShowcase());
   $("od-sample")?.addEventListener("click", () => void openSample());
+  for (const b of document.querySelectorAll<HTMLButtonElement>(".od-fixture")) {
+    b.addEventListener("click", () =>
+      void openSiteSample(`/api/${b.dataset.file}`, b.dataset.title ?? "", b.dataset.label ?? ""));
+  }
   $("od-reload")?.addEventListener("click", () => location.reload());
   $("od-import")?.addEventListener("click", () => $("od-file")?.click());
   $("od-file")?.addEventListener("change", (e) => {

@@ -8,6 +8,7 @@
  * export (its markdown export writes lists as HTML).
  */
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { SUPERDOC_ENGINE } from "./assets.ts";
 import { markdownToBlocks } from "/lib/markdown.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
@@ -174,6 +175,8 @@ window.od.register({
     if (v) document.getElementById("sd-toolbar")?.style.setProperty("display", "none");
     await create(SuperDoc, v ? await v.initialDocx() : await window.od.blankDocx());
   },
+
+  revisions: REVISION_NOTES["superdoc"],
 
   async load(bytes: Uint8Array) {
     if (!instance) throw new Error("SuperDoc not mounted");

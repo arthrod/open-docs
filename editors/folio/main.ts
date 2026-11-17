@@ -11,6 +11,8 @@
  * DOCX export.
  */
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
+import { hasReviewContent } from "./review-panel.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 // DO NOT pass ?external=: esm.sh leaves every external as a bare import the
@@ -75,6 +77,25 @@ async function open(input: Uint8Array | ArrayBuffer): Promise<void> {
       pmView = v ?? undefined;
     },
   }) as Handle;
+  void openReviewPanel(host);
+}
+
+/**
+ * folio lists comment threads and tracked changes (author, date, what changed)
+ * in its "Comments & Changes" panel. It opens that by itself only on a wide
+ * stage; beside this site's assistant it stays shut and the comments look
+ * missing. When the document has comments or tracked changes, press folio's
+ * own toolbar toggle.
+ */
+async function openReviewPanel(root: HTMLElement): Promise<void> {
+  for (let i = 0; i < 20; i++) {
+    const toggle = root.querySelector<HTMLButtonElement>('[data-testid="toolbar-comments-toggle"]');
+    if (toggle && hasReviewContent(root)) {
+      if (toggle.getAttribute("aria-pressed") === "false") toggle.click();
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
 }
 
 /** folio's ProseMirror view: its own keymap binds Mod-Z / Mod-Shift-Z to its history. */
@@ -140,6 +161,8 @@ window.od.register({
     fitZoom = z;
     handle?.setZoom?.(z);
   },
+
+  revisions: REVISION_NOTES["folio"],
 
   async load(bytes: Uint8Array) {
     await open(bytes.slice());

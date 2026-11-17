@@ -39,6 +39,8 @@ import floatingToolbarPlugin from "@hufe921/canvas-editor-plugin-floating-toolba
 import markdownPlugin from "@hufe921/canvas-editor-plugin-markdown";
 import { marked } from "marked";
 import { waitFor } from "/lib/kit.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
+import { revisionsAsFormatting } from "/lib/revisions.ts";
 
 // deno-lint-ignore no-explicit-any
 let editor: any;
@@ -91,9 +93,15 @@ window.od.register({
     editor?.command.executeMode("readonly" as never);
   },
 
+  revisions: REVISION_NOTES["canvas-editor"],
+
   async load(bytes) {
     if (!editor) throw new Error("editor not ready");
-    await editor.command.executeImportDocx({ arrayBuffer: bytes.slice().buffer });
+    // plugin-docx skips w:ins and w:del, so inserted AND deleted words vanish
+    // from a redline. lib/revisions.ts turns them into formatting it can draw;
+    // a document without tracked changes is passed through as the same bytes.
+    const doc = revisionsAsFormatting(bytes).bytes;
+    await editor.command.executeImportDocx({ arrayBuffer: doc.slice().buffer });
   },
 
   async applyMarkdown(markdown) {

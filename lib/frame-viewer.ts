@@ -10,8 +10,14 @@
  * load event — not when the server finished rendering, nor its bytes/memory.
  */
 import { waitFor, type EditorAdapter } from "/lib/kit.ts";
+import { startPath } from "/lib/start-doc.ts";
 
-export function frameViewer(name: string, viewerUrl: (docUrl: string) => string): EditorAdapter {
+export function frameViewer(
+  name: string,
+  viewerUrl: (docUrl: string) => string,
+  /** How the vendor's viewer treats tracked changes (EditorAdapter.revisions). */
+  revisions?: string,
+): EditorAdapter {
   let frame: HTMLIFrameElement;
 
   // Each show() takes a generation; a newer one supersedes it, so a late
@@ -49,6 +55,7 @@ export function frameViewer(name: string, viewerUrl: (docUrl: string) => string)
 
   return {
     name,
+    revisions,
     viewOnly: true,
     acceptsFiles: false,
     async mount() {
@@ -56,7 +63,7 @@ export function frameViewer(name: string, viewerUrl: (docUrl: string) => string)
       window.od.progress(`Loading ${name} (rendered on its own servers)…`);
       const v = window.od.viewer;
       if (v) v.taken = true;
-      await show(v ? v.srcUrl : "/api/showcase.docx");
+      await show(v ? v.srcUrl : startPath());
     },
     loadUrl: show,
     load() {

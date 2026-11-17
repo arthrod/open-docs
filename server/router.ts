@@ -5,6 +5,8 @@
  *   GET  /e/<slug>             the editor page (shared chrome + editor body)
  *   GET  /api/sample.docx      the shared fixture, byte-for-byte
  *   GET  /api/showcase.docx    the rich sample (scripts/make_showcase.py)
+ *   GET  /api/redline.docx     the rich sample with tracked changes and comments
+ *   GET  /api/lorem-500.docx   500 pages of lorem ipsum (scripts/make_lorem.py)
  *   GET  /api/blank.docx       a valid empty .docx
  *   POST /api/import           .docx → { title, markdown }
  *   POST /api/agent            { document, prompt, history } → { reply, edit? }
@@ -16,6 +18,7 @@ import { serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors, type Maker } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
+import { fixtureBytes, FIXTURES } from "./fixtures.ts";
 import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
 import { DOCX_IO_SRI, DOCX_IO_URL } from "../lib/plate-docx-pin.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
@@ -33,6 +36,11 @@ export interface EditorShell {
   title: string;
   /** Extra import-map entries (bare specifiers / URL remaps) for this editor. */
   importMap?: Record<string, string>;
+  /**
+   * Render NO assistant panel and NO toggle button (page works standalone —
+   * e.g. cite-check, whose owner explicitly does not want the agent there).
+   */
+  noAgent?: boolean;
 }
 
 /** React, resolved once, for every adapter that loads a React package with `?external=react,react-dom`. */
@@ -90,7 +98,7 @@ function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: s
         <hr />
         <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / Samples</div>
         <button role="menuitem" id="od-showcase">Load the rich sample<small>tables, lists, image, styles</small></button>
-        <button role="menuitem" id="od-sample">Load the short sample</button>
+${FIXTURES.map((f) => `        <button role="menuitem" class="od-fixture" data-file="${f.file}" data-title="${esc(f.title)}" data-label="${esc(f.label)}">Load the ${esc(f.label)} sample<small>${esc(f.note)}</small></button>\n`).join("")}        <button role="menuitem" id="od-sample">Load the short sample</button>
         <a role="menuitem" href="/api/showcase.docx" download="open-docs-showcase.docx">Download the rich sample ↓</a>
         <hr />
         <div class="od-menu-label"><span class="sq" aria-hidden="true"></span> / View</div>
@@ -123,6 +131,8 @@ function shell(o: EditorShell, embed = false): string {
     integrity: { [DOCX_IO_URL]: DOCX_IO_SRI },
   })}</script>`;
   const viewer = meta?.kind === "viewer";
+  const noAgent = !!o.noAgent; // viewer pages never get the agent either
+  const agentless = viewer || noAgent;
   const opensFiles = meta?.opensFiles !== false;
   const option = (e: typeof editors[number]) =>
     `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
@@ -185,7 +195,7 @@ ${o.head ?? ""}
       <span class="m"><b id="od-m-mem">—</b><small>JS heap</small></span>
       <span class="m"><b id="od-m-size">—</b><small>loaded</small></span>
     </button>
-    ${viewer ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
+    ${agentless ? "" : `<button class="od-btn" id="od-toggle-agent" title="Toggle assistant" aria-pressed="true" aria-controls="od-aside">AI</button>`}
     <div class="od-menu-wrap">
       <button class="od-btn od-menu-btn" id="od-more" type="button" title="Menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false" aria-controls="od-menu">
         <span class="od-burger" aria-hidden="true"><i></i><i></i><i></i></span><span class="od-menu-lbl">MENU</span>
@@ -202,7 +212,7 @@ ${panel}
     <span class="od-spacer"></span>
     <span class="od-status" id="od-status" role="status" aria-live="polite"></span>
   </div>`}
-  <div class="od-layout${viewer || embed ? " no-agent" : ""}" id="od-layout">
+  <div class="od-layout${agentless || embed ? " no-agent" : ""}" id="od-layout">
     <main class="od-stage" id="od-stage">
       ${o.body}
       <div class="od-loading" id="od-loading">
@@ -210,7 +220,7 @@ ${panel}
         <div><strong>Loading ${esc(meta?.name ?? o.title)}…</strong><span id="od-loading-detail">Fetching the editor from the CDN</span></div>
       </div>
     </main>
-    ${viewer || embed ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
+    ${agentless || embed ? "" : `<aside class="od-aside" id="od-aside" aria-label="Assistant">
       <div class="od-aside-head">
         <div>
           <h2><span class="sq" aria-hidden="true"></span> / Assistant</h2>
@@ -270,6 +280,27 @@ export function mountShared(app: Hono) {
         "cache-control": "public, max-age=300",
       },
     }));
+
+  // The large samples: fetched from Hugging Face at a pinned commit (server/fixtures.ts).
+  for (const f of FIXTURES) {
+    app.get(`/api/${f.file}`, async (c) => {
+      let bytes: Uint8Array;
+      try {
+        bytes = await fixtureBytes(f);
+      } catch (err) {
+        // 4xx on purpose: Val Town's edge replaces 5xx bodies, which would hide why.
+        return c.text(`could not load ${f.file}: ${(err as Error).message}`, 424);
+      }
+      return new Response(bytes as Uint8Array<ArrayBuffer>, {
+        headers: {
+          "content-type": DOCX_MIME,
+          "content-disposition": `attachment; filename="open-docs-${f.file}"`,
+          "cache-control": "public, max-age=86400, immutable",
+          "access-control-allow-origin": "*",
+        },
+      });
+    });
+  }
 
   app.get("/api/sample.txt", (c) =>
     c.json({ title: "Quarterly Report — Acme Robotics", markdown: sampleText }));

@@ -7,6 +7,8 @@
  * editors (WebViewer can also edit DOCX with a license; not exercised here).
  */
 import { waitFor } from "/lib/kit.ts";
+import { startPath } from "/lib/start-doc.ts";
+import { REVISION_NOTES } from "/lib/revision-notes.ts";
 
 const VERSION = "12.2.1";
 const BASE = `https://cdn.jsdelivr.net/npm/@pdftron/webviewer@${VERSION}`;
@@ -100,6 +102,7 @@ function makeReadOnly() {
 
 window.od.register({
   name: "Apryse WebViewer",
+  revisions: REVISION_NOTES["apryse"],
   viewOnly: true,
   extraResources: WORKER_FILES,
 
@@ -112,7 +115,7 @@ window.od.register({
     makeReadOnly();
     const v = window.od.viewer;
     if (v) await open(new Blob([(await v.initialDocx()).slice()]), "document.docx");
-    else await open(`${location.origin}/api/showcase.docx`, "showcase.docx");
+    else await open(`${location.origin}${startPath()}`, startPath().slice(5));
   },
 
   load: (bytes) => open(new Blob([bytes.slice()]), "document.docx"),

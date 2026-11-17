@@ -1,19 +1,46 @@
 # wordcraft-render (wasm)
 
 WordCraft's own `.docx` reader, page layout and rasteriser as one WebAssembly
-function, so a Deno server (the [open-docs viewer](https://viewers.benchmarks.law)
+module, so a Deno server (the [open-docs viewer](https://viewers.benchmarks.law)
 on Val Town) renders `.docx` pages the way `wordcraft-cli convert x.docx x.png`
 does: no browser, no GPU, no filesystem, no subprocess.
 
 ```ts
-import init, { render_docx } from "./dist/wc_render.js";
+import init, { Doc, render_docx } from "./dist/wc_render.js";
 await init({ module_or_path: wasmBytes });          // dist/wc_render_bg.wasm.gz, gunzipped
-const pngs: Uint8Array[] = render_docx(docxBytes, 1.5); // one PNG per printed page
+
+// One page at a time: read and lay out once, rasterise only the pages asked for.
+const doc = new Doc(docxBytes);
+try {
+  const sizes = doc.page_sizes();                    // points: width, height, width, height, …
+  const png: Uint8Array = doc.render_page(0, 2);     // page 1 at 2 pixels per point
+} finally {
+  doc.free();                                        // release the document and its layout, also if a call threw
+}
+
+// Or every page in one call.
+const pngs: Uint8Array[] = render_docx(docxBytes, 2);
 ```
 
-`render_docx` runs `wordcraft_docx::read_with_password` → `wordcraft_layout::layout`
-(Print view) → `wordcraft_render::render_page` (vello_cpu) for every page, with
-headers and footers at full strength, as WordCraft's `file.exportPng` does.
+A `Doc` holds the parsed document and its whole layout in wasm memory until
+it is released. Call `free()` when the last page has been rendered (in a
+`try`/`finally` for a one-off). The glue also registers a finalizer, so a
+`Doc` that is only dropped is released when it is garbage-collected: the
+viewer relies on that for layouts it keeps across page requests, because a
+request may still hold a layout at the moment it is evicted.
+
+Both run `wordcraft_docx::read_with_password` → `wordcraft_layout::layout`
+(Print view) → `wordcraft_render::render_page` (vello_cpu), with headers and
+footers at full strength, as WordCraft's `file.exportPng` does.
+
+`Doc` exists because a long document cannot be sent as one response: 550 pages
+at 2 pixels per point are 520 MB of base64 PNG. On a 550-page document, laying
+out takes about 0.7 s and one page about 0.1 to 0.2 s (Apple M-series, Deno),
+so a server can answer with the page sizes at once and rasterise each page
+when the browser asks for it. `Doc.render_page` also compresses its PNG harder
+than `render_docx` does (about half the bytes, about 0.1 s more per page) and
+drops the alpha channel of a fully opaque page.
+
 Text uses the fonts WordCraft bundles (Source Sans 3 / Source Serif 4 and its
 other embedded faces), not Microsoft's.
 
@@ -21,14 +48,14 @@ other embedded faces), not Microsoft's.
 
 | Path | What |
 | --- | --- |
-| `src/lib.rs` | the wrapper (one `#[wasm_bindgen]` function) |
+| `src/lib.rs` | the wrapper (`Doc` and `render_docx`) |
 | `Cargo.toml` | the crate, built as a member of the WordCraft workspace |
 | `dist/wc_render.js` | wasm-bindgen glue (`--target web`) |
 | `dist/wc_render_bg.wasm.gz` | the module, `wasm-opt -Oz`, gzipped |
 
 `dist/wc_render_bg.wasm.gz` SHA-256:
-`e42d2c262d052b33292fd9dbace987be9b457b091209d5497e987d231bf949f6`
-(gunzipped: `776cdbd94f68d879d5c3e2032bbb659cea70b47fd55a7242d8bfadd51e799820`).
+`60869b8554e3656bfe13f517d1cece3d99b05d017e261d65ce597e614a6cc85f`
+(gunzipped: `ad132aa50b51eb0f2d0079b626ac29fb45c12c1f0ab7dab8da29b9a3f1b8782b`).
 The viewer checks the first before it instantiates anything.
 
 ## Build
@@ -47,6 +74,12 @@ cargo install wasm-bindgen-cli --version 0.2.129 --locked --root /tmp/wb
 wasm-opt -Oz --enable-bulk-memory --enable-nontrapping-float-to-int --enable-sign-ext \
   --enable-mutable-globals -o out/wc_render_bg.wasm out/wc_render_bg.wasm
 gzip -9 out/wc_render_bg.wasm
+```
+
+The wrapper's own tests (the PNG encoder) run on the host, from the same workspace:
+
+```sh
+cargo test -p wc-render
 ```
 
 ## License
