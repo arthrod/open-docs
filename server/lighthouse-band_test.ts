@@ -36,3 +36,17 @@ Deno.test("a page analysed in a different run from its table says when", () => {
   assertEquals(html.includes("measured 2026-11-16: Lighthouse 13.6, 1 analyses"), true);
   assertEquals((html.match(/class="lh-part prov"/g) ?? []).length, 1);
 });
+
+Deno.test("a value that should be a number is not written into the page as markup", () => {
+  const evil = "<img src=x onerror=alert(1)>" as unknown as number;
+  const p = { ...page(), performance: evil, cls: evil, accessibility: evil, lcpMs: evil, performanceRuns: [evil, 1, 2] };
+  const html = lighthouseBand(editors, { measuredAt: "2026-11-10", environment: "x", pages: { "e/folio": { desktop: p, mobile: p } } });
+  assertEquals(html.includes("<img"), false);
+});
+
+Deno.test("a results file with parts missing draws what it has instead of throwing", () => {
+  assertEquals(lighthouseBand(editors, {} as never), "");
+  const bare = { performance: 90 } as never;
+  const html = lighthouseBand(editors, { measuredAt: "2026-11-10", environment: "x", pages: { "e/folio": { desktop: bare } as never, "e/docen": { desktop: page(), mobile: page() } } });
+  assertEquals(html.includes("docen"), true);
+});

@@ -249,6 +249,9 @@ async function start(adapter: EditorAdapter) {
     const mountEnd = performance.now();
     mounted = true;
     setLoading(false);
+    // The moment the editor became ready, for anything timing the page from outside (scripts/measure_samples.py):
+    // read here, it is the exact time; polled from outside, it is late by up to the polling interval.
+    document.documentElement.dataset.odReady = String(Math.round(mountEnd));
     // Viewers open on the rich sample (a blank page shows nothing about them).
     if (adapter.viewOnly) setDocName("Coastal Wind Farm — Spring Field Report");
     setStatus(`${adapter.name} ready`, "ok");
@@ -352,6 +355,11 @@ const newDoc = () =>
   withAdapter("New document", async (a) => {
     if (a.viewOnly) return setStatus(`${a.name} is a view-only viewer`, "err");
     openOwner.start(); // a sample still being measured no longer owns the page
+    // The document is being replaced from this moment, as in openSiteSample: an assistant answer
+    // computed for the one on screen must not land on its successor while that one loads, and the
+    // sample timing left on <html> describes a document that is going away.
+    docGen++;
+    delete document.documentElement.dataset.odLoaded;
     const blank = await window.od.blankDocx();
     await loads.run(() => a.load(blank));
     newDocument();
@@ -492,6 +500,8 @@ async function importFile(file: File) {
   const ok = await withAdapter(`Import ${file.name}`, async (a) => {
     try {
       openOwner.start(); // a sample still being measured no longer owns the page
+      docGen++; // as in newDoc: the document on screen is being replaced from now on
+      delete document.documentElement.dataset.odLoaded;
       const bytes = new Uint8Array(await file.arrayBuffer());
       await loads.run(() => a.load(bytes));
     } catch (err) {

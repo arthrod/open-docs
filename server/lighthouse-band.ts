@@ -40,10 +40,16 @@ export interface LighthouseResults {
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const ms = (n: number | null | undefined) =>
-  n == null ? "n/a" : n < 1000 ? `${Math.round(n)} ms` : `${(n / 1000).toFixed(n < 10_000 ? 2 : 1)} s`;
-const score = (n: number | null | undefined) =>
-  n == null ? "n/a" : `<b class="lh ${n >= 90 ? "lh-good" : n >= 50 ? "lh-mid" : "lh-bad"}">${n}</b>`;
+/** A number from a results file, or null: anything else (a string in a hand-edited file) is not written into the page. */
+const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const ms = (v: number | null | undefined) => {
+  const n = num(v);
+  return n == null ? "n/a" : n < 1000 ? `${Math.round(n)} ms` : `${(n / 1000).toFixed(n < 10_000 ? 2 : 1)} s`;
+};
+const score = (v: number | null | undefined) => {
+  const n = num(v);
+  return n == null ? "n/a" : `<b class="lh ${n >= 90 ? "lh-good" : n >= 50 ? "lh-mid" : "lh-bad"}">${n}</b>`;
+};
 
 export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATEST as LighthouseResults): string {
   const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string }) => {
@@ -52,20 +58,23 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
       const r = pages?.[`e/${e.slug}`];
       if (!r) return "";
       const name = `<a href="/e/${e.slug}${q}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}`;
-      const d = r.desktop, m = r.mobile;
+      // A form factor missing from the file is one without a result, not a reason to drop the table.
+      const none = { performanceRuns: [], error: null } as unknown as LighthousePage;
+      const d = r.desktop ?? none, m = r.mobile ?? none;
       // A median over fewer analyses than were run says so, with the reason the others gave.
       const part = (f: string, p: LighthousePage) => {
-        const got = p.performanceRuns.filter((n) => n != null).length;
-        return got === p.performanceRuns.length ? "" : `${f} ${got}/${p.performanceRuns.length} analyses${p.error ? `: ${esc(p.error.slice(0, 120))}` : ""}`;
+        const runs = p.performanceRuns ?? [];
+        const got = runs.filter((n) => num(n) != null).length;
+        return got === runs.length ? "" : `${f} ${got}/${runs.length} analyses${p.error ? `: ${esc(p.error.slice(0, 120))}` : ""}`;
       };
       const partial = [part("desktop", d), part("mobile", m)].filter(Boolean).join(" · ");
-      if (d.performance == null && m.performance == null) return `<tr><td>${name}</td><td colspan="8"><b>no result</b>: ${esc((d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
+      if (num(d.performance) == null && num(m.performance) == null) return `<tr><td>${name}</td><td colspan="8"><b>no result</b>: ${esc((d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
       // A page analysed in another run than the table's heading (a partial re-run) says when.
       const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment)
         ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}</small>`
         : "";
       return `<tr><td>${name}${elsewhere}${partial ? ` <small class="lh-part">${partial}</small>` : ""}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>
-      <td class="n hide-sm">${d.cls ?? "n/a"} · ${m.cls ?? "n/a"}</td><td class="n hide-sm">${score(d.accessibility)}</td><td class="n hide-sm">${score(d.bestPractices)}</td><td class="n hide-sm">${score(d.seo)}</td>
+      <td class="n hide-sm">${num(d.cls) ?? "n/a"} · ${num(m.cls) ?? "n/a"}</td><td class="n hide-sm">${score(d.accessibility)}</td><td class="n hide-sm">${score(d.bestPractices)}</td><td class="n hide-sm">${score(d.seo)}</td>
       <td class="hide-sm"><a href="${psi(e.slug)}" target="_blank" rel="noopener">run it →</a></td></tr>`;
     };
     const rows = all.map(row).join("");

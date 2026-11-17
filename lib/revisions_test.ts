@@ -108,3 +108,16 @@ Deno.test("a deleted run whose own strike is explicitly off, written as a pair, 
   );
   assertEquals(out, `<w:r><w:rPr><w:b/><w:strike/><w:color w:val="C00000"/></w:rPr><w:t>x</w:t></w:r>`);
 });
+
+Deno.test("a '>' inside an attribute value does not end the tag (an author named A>B)", () => {
+  const out = flattenRevisions(
+    `<w:ins w:id="1" w:author="A>B"><w:r><w:t>x</w:t></w:r></w:ins><w:del w:id="2" w:author='C>D'><w:r w:rsidR="a>b"><w:delText>y</w:delText></w:r></w:del>` +
+      `<w:r><w:rPr><w:b/><w:rPrChange w:id="3" w:author="E>F"><w:rPr><w:i/></w:rPr></w:rPrChange></w:rPr><w:t>z</w:t></w:r>`,
+  );
+  assertEquals(out.includes(`B"`), false);
+  assertEquals(out.includes(`D'`), false);
+  assertEquals(out.includes(`F"`), false);
+  // The only text left between tags is the document's.
+  assertEquals(out.replace(/<(?:"[^"]*"|'[^']*'|[^>"'])*>/g, ""), "xyz");
+  assertEquals(out.includes("rPrChange"), false);
+});

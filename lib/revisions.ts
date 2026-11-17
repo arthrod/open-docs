@@ -29,17 +29,28 @@ const DELETED = `<w:strike/><w:color w:val="${RED}"/>`;
 /** True when the WordprocessingML part has insertions, deletions or moves. */
 export const hasRevisions = (xml: string): boolean => /<w:(ins|del|moveFrom|moveTo)(?=[\s>\/])/.test(xml);
 
-const TAG = /<(\/?)w:(ins|del|moveFrom|moveTo|r|delText|delInstrText)(?=[\s>\/])([^>]*?)(\/?)>/g;
+/**
+ * The inside of a tag after its name, as a pattern source: quoted attribute values are taken whole,
+ * so a `>` inside one (an author named "A>B") does not end the tag.
+ */
+const ATTRS = String.raw`(?:"[^"]*"|'[^']*'|[^>"'])`;
+const TAG = new RegExp(String.raw`<(\/?)w:(ins|del|moveFrom|moveTo|r|delText|delInstrText)(?=[\s>\/])(${ATTRS}*?)(\/?)>`, "g");
+const RPR_CHANGE = new RegExp(String.raw`<w:rPrChange\b${ATTRS}*>[\s\S]*?<\/w:rPrChange>`, "g");
+const PPR_CHANGE = new RegExp(String.raw`<w:pPrChange\b${ATTRS}*>[\s\S]*?<\/w:pPrChange>`, "g");
+const MOVE_RANGE = new RegExp(String.raw`<w:move(From|To)Range(Start|End)\b${ATTRS}*?\/>`, "g");
+const RPR_OPEN = new RegExp(String.raw`^\s*(<w:rPr(?:\s${ATTRS}*?)?)>`);
+const RPR_EMPTY = new RegExp(String.raw`^\s*<w:rPr(?:\s${ATTRS}*?)?\/>`);
+const OWN_MARKS = new RegExp(String.raw`<w:(u|strike|dstrike|color)\b${ATTRS}*?(\/>|>\s*<\/w:\1>)`, "g");
 
 /** One WordprocessingML part: revisions unwrapped, their runs marked. */
 export function flattenRevisions(xml: string): string {
   if (!hasRevisions(xml)) return xml;
   // Formatting-change records carry the OLD properties; the current ones stay.
   xml = xml
-    .replace(/<w:rPrChange\b[^>]*>[\s\S]*?<\/w:rPrChange>/g, "")
-    .replace(/<w:pPrChange\b[^>]*>[\s\S]*?<\/w:pPrChange>/g, "")
+    .replace(RPR_CHANGE, "")
+    .replace(PPR_CHANGE, "")
     // Move bookmarks only pair a moveFrom with its moveTo.
-    .replace(/<w:move(From|To)Range(Start|End)\b[^>]*\/>/g, "");
+    .replace(MOVE_RANGE, "");
 
   let out = "";
   let at = 0;
@@ -77,12 +88,12 @@ export function flattenRevisions(xml: string): string {
     const rest = xml.slice(at);
     // The tag may carry whitespace or attributes (`<w:rPr >`, a namespace declaration): XML allows
     // both, and a second container would be ignored by mammoth, which reads the first one only.
-    const open = /^\s*(<w:rPr(?:\s[^>]*?)?)>/.exec(rest);
-    const empty = /^\s*<w:rPr(?:\s[^>]*?)?\/>/.exec(rest);
+    const open = RPR_OPEN.exec(rest);
+    const empty = RPR_EMPTY.exec(rest);
     const end = open && !empty ? /<\/w:rPr\s*>/.exec(rest) : null;
     if (open && end && !empty) {
       // The run's own underline / strike / colour would win or duplicate: replace them.
-      const kept = rest.slice(open[0].length, end.index).replace(/<w:(u|strike|dstrike|color)\b[^>]*(\/>|>\s*<\/w:\1>)/g, "");
+      const kept = rest.slice(open[0].length, end.index).replace(OWN_MARKS, "");
       out += `${open[1]}>${kept}${marks}</w:rPr>`;
       at += end.index + end[0].length;
     } else if (empty) {
