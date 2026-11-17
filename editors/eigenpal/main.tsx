@@ -97,7 +97,6 @@ window.od.register({
 
   async applyMarkdown(markdown: string) {
     if (!ref) throw new Error("docx-editor.dev not mounted");
-    const handleBefore = ref.getDocumentHandle();
     let html = "";
     if (markdown.trim()) {
       const bytes = await markdownToDocx(markdown);
@@ -114,9 +113,6 @@ window.od.register({
       // (and then to the text) instead of to nothing.
       const rendered = await marked.parse(markdown);
       html = `<div data-docx-fragment="${btoa(binary)}" data-docx-fragment-end="covered">${rendered}</div>`;
-    }
-    if (ref.getDocumentHandle() !== handleBefore) {
-      throw new Error("docx-editor.dev document changed while the apply was being prepared");
     }
     ref.focus();
     const selected = ref.exec({ type: "selectAll" });
