@@ -193,6 +193,9 @@ window.od.register({
     // separately loaded folio-core, so it is re-read through the mounted
     // view's schema before the one replacing transaction.
     const content = view.state.schema.nodeFromJSON(toProseDoc(merged).toJSON()).content;
+    // The imports above took time: a document opened meanwhile mounted a new view, and this
+    // edit was made for the old one.
+    if (pmView !== view) throw new Error("folio document changed while the apply was being prepared");
     view.focus();
     view.dispatch(view.state.tr.replaceWith(0, view.state.doc.content.size, content));
   },

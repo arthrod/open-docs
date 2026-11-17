@@ -99,8 +99,14 @@ window.od.register({
     // have no <blockquote> rule, so a quote lands as a plain paragraph.
     const editor = el.editor;
     if (!editor) throw new Error("docen editor not ready");
+    const docBefore = (editor as { state?: { doc: unknown } }).state?.doc;
     const [{ marked }, { parseHTMLBody }] = await Promise.all([import(MARKED), import(DOCX_PASTE)]);
     const body = new DOMParser().parseFromString(await marked.parse(markdown), "text/html").body;
+    // The imports above took time: a document opened meanwhile replaced the editor or its
+    // document, and this edit was made for the old one.
+    if (el?.editor !== editor || (editor as { state?: { doc: unknown } }).state?.doc !== docBefore) {
+      throw new Error("docen document changed while the apply was being prepared");
+    }
     if (!editor.commands.setContent(parseHTMLBody(body, editor.schema))) {
       throw new Error("docen setContent rejected the pasted content");
     }
