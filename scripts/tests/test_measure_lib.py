@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import measure_lib as lib  # noqa: E402
+import measure_lib as lib  # noqa: E402 - sys.path is set above so the sibling module imports
 
 
 def test_pkill_pattern_is_delimited_so_it_is_not_read_as_an_option():
@@ -223,3 +223,29 @@ def test_a_page_whose_engine_failed_in_most_analyses_publishes_no_score():
     assert e["desktop"]["error"].startswith(lib.ENGINE_FAILED)
     mostly_fine = lib.page_entry([{"desktop": ok}, {"desktop": ok}, {"desktop": failed}], 240)
     assert mostly_fine["desktop"]["performance"] == 86
+
+
+def test_a_default_table_rerun_does_not_redate_a_legacy_labelled_population():
+    """A file from before docsMeta: its 500-page rows were published under the root heading of that day."""
+    result = {"measuredAt": "2026-11-10", "environment": "old", "base": "b",
+              "pages": {"e/a": {"desktop": {}}}, "docs": {"lorem-500": {"e/a": {"desktop": {}}, "e/b": {"desktop": {}}}}}
+    lib.merge_pagespeed(result, {"e/a": {"desktop": {}}}, None, {"measuredAt": "2026-11-16", "environment": "new", "base": "b"})
+    assert result["measuredAt"] == "2026-11-16"
+    assert result["docsMeta"]["lorem-500"]["measuredAt"] == "2026-11-10"
+    lib.merge_pagespeed(result, {"e/a": {"desktop": {}}}, "lorem-500", {"measuredAt": "2026-11-17", "environment": "newer", "base": "b"})
+    assert result["docs"]["lorem-500"]["e/b"]["measuredAt"] == "2026-11-10"  # untouched: still the day it was measured
+    assert result["docs"]["lorem-500"]["e/a"]["measuredAt"] == "2026-11-17"
+
+
+def test_end_chrome_reports_a_pgrep_that_could_not_run(monkeypatch):
+    """pgrep exits 1 for no match and 2 or 3 for an error: an error is not proof that Chrome went."""
+
+    def run(args, **k):
+        if args[0] == "pkill":
+            return subprocess.CompletedProcess(args, 0, b"", b"")
+        return subprocess.CompletedProcess(args, 3, b"", b"cannot read the process table")
+
+    monkeypatch.setattr(lib.subprocess, "run", run)
+    monkeypatch.setattr(lib.time, "sleep", lambda s: None)
+    left = lib.end_chrome("/tmp/p", wait_s=5)
+    assert "pgrep exited 3" in left and "cannot read the process table" in left

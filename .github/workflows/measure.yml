@@ -8,7 +8,8 @@ name: Measure
 #
 # Runs when a branch named measure/<anything> is pushed (a workflow that is not
 # on the default branch cannot be started by hand), or by hand once it is. The
-# result files are the artifact "samples": download it over docs/samples/ and commit.
+# result files are the artifact "samples" (docs/samples/ and README.md, paths from the repository
+# root): extract it at the root of the checkout and commit.
 on:
   push:
     branches: ["measure/**"]

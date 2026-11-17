@@ -26,7 +26,8 @@ def pkill_args(profile: str) -> list[str]:
 def end_chrome(profile: str, wait_s: float = 5.0) -> str | None:
     """End the Chrome started on `profile` and see that it went. Returns what went wrong, or None.
 
-    pkill exiting 1 means nothing matched: it was already gone. After a
+    pkill exiting 1 means nothing matched: it was already gone (pgrep likewise;
+    2 and 3 are errors of the tool, reported). After a
     delivered signal the process is looked for until it is gone or `wait_s`
     has passed; one that is still there is reported, so the caller can stop
     instead of measuring the next page beside a leftover browser.
@@ -38,8 +39,11 @@ def end_chrome(profile: str, wait_s: float = 5.0) -> str | None:
         return f"pkill exited {p.returncode}: {(p.stderr or b'').decode(errors='replace').strip()[:120]}; that Chrome may still be running"
     deadline = time.monotonic() + wait_s
     while True:
-        if subprocess.run(["pgrep", "-f", "--", f"--user-data-dir={profile}"], capture_output=True).returncode != 0:
-            return None
+        g = subprocess.run(["pgrep", "-f", "--", f"--user-data-dir={profile}"], capture_output=True)
+        if g.returncode == 1:
+            return None  # nothing matched: it is gone
+        if g.returncode != 0:  # 2 or 3: pgrep itself failed, which is not proof that Chrome went
+            return f"pgrep exited {g.returncode}: {(g.stderr or b'').decode(errors='replace').strip()[:120]}; that Chrome may still be running"
         if time.monotonic() >= deadline:
             return f"that Chrome is still running {wait_s:g} s after pkill"
         time.sleep(0.2)
@@ -182,6 +186,10 @@ def merge_pagespeed(result: dict, entries: dict, label: str | None, meta: dict) 
     else:
         rows = result.setdefault("pages", {})
         old = {k: result[k] for k in PROVENANCE if k in result}
+        # A labelled population from before docsMeta was published under this heading: it keeps it,
+        # or a later partial run of that population would date its untouched rows by this run.
+        for doc in result.get("docs", {}):
+            result.setdefault("docsMeta", {}).setdefault(doc, dict(old))
         result.update(meta)
     for row in rows.values():
         for k, v in old.items():

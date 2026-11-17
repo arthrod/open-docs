@@ -26,10 +26,13 @@ export interface LighthouseEntry {
   mobile: LighthousePage;
   measuredAt?: string;
   environment?: string;
+  /** The site address that was analysed, when the run recorded it. */
+  base?: string;
 }
 export interface LighthouseResults {
   measuredAt: string | null;
   environment: string;
+  base?: string;
   /** "e/<slug>" → medians, per form factor */
   pages: Record<string, LighthouseEntry>;
   /** The same pages opening a Menu sample (`?open=<file>`): sample id → page → medians. */
@@ -64,7 +67,8 @@ const spread = (f: string, p: LighthousePage): string => {
 
 export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATEST as LighthouseResults): string {
   const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string }) => {
-    const psi = (slug: string) => `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`https://editors.benchmarks.law/e/${slug}${q}`)}`;
+    // The link analyses the address the row was measured on.
+    const psi = (slug: string, base?: string) => `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`${base ?? data.base ?? "https://editors.benchmarks.law"}/e/${slug}${q}`)}`;
     const row = (e: EditorMeta) => {
       const r = pages?.[`e/${e.slug}`];
       if (!r) return "";
@@ -79,14 +83,16 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
         return got === runs.length ? "" : `${f} ${got}/${runs.length} analyses${p.error ? `: ${esc(String(p.error).slice(0, 120))}` : ""}`;
       };
       const partial = [part("desktop", d), part("mobile", m), spread("desktop", d), spread("mobile", m)].filter(Boolean).join(" · ");
-      if (num(d.performance) == null && num(m.performance) == null) return `<tr><td>${name}</td><td colspan="8"><b>no result</b>: ${esc(String(d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
-      // A page analysed in another run than the table's heading (a partial re-run) says when.
-      const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment)
-        ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}</small>`
+      // A page analysed in another run than the table's heading (a partial re-run), or on another
+      // address, says so, whether or not it got a result.
+      const otherBase = !!r.base && !!data.base && r.base !== data.base;
+      const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment) || otherBase
+        ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
+      if (num(d.performance) == null && num(m.performance) == null) return `<tr><td>${name}${elsewhere}</td><td colspan="8"><b>no result</b>: ${esc(String(d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
       return `<tr><td>${name}${elsewhere}${partial ? ` <small class="lh-part">${partial}</small>` : ""}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>
       <td class="n hide-sm">${num(d.cls) ?? "n/a"} · ${num(m.cls) ?? "n/a"}</td><td class="n hide-sm">${score(d.accessibility)}</td><td class="n hide-sm">${score(d.bestPractices)}</td><td class="n hide-sm">${score(d.seo)}</td>
-      <td class="hide-sm"><a href="${psi(e.slug)}" target="_blank" rel="noopener">run it →</a></td></tr>`;
+      <td class="hide-sm"><a href="${psi(e.slug, r.base)}" target="_blank" rel="noopener">run it →</a></td></tr>`;
     };
     const rows = all.map(row).join("");
     return rows && `<div class="table-wrap"><table class="tbl lh-tbl"><thead><tr>

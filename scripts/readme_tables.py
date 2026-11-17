@@ -57,6 +57,14 @@ def cell(text) -> str:
     return str(text).splitlines()[0].replace("|", "\\|")[:160] if str(text) else ""
 
 
+def elsewhere(row: dict, head: dict) -> str:
+    """" (measured DATE)" for a row from another day than its table, with the environment when that differs."""
+    when, where = row.get("measuredAt") or head.get("measuredAt"), row.get("environment") or head.get("environment")
+    if where != head.get("environment"):
+        return f" (measured {when}: {cell(where)})"
+    return f" (measured {when})" if when != head.get("measuredAt") else ""
+
+
 def samples_block(data: dict) -> str:
     """The samples tables: one per sample, a row per engine, from docs/samples/latest.json."""
     out = [f"Measured {data['measuredAt']}: {data['environment']}.", ""]
@@ -73,8 +81,7 @@ def samples_block(data: dict) -> str:
             runs = r.get("runs") or []
             loaded = f"{sum(1 for x in runs if x is not None)} of {len(runs)}"
             name = NAMES.get(engine, engine)
-            if r.get("measuredAt") and r["measuredAt"] != data["measuredAt"]:
-                name += f" (measured {r['measuredAt']})"
+            name += elsewhere(r, data)
             if r.get("loadMs") is None:
                 out.append(f"| {name} | **did not open it**: {cell(r.get('failed') or 'no answer')} | | | | | {loaded} |")
                 continue
@@ -102,8 +109,7 @@ LH_HEAD = [
 def lighthouse_line(label: str, r: dict, head: dict) -> str:
     """One page's row: desktop · mobile in each cell."""
     d, m = r["desktop"], r["mobile"]
-    if r.get("measuredAt") and r["measuredAt"] != head.get("measuredAt"):
-        label += f" (measured {r['measuredAt']})"
+    label += elsewhere(r, head)
     if d.get("performance") is None and m.get("performance") is None:
         return f"| {label} | **no result**: {cell(d.get('error') or m.get('error') or 'PageSpeed gave no score')} | | | | | | | | | |"
     two = lambda k, f=str: f"{'n/a' if d.get(k) is None else f(d[k])} · {'n/a' if m.get(k) is None else f(m[k])}"

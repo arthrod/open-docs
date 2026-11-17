@@ -12,9 +12,12 @@ on:
 permissions:
   contents: read
 
+# A pull request's newer push replaces the older run (its diff is cumulative). Pushes to main do
+# not cancel each other: the Rust job compares against the previous push, and a cancelled run
+# would leave that push's wrapper changes untested.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   deno:
@@ -42,6 +45,10 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Compile every script
         run: uv run python -m compileall -q scripts
+      - name: Lint (ruff.toml says for what)
+        run: uvx ruff check scripts
+      - name: Type-check
+        run: uv run --with playwright --with python-docx --with matplotlib --with pytest --with pyrefly pyrefly check scripts/*.py scripts/tests/*.py
       - name: Tests with coverage
         run: uv run --with pytest --with pytest-cov pytest scripts/tests --cov=measure_lib --cov=readme_tables --cov-report=term-missing
 

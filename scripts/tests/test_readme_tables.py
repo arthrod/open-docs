@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import readme_tables as rt  # noqa: E402
+import readme_tables as rt  # noqa: E402 - sys.path is set above so the sibling module imports
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -54,3 +54,14 @@ def test_a_readme_without_the_markers_is_refused():
     with pytest.raises(SystemExit):
         rt.put("no markers here", "samples", "x")
     assert rt.put("a <!-- samples:start -->old<!-- samples:end --> b", "samples", "new") == "a <!-- samples:start -->\nnew\n<!-- samples:end --> b"
+
+
+def test_a_row_measured_on_another_machine_the_same_day_says_so():
+    row = {"loadMs": 600, "settledMs": 700, "heapBytes": 5 << 20, "rendererRss": 700 << 20, "runs": [600]}
+    data = {"measuredAt": "2026-11-16", "environment": "runner", "samples": {"redline": {
+        "folio": {**row, "measuredAt": "2026-11-16", "environment": "a laptop"}, "plate": {**row, "measuredAt": "2026-11-16", "environment": "runner"}}}}
+    out = rt.samples_block(data)
+    assert "| folio (measured 2026-11-16: a laptop) |" in out and "| Plate |" in out
+    page = {"performance": 66, "accessibility": 96, "bestPractices": 100, "seo": 90, "fcpMs": 230, "lcpMs": 1072, "tbtMs": 828, "cls": 0.006, "speedIndexMs": 2292, "performanceRuns": [66], "error": None}
+    lh = {"measuredAt": "2026-11-16", "environment": "PSI", "pages": {"e/folio": {"desktop": page, "mobile": page, "measuredAt": "2026-11-16", "environment": "PSI, 2 analyses"}}}
+    assert "| folio (measured 2026-11-16: PSI, 2 analyses) |" in rt.lighthouse_block(lh)

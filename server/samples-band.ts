@@ -79,7 +79,13 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
         ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
       const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(String(r.incomplete).split("\n")[0].slice(0, 120))}</small>` : "";
-      const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}${elsewhere}${incomplete}`;
+      // A median over fewer runs than were made says how many loaded, and why the others did not.
+      const runs = r.runs ?? [];
+      const got = runs.filter((x) => x != null).length;
+      const partial = num(r.loadMs) != null && got < runs.length
+        ? ` <small class="prov-warn">${got} of ${runs.length} runs loaded${r.failed ? `: ${esc(String(r.failed).split("\n")[0].slice(0, 120))}` : ""}</small>`
+        : "";
+      const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}${elsewhere}${incomplete}${partial}`;
       if (num(r.loadMs) == null) {
         return `<tr><td>${name}</td><td colspan="${redline ? 4 : 5}"><b>did not open it</b>: ${esc(String(r.failed ?? "no answer").split("\n")[0].slice(0, 160))}</td>${
           redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : ""

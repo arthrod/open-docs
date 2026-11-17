@@ -19,7 +19,7 @@ Per page and form factor: the four category scores (0-100), First Contentful
 Paint, Largest Contentful Paint, Total Blocking Time, Cumulative Layout
 Shift, Speed Index.
 """
-import asyncio, datetime, json, os, statistics, sys, urllib.parse
+import asyncio, datetime, json, os, sys, urllib.parse
 
 from playwright.async_api import async_playwright
 

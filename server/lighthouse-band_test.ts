@@ -58,3 +58,22 @@ Deno.test("a page whose analyses disagree shows their range beside the median", 
   assertEquals(html.includes("mobile analyses ranged 44 to 79"), true);
   assertEquals((html.match(/analyses ranged/g) ?? []).length, 1);
 });
+
+Deno.test("a page with no result still says when and where it was analysed, if not with the table", () => {
+  const none = page({ performance: null, performanceRuns: [null], error: "the engine failed" } as unknown as Partial<LighthousePage>);
+  const html = lighthouseBand(editors, {
+    measuredAt: "2026-11-10", environment: "Lighthouse 13.5",
+    pages: { "e/folio": { desktop: none, mobile: none, measuredAt: "2026-11-16", environment: "Lighthouse 13.6" } as LighthouseResults["pages"][string] },
+  });
+  assertEquals(html.includes("<b>no result</b>: the engine failed"), true);
+  assertEquals(html.includes("measured 2026-11-16: Lighthouse 13.6"), true);
+});
+
+Deno.test("a page analysed on another address says so, and its link analyses that address", () => {
+  const html = lighthouseBand(editors, {
+    measuredAt: "2026-11-10", environment: "Lighthouse 13.5", base: "https://editors.benchmarks.law",
+    pages: { "e/folio": { desktop: page(), mobile: page(), measuredAt: "2026-11-10", environment: "Lighthouse 13.5", base: "https://open-docs.val.run" } as LighthouseResults["pages"][string] },
+  } as LighthouseResults);
+  assertEquals(html.includes("https://open-docs.val.run</small>"), true);
+  assertEquals(html.includes(encodeURIComponent("https://open-docs.val.run/e/folio")), true);
+});

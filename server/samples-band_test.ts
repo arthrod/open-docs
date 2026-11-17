@@ -102,3 +102,13 @@ Deno.test("a settled median that leaves out runs which never settled says how ma
   assertEquals(samplesBand(editors, { measuredAt: "x", environment: "t", samples: { "lorem-500": {} } }), "");
   assertEquals(samplesBand(editors, { measuredAt: "x", environment: "t", samples: { redline: { folio: row({ loadMs: null, failed: 42 as unknown as string }) } } }).includes("42"), true);
 });
+
+Deno.test("a row whose median stands on some of the runs says how many loaded and why the others did not", () => {
+  const html = samplesBand(editors, {
+    measuredAt: "2026-11-17", environment: "test",
+    samples: { "lorem-500": { folio: row({ runs: [200, null, 210, null, 190], failed: "not ready within 300s\n at y" }), plate: row({ runs: [200, 200, 200] }) } },
+  });
+  assertEquals(html.includes("3 of 5 runs loaded: not ready within 300s"), true);
+  assertEquals(html.includes(" at y"), false);
+  assertEquals((html.match(/runs loaded/g) ?? []).length, 1); // a full set says nothing extra
+});

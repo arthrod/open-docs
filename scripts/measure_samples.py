@@ -38,7 +38,7 @@ Per run:
 Frame viewers (Microsoft, Google) render on their own servers: loadMs is the
 frame's load event and the heap is this page's, not theirs.
 """
-import asyncio, datetime, json, os, platform, statistics, subprocess, sys, tempfile, time
+import asyncio, datetime, json, os, platform, subprocess, sys, tempfile, time
 
 from playwright.async_api import async_playwright
 

@@ -72,12 +72,12 @@ export function flattenRevisions(xml: string): string {
       continue; // the wrapper itself is dropped
     }
     if (name === "delText") {
-      out += close ? "</w:t>" : `<w:t${m[3]}>`;
+      out += close ? "</w:t>" : `<w:t${m[3]}${selfClose}>`; // <w:delText/> stays one empty element
       continue;
     }
     if (name === "delInstrText") {
       // A deleted field code: keep it a field code so it is not printed as text.
-      out += close ? "</w:instrText>" : `<w:instrText${m[3]}>`;
+      out += close ? "</w:instrText>" : `<w:instrText${m[3]}${selfClose}>`;
       continue;
     }
     // w:r

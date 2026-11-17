@@ -121,3 +121,15 @@ Deno.test("a '>' inside an attribute value does not end the tag (an author named
   assertEquals(out.replace(/<(?:"[^"]*"|'[^']*'|[^>"'])*>/g, ""), "xyz");
   assertEquals(out.includes("rPrChange"), false);
 });
+
+Deno.test("an empty deleted-text element written self-closed stays well-formed", () => {
+  const out = flattenRevisions(`<w:p><w:del w:id="1" w:author="A"><w:r><w:delText/></w:r><w:r><w:delInstrText xml:space="preserve"/></w:r></w:del></w:p>`);
+  assertEquals(out.includes("<w:t/>"), true);
+  assertEquals(out.includes(`<w:instrText xml:space="preserve"/>`), true);
+  // Every element opened is closed: the same number of each.
+  for (const el of ["w:t", "w:instrText"]) {
+    const open = (out.match(new RegExp(`<${el}(?=[\\s>])[^>]*[^/]>|<${el}>`, "g")) ?? []).length;
+    const close = (out.match(new RegExp(`</${el}>`, "g")) ?? []).length;
+    assertEquals(open, close);
+  }
+});
