@@ -14,12 +14,14 @@
  *   GET  /api/metrics          per-editor medians, for the landing page
  */
 import type { Hono } from "npm:hono@4";
+import { bodyLimit } from "npm:hono@4/body-limit";
 import { serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors, type Maker } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
 import { fixtureBytes, FIXTURES } from "./fixtures.ts";
-import { buildDocx, looksLikeZip, textFromDocx } from "./docx.ts";
+import { buildDocx, looksLikeZip, textFromDocx, textToParagraphs } from "./docx.ts";
+import { DOCX_PREVIEW_MAX_BYTES, renderDocxPages } from "../editors/wordcraft/render.ts";
 import { DOCX_IO_SRI, DOCX_IO_URL } from "../lib/plate-docx-pin.ts";
 import { AGENT_MODEL, runAgent } from "./agent.ts";
 import { recordMetric, summarizeMetrics } from "./metrics.ts";
@@ -237,7 +239,7 @@ ${panel}
       <div class="od-suggestions" id="od-suggestions"></div>
       <form class="od-input" id="od-form">
         <textarea id="od-prompt" rows="2" placeholder="Ask the assistant to write or edit (⌘↵ to send)"></textarea>
-        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)"><span class="arr">→</span></button>
+        <button class="od-btn primary" id="od-send" type="submit" title="Send (⌘↵)" aria-label="Send"><span class="arr" aria-hidden="true">→</span></button>
       </form>
     </aside>`}
   </div>
@@ -371,6 +373,111 @@ export function mountShared(app: Hono) {
   });
 
   app.get("/api/metrics", async (c) => c.json(await summarizeMetrics()));
+
+  const previewCache = new Map<string, { png: Uint8Array; count: number }>();
+
+  app.get("/api/wordcraft/preview", async (c) => {
+    const key = c.req.query("doc") === "showcase" ? "showcase" : "sample";
+    let hit = previewCache.get(key);
+    if (!hit) {
+      const docx = key === "showcase" ? showcaseDocx() : sampleDocx();
+      const pages = await renderDocxPages(docx, 1.0);
+      if (!pages.length) return c.json({ error: "rendered 0 pages" }, 500);
+      hit = { png: pages[0], count: pages.length };
+      previewCache.set(key, hit);
+    }
+    return new Response(hit.png.slice(), {
+      headers: {
+        "content-type": "image/png",
+        "x-wordcraft-page-count": String(hit.count),
+        "cache-control": "public, max-age=300",
+      },
+    });
+  });
+
+  // Base64 inside JSON inflates ~4/3 plus the object wrapper; the decoded-size
+  // check below still caps real .docx bytes at DOCX_PREVIEW_MAX_BYTES.
+  const previewBodyLimit = Math.ceil(DOCX_PREVIEW_MAX_BYTES * 4 / 3) + 1024;
+
+  app.post("/api/wordcraft/preview", bodyLimit({
+    maxSize: previewBodyLimit,
+    onError: (c) => c.json({ error: "Request body too large." }, 413),
+  }), async (c) => {
+    const type = c.req.header("content-type") ?? "";
+    const bytes = type.includes("application/json")
+      ? base64ToBytes(String((await c.req.json()).docxBase64 ?? ""))
+      : new Uint8Array(await c.req.arrayBuffer());
+    if (!looksLikeZip(bytes)) {
+      return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
+    }
+    if (bytes.byteLength > DOCX_PREVIEW_MAX_BYTES) {
+      return c.json({ error: "Document too large to preview." }, 413);
+    }
+    let pages: Uint8Array[];
+    try {
+      pages = await renderDocxPages(bytes, 1.0);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return c.json({ error: msg }, msg.includes("timed out") ? 504 : 500);
+    }
+    if (!pages.length) return c.json({ error: "rendered 0 pages" }, 500);
+    return new Response(pages[0].slice(), {
+      headers: {
+        "content-type": "image/png",
+        "x-wordcraft-page-count": String(pages.length),
+        "cache-control": "no-store",
+      },
+    });
+  });
+
+  app.post("/api/wordcraft/convert", async (c) => {
+    const type = c.req.header("content-type") ?? "";
+    if (type.includes("application/json")) {
+      const body = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+      if (!body) return c.json({ error: "invalid JSON body" }, 400);
+      if (typeof body.markdown === "string") {
+        const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Document";
+        const docx = buildDocx(textToParagraphs(body.markdown), title);
+        // RFC 6266: sanitized-ASCII filename fallback plus filename* for the real title.
+        const asciiName = title.replace(/[^\x20-\x7e]/g, "").replace(/[\\/:*?"<>|]+/g, "-").trim() ||
+          "document";
+        const utf8Name = encodeURIComponent(`${title}.docx`).replace(
+          /['()*]/g,
+          (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`,
+        );
+        return new Response(docx.slice(), {
+          headers: {
+            "content-type": DOCX_MIME,
+            "content-disposition": `attachment; filename="${asciiName}.docx"; filename*=UTF-8''${utf8Name}`,
+            "cache-control": "no-store",
+          },
+        });
+      }
+      const b64 = typeof body.docxBase64 === "string" ? body.docxBase64 : typeof body.base64 === "string" ? body.base64 : "";
+      const bytes = base64ToBytes(b64);
+      if (!looksLikeZip(bytes)) {
+        return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
+      }
+      const { title, paragraphs } = textFromDocx(bytes);
+      return c.json({
+        title: title || "Imported document",
+        markdown: paragraphsToText(paragraphs),
+        paragraphs,
+        bytes: bytes.length,
+      });
+    }
+    const bytes = new Uint8Array(await c.req.arrayBuffer());
+    if (!looksLikeZip(bytes)) {
+      return c.json({ error: "That doesn't look like a .docx (zip) file." }, 400);
+    }
+    const { title, paragraphs } = textFromDocx(bytes);
+    return c.json({
+      title: title || "Imported document",
+      markdown: paragraphsToText(paragraphs),
+      paragraphs,
+      bytes: bytes.length,
+    });
+  });
 }
 
 export function bytesToBase64(bytes: Uint8Array): string {

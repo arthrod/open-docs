@@ -28,7 +28,16 @@ type DocenEl = HTMLElement & {
   setZoom?(pct: number): void;
   getZoom?(): number;
   /** The underlying Tiptap editor (main document story). */
-  readonly editor?: { schema: unknown; commands: { setContent(content: unknown): boolean } };
+  readonly editor?: {
+    schema: unknown;
+    commands: {
+      setContent(content: unknown): boolean;
+      command(fn: (props: {
+        tr: { setMeta(key: string, value: unknown): unknown };
+        commands: { setContent(content: unknown): boolean };
+      }) => boolean): boolean;
+    };
+  };
 };
 
 let el: DocenEl | undefined;
@@ -99,9 +108,26 @@ window.od.register({
     // have no <blockquote> rule, so a quote lands as a plain paragraph.
     const editor = el.editor;
     if (!editor) throw new Error("docen editor not ready");
+    const docBefore = (editor as { state?: { doc: unknown } }).state?.doc;
     const [{ marked }, { parseHTMLBody }] = await Promise.all([import(MARKED), import(DOCX_PASTE)]);
     const body = new DOMParser().parseFromString(await marked.parse(markdown), "text/html").body;
-    if (!editor.commands.setContent(parseHTMLBody(body, editor.schema))) {
+    // The imports above took time: a document opened meanwhile replaced the editor or its
+    // document, and this edit was made for the old one.
+    if (el?.editor !== editor || (editor as { state?: { doc: unknown } }).state?.doc !== docBefore) {
+      throw new Error("docen document changed while the apply was being prepared");
+    }
+    // docen's paste rules have no <blockquote> rule; its style-class convention
+    // maps docx-style-IntenseQuote to the quote style (the old importer applied it).
+    for (const quote of body.querySelectorAll("blockquote")) {
+      for (const paragraph of quote.querySelectorAll(":scope > p")) {
+        paragraph.classList.add("docx-style-IntenseQuote");
+      }
+    }
+    // (A "closeHistory" meta under a plain string never reaches prosemirror-history, which
+    // reads it under its own plugin key, so none is set: an apply landing within half a
+    // second of typing shares that typing's undo step.)
+    const ok = editor.commands.setContent(parseHTMLBody(body, editor.schema));
+    if (!ok) {
       throw new Error("docen setContent rejected the pasted content");
     }
   },

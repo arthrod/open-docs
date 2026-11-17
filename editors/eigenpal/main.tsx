@@ -120,9 +120,13 @@ window.od.register({
     const pasted = ref.exec(html
       ? { type: "paste", text: markdown, html }
       : { type: "deleteText" });
+    // An empty edit on a document that is already empty: select-all selects nothing and the
+    // engine refuses the delete. The document is what was asked for.
+    if (!html && !pasted.ok && /nothing is selected/.test(String((pasted as { reason?: unknown }).reason ?? ""))) return;
     // `ok` only means the command ran: a paste every lane declined (view mode,
     // a header story, a cell selection) answers {ok: true, changed: false}.
-    if (!pasted.ok || !pasted.changed) throw new Error(`Paste did not change the document: ${JSON.stringify(pasted)}`);
+    // The delete branch may legitimately change nothing on an already-empty document.
+    if (!pasted.ok || (html && !pasted.changed)) throw new Error(`Paste did not change the document: ${JSON.stringify(pasted)}`);
   },
 
   // docx-editor.dev's own history commands.

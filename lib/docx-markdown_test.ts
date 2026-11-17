@@ -114,3 +114,30 @@ Deno.test("docx: a full <w:lvl> override without numFmt replaces a bullet level 
   const md = docxToMarkdown(docxWith(p("a", "2") + p("b", "2"), numbering));
   assertEquals(md.trim(), "1. a\n2. b");
 });
+
+Deno.test("docx: a level whose numFmt is none shows no marker: a plain paragraph, not item 1", () => {
+  const none = `<w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="none"/></w:lvl></w:abstractNum>` +
+    `<w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num>`;
+  assertEquals(docxToMarkdown(docxWith(p("a heading-like line", "2") + p("another", "2"), none)).trim(), "a heading-like line\n\nanother");
+});
+
+Deno.test("docx: a list item inside a table cell still counts for the items after the table", () => {
+  const table = `<w:tbl><w:tr><w:tc>${p("in a cell", "2")}</w:tc></w:tr></w:tbl>`;
+  const md = docxToMarkdown(docxWith(p("a", "2") + table + p("c", "2"), decimal("1", "2")));
+  assertEquals(md.trim().split("\n").at(0), "1. a");
+  assertEquals(md.trim().split("\n").at(-1), "3. c"); // the cell's item was 2
+});
+
+Deno.test("docx: an unmarked level still counts, so the numbered level under it starts again", () => {
+  const outline = `<w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="none"/></w:lvl>` +
+    `<w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="decimal"/></w:lvl></w:abstractNum><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num>`;
+  const md = docxToMarkdown(docxWith(p("Part A", "2") + p("a", "2", 1) + p("b", "2", 1) + p("Part B", "2") + p("c", "2", 1), outline));
+  assertEquals(md.match(/\d+\. \w/g), ["1. a", "2. b", "1. c"]);
+});
+
+Deno.test("docx: a cell paragraph inside a content control is read, and its list item counts", () => {
+  const table = `<w:tbl><w:tr><w:tc><w:sdt><w:sdtContent>${p("in a control", "2")}</w:sdtContent></w:sdt></w:tc></w:tr></w:tbl>`;
+  const md = docxToMarkdown(docxWith(p("a", "2") + table + p("c", "2"), decimal("1", "2")));
+  assertEquals(md.includes("in a control"), true);
+  assertEquals(md.trim().split("\n").at(-1), "3. c");
+});

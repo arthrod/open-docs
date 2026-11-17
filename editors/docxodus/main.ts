@@ -20,6 +20,7 @@ import { waitFor } from "/lib/kit.ts";
 import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 import { BUNDLE_URL, WASM_BASE } from "./assets.ts";
+import { stripImagesOutsideCode } from "/lib/markdown-images.ts";
 
 /** One block the engine addressed (dist/session.d.ts's AnchorRef). */
 interface AnchorRef {
@@ -182,10 +183,21 @@ function splitMarkdown(markdown: string): Segment[] {
     }
     flush();
     const t = token as Tokens.Table;
-    segments.push({ kind: "table", rows: [t.header.map((c) => c.text), ...t.rows.map((r) => r.map((c) => c.text))] });
+    segments.push({ kind: "table", rows: [t.header.map(cellText), ...t.rows.map((r) => r.map(cellText))] });
   }
   flush();
   return segments;
+}
+
+/** Plain text of a marked table cell: `c.text` is the raw inline source
+ * (`**bold**`, `` `code` `` stay literal); flatten its inline tokens instead. */
+function cellText(cell: Tokens.TableCell): string {
+  const flatten = (tokens: readonly unknown[]): string =>
+    tokens.map((t) => {
+      const tok = t as { text?: string; raw?: string; tokens?: unknown[] };
+      return tok.tokens ? flatten(tok.tokens) : (tok.text ?? tok.raw ?? "");
+    }).join("");
+  return cell.tokens?.length ? flatten(cell.tokens) : cell.text;
 }
 
 /**
@@ -241,7 +253,11 @@ function applyToSession(
     const steps: BatchStep[] = [];
     // The new content goes in BEFORE the first old block; the old blocks are
     // deleted after it, in the same atomic batch.
-    for (const segment of splitMarkdown(text)) {
+    const segments = splitMarkdown(text);
+    // Empty (or image-only, once images are stripped) input must not leave the
+    // body with zero blocks — later applies anchor to the first body block.
+    if (segments.length === 0) segments.push({ kind: "text", markdown: " " });
+    for (const segment of segments) {
       if (segment.kind === "text") {
         steps.push({
           tool: "docx_create",
@@ -289,7 +305,7 @@ function applyToSession(
     // The engine's markdown subset has no image syntax (a picture needs
     // bytes; the engine's own refusal says so). The rebuild path this
     // replaces dropped images too, so drop them and land the rest of the edit.
-    result = run(markdown.replace(/!\[[^\]]*\]\([^)]*\)/g, ""));
+    result = run(stripImagesOutsideCode(markdown));
   }
   if (!result.success) {
     throw new Error(

@@ -20,6 +20,7 @@ import {
   parseArenaMessage,
 } from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
+import { sameText, stepHistory } from "./edit-history.ts";
 import { LoadQueue, longTasksSupported, OpenOwner, ownedLoad, quietSince, settledMs as settledAfter } from "./open-timing.ts";
 
 const slug = document.body.dataset.slug ?? "";
@@ -37,6 +38,8 @@ const postChild = (msg: ChildMessage, transfer?: Transferable[]) => {
 };
 /** A parent message that arrived before the adapter mounted; run after. */
 let pendingEmbedAction: (() => void) | undefined;
+/** When the iframe's blur handler last closed the menu (embed mode). */
+let blurClosedAt = 0;
 
 let current: EditorAdapter | undefined;
 let mounted = false;
@@ -45,6 +48,10 @@ let lastMeasurement: Measurement | undefined;
 /** "Re-measure now": the same reading taken again later, with when it was taken. */
 let nowMeasurement: { m: Measurement; at: Date } | undefined;
 let measureArgs: { adapter: EditorAdapter; mountStart: number; mountEnd: number } | undefined;
+/** True while an Undo or Redo walk runs: two walks on one editor would mix their steps. */
+let walking = false;
+/** True while a re-measure is in flight; lives outside the dialog so a re-rendered button stays disabled. */
+let measuring = false;
 const history: Array<{ role: "user" | "assistant"; content: string }> = [];
 /**
  * Bumped whenever a different document is opened (New / Sample / Import). An
@@ -56,11 +63,17 @@ let docGen = 0;
  * which unwinds newest first, so only the TOP of the stack can be undone.
  */
 const appliedStack: symbol[] = [];
+/**
+ * Undone assistant edits, newest last. Native redo replays oldest-undone
+ * first, so only the TOP of this stack may be redone.
+ */
+const undoneStack: symbol[] = [];
 const EDIT_EVENT = "od-edit-stack";
 const stackChanged = () => document.dispatchEvent(new CustomEvent(EDIT_EVENT));
 function newDocument() {
   docGen++;
   appliedStack.length = 0;
+  undoneStack.length = 0;
   history.length = 0; // the conversation was about the previous document
   stackChanged();
 }
@@ -144,11 +157,12 @@ function renderMetricsDialog() {
   const biggest = [...m.rows].sort((a, b) => b.bytes - a.bytes).slice(0, 6)
     .map((r) => `<tr><td title="${r.url}">${r.url.replace(/^https?:\/\//, "").split("?")[0].slice(-58)}</td><td>${r.kind}</td><td class="n">${fmtBytes(r.bytes)}</td></tr>`).join("");
   const n = nowMeasurement;
+  const at = (d: Date | number) => new Date(d).toLocaleTimeString();
   const now = n
-    ? `<table class="od-table" id="od-remeasured"><thead><tr><th>Current state</th><th style="text-align:right">This load</th><th style="text-align:right">Now (${n.at.toLocaleTimeString()})</th></tr></thead><tbody>
-      <tr><td>JS heap in use</td><td class="n">${fmtBytes(m.heapBytes)}</td><td class="n">${fmtBytes(n.m.heapBytes)}</td></tr>
-      <tr><td>Bytes loaded so far</td><td class="n">${fmtBytes(m.loadedBytes)}</td><td class="n">${fmtBytes(n.m.loadedBytes)}</td></tr>
-      <tr><td>Files loaded so far</td><td class="n">${m.resources}</td><td class="n">${n.m.resources}</td></tr>
+    ? `<table class="od-table" id="od-remeasured"><thead><tr><th>Current state</th><th style="text-align:right">This load</th><th style="text-align:right">Now</th></tr></thead><tbody>
+      <tr><td>JS heap in use <small>(${at(n.at)})</small></td><td class="n">${fmtBytes(m.heapBytes)}</td><td class="n">${fmtBytes(n.m.heapBytes)}</td></tr>
+      <tr><td>Bytes loaded so far <small>(${at(n.m.resourcesAt)})</small></td><td class="n">${fmtBytes(m.loadedBytes)}</td><td class="n">${fmtBytes(n.m.loadedBytes)}</td></tr>
+      <tr><td>Files loaded so far <small>(${at(n.m.resourcesAt)})</small></td><td class="n">${m.resources}</td><td class="n">${n.m.resources}</td></tr>
     </tbody></table>`
     : "";
   body.innerHTML = `
@@ -174,20 +188,37 @@ function renderMetricsDialog() {
     <p class="od-note">Sizes are decoded bytes (what the browser parses), including the shared page chrome (~60 KB).
     JS heap comes from <code>performance.memory</code> and is only available in Chromium browsers.
     Each load is saved anonymously so the landing page can compare editors by median; re-measuring is not saved.</p>`;
-  $("od-remeasure")?.addEventListener("click", () => void remeasure());
+  const remeasureBtn = $("od-remeasure") as HTMLButtonElement | null;
+  if (remeasureBtn) {
+    // A re-rendered dialog must not offer a second measurement while one runs.
+    if (measuring) {
+      remeasureBtn.disabled = true;
+      remeasureBtn.textContent = "Measuring…";
+    }
+    remeasureBtn.addEventListener("click", () => void remeasure());
+  }
 }
 
 /** Take the reading again, now; shown next to the load's numbers, never posted. */
 async function remeasure() {
-  if (!measureArgs) return;
+  if (!measureArgs || measuring) return;
+  measuring = true;
   const btn = $("od-remeasure") as HTMLButtonElement | null;
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Measuring…";
   }
-  const { adapter, mountStart, mountEnd } = measureArgs;
-  const m = await measure({ slug, mountStart, mountEnd, registeredAt: window.od.registeredAt, extraUrls: adapter.extraResources });
-  nowMeasurement = { m, at: new Date() };
+  try {
+    const { adapter, mountStart, mountEnd } = measureArgs;
+    const m = await measure({ slug, mountStart, mountEnd, registeredAt: window.od.registeredAt, extraUrls: adapter.extraResources });
+    nowMeasurement = { m, at: new Date() };
+  } catch (err) {
+    setStatus("Re-measure failed", "err");
+    console.warn("[open-docs] remeasure", err);
+  } finally {
+    measuring = false;
+  }
+  // Also after a failure: the dialog is drawn again, so its button can be pressed again.
   renderMetricsDialog();
 }
 
@@ -538,6 +569,9 @@ function onParentMessage(e: MessageEvent) {
   if (msg.type === "menu") {
     const menu = $("od-menu");
     if (!menu) return;
+    // The arena click that blurred this iframe meant "close": ignore a toggle
+    // arriving right after a blur-triggered close (the same click caused both).
+    if (menu.hidden && performance.now() - blurClosedAt < 500) return;
     if (menu.hidden) openMenu();
     else closeMenu();
     return;
@@ -629,24 +663,6 @@ function diffCounts(before: string, after: string) {
 }
 
 /** Whitespace-insensitive document text, to tell when native undo is back. */
-const sameText = (x: string, y: string) => x.replace(/\s+/g, " ").trim() === y.replace(/\s+/g, " ").trim();
-/** Native history steps an apply may take (SuperDoc's importer is several). */
-const MAX_STEPS = 12;
-
-/**
- * Step the engine's OWN history (undo or redo) until the document reads
- * `target` again. Returns the steps taken, or null if it never got there.
- */
-async function stepHistory(a: EditorAdapter, dir: "undo" | "redo", target: string): Promise<number | null> {
-  const step = dir === "undo" ? a.undo : a.redo;
-  if (!step) return null;
-  for (let i = 1; i <= MAX_STEPS; i++) {
-    await step.call(a);
-    if (sameText(await a.getMarkdown(), target)) return i;
-  }
-  return null;
-}
-
 function editCard(markdown: string, summary: string, before: string) {
   const d = diffCounts(before, markdown);
   const card = document.createElement("div");
@@ -671,8 +687,11 @@ function editCard(markdown: string, summary: string, before: string) {
   const gen = docGen; // the document this edit was computed for
   const token = Symbol("edit");
   const isTop = () => appliedStack[appliedStack.length - 1] === token;
+  const isLastUndone = () => undoneStack[undoneStack.length - 1] === token;
   let beforeApply = ""; // document text right before our apply
+  let beforeOk = true; // false when the pre-apply text could not be read
   let afterApply = ""; // document text right after it
+  let afterOk = true; // false when the post-apply text could not be read
   let confirmDiscard = false;
   /** Undo / Redo are the engine's own history, offered only when the apply is in it. */
   const native = () => !!(current?.applyInHistory && current.undo && current.redo);
@@ -690,6 +709,17 @@ function editCard(markdown: string, summary: string, before: string) {
       undo.disabled = !top;
       undo.title = top ? "" : "Undo the later assistant edit first";
       state.textContent = top ? "Applied ✓" : "Applied ✓ (later edit on top)";
+    } else if (!appliedStack.includes(token) && !redo.hidden) {
+      const top = isLastUndone();
+      redo.disabled = !top;
+      redo.title = top ? "" : "Redo the most recently undone edit first";
+      if (!undoneStack.includes(token)) {
+        redo.hidden = true;
+        apply.hidden = false;
+        apply.disabled = false;
+        apply.textContent = "Re-apply";
+        state.textContent = "History moved on; re-apply instead";
+      }
     }
   };
   document.addEventListener(EDIT_EVENT, refresh);
@@ -712,9 +742,11 @@ function editCard(markdown: string, summary: string, before: string) {
     apply.disabled = true;
     setStatus("Applying the assistant's edit…");
     try {
-      beforeApply = await current.getMarkdown().catch(() => "");
+      beforeOk = afterOk = true;
+      beforeApply = await current.getMarkdown().catch(() => { beforeOk = false; return ""; });
       await current.applyMarkdown(markdown);
-      afterApply = await current.getMarkdown().catch(() => "");
+      afterApply = await current.getMarkdown().catch(() => { afterOk = false; return ""; });
+      undoneStack.length = 0; // a new edit invalidates the redo stack
       applied();
       setStatus("Edit applied", "ok");
     } catch (err) {
@@ -725,7 +757,7 @@ function editCard(markdown: string, summary: string, before: string) {
   apply.addEventListener("click", () => void doApply());
 
   undo.addEventListener("click", async () => {
-    if (!current || !native() || gen !== docGen || !isTop()) return refresh();
+    if (walking || !current || !native() || gen !== docGen || !isTop()) return refresh();
     // Native undo walks back through anything typed since, too; say so first.
     const now = await current.getMarkdown().catch(() => afterApply);
     if (!sameText(now, afterApply) && !confirmDiscard) {
@@ -734,31 +766,57 @@ function editCard(markdown: string, summary: string, before: string) {
       state.textContent = "You edited since — undo also undoes that";
       return;
     }
+    if (!beforeOk) {
+      setStatus("Undo refused: the pre-edit text could not be read", "err");
+      return;
+    }
     undo.disabled = true;
+    walking = true;
     try {
       const steps = await stepHistory(current, "undo", beforeApply);
+      // A document opened during the walk emptied the stacks: this card is no longer about it.
+      if (gen !== docGen || !isTop()) return refresh();
+      if (steps == null) {
+        // stepHistory restored the document after failing to reach the target.
+        undo.disabled = false;
+        state.textContent = `${current.name}'s history couldn't reach the pre-edit text; nothing was undone`;
+        setStatus("Undo did not reach the original text", "err");
+        return;
+      }
       appliedStack.pop();
+      // Redo walks to the text read after the apply. When that read failed there is no
+      // target, so the card offers Re-apply and stays out of the way of older cards' Redo.
+      if (afterOk) undoneStack.push(token);
       stackChanged();
       card.className = "od-edit undone";
       undo.hidden = true;
       undo.textContent = "Undo";
-      redo.hidden = false;
+      redo.hidden = !afterOk;
       redo.disabled = false;
-      state.textContent = steps == null
-        ? `Undid ${MAX_STEPS} steps of ${current.name}'s history; the text still differs from before the edit`
-        : "Undone";
-      setStatus(steps == null ? "Undo stopped before the original text" : "Edit undone", steps == null ? "err" : "ok");
+      apply.hidden = afterOk;
+      apply.disabled = false;
+      if (!afterOk) apply.textContent = "Re-apply";
+      state.textContent = "Undone";
+      setStatus("Edit undone", "ok");
     } catch (err) {
       undo.disabled = false;
       fail("Undo failed", err);
+    } finally {
+      walking = false;
     }
   });
 
   redo.addEventListener("click", async () => {
-    if (!current || !native() || gen !== docGen || appliedStack.includes(token)) return refresh();
+    if (walking || !current || !native() || gen !== docGen || appliedStack.includes(token) || !isLastUndone()) return refresh();
+    if (!afterOk) {
+      setStatus("Redo refused: the post-edit text could not be read", "err");
+      return;
+    }
     redo.disabled = true;
+    walking = true;
     try {
       const steps = await stepHistory(current, "redo", afterApply);
+      if (gen !== docGen || !isLastUndone()) return refresh();
       if (steps == null) {
         // History moved on (e.g. the user typed after undoing): redo has nothing to replay.
         redo.hidden = true;
@@ -766,13 +824,20 @@ function editCard(markdown: string, summary: string, before: string) {
         apply.disabled = false;
         apply.textContent = "Re-apply";
         state.textContent = `${current.name} has nothing to redo; re-apply instead`;
+        // The engine has nothing to redo, so no undone card can be redone: empty the stack,
+        // and every one of them offers Re-apply.
+        undoneStack.length = 0;
+        stackChanged();
         return;
       }
+      undoneStack.pop();
       applied();
       setStatus("Edit redone", "ok");
     } catch (err) {
       redo.disabled = false;
       fail("Redo failed", err);
+    } finally {
+      walking = false;
     }
   });
   return doApply;
@@ -921,7 +986,10 @@ function wire() {
   // A click in the arena blurs this iframe. Close so the panel does not stay up.
   if (embed) {
     window.addEventListener("blur", () => {
-      if (menu && !menu.hidden) closeMenu();
+      if (menu && !menu.hidden) {
+        closeMenu();
+        blurClosedAt = performance.now();
+      }
     });
   }
 
@@ -1029,5 +1097,16 @@ setTimeout(() => {
     paintChip(undefined, "err");
   }
 }, 45_000);
+
+document.addEventListener("pointerenter", (e) => {
+  if (e.target instanceof Element && e.target.closest('a[href="/e/wordcraft"], #od-switch')) {
+    import("/editors/wordcraft/prefetch.ts").then((m) => m.prefetchWordcraft()).catch(() => {});
+  }
+}, { capture: true, passive: true });
+document.addEventListener("focusin", (e) => {
+  if (e.target instanceof Element && e.target.closest('a[href="/e/wordcraft"], #od-switch')) {
+    import("/editors/wordcraft/prefetch.ts").then((m) => m.prefetchWordcraft()).catch(() => {});
+  }
+}, { capture: true, passive: true });
 
 export {};

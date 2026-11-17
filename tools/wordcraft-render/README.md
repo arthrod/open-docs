@@ -60,13 +60,16 @@ The viewer checks the first before it instantiates anything.
 
 ## Build
 
-Built from [storytold/wordcraft](https://github.com/storytold/wordcraft) at
-`d40d1b27181b61990c84c75f77d5fd23ef81d452`, Rust 1.99, wasm-bindgen 0.2.129
-(the version WordCraft's lockfile pins).
+Builds inside the fork [arthrod/wordcraft-web](https://github.com/arthrod/wordcraft-web),
+branch `wordcraft-web`: `Cargo.toml` asks `wordcraft-fonts` for its `minimal-wasm-fonts`
+feature (a small font set, which is what makes the module 2.5 MB compressed, not 5.3 MB), and
+upstream [storytold/wordcraft](https://github.com/storytold/wordcraft) does not have that
+feature. CI tests the wrapper at `49d2f021fc120d4cac896931e75eb3810f4e5b58`. The commit the
+shipped `dist/` was built from was not recorded.
 
 ```sh
-git clone https://github.com/storytold/wordcraft && cd wordcraft
-git checkout d40d1b27181b61990c84c75f77d5fd23ef81d452
+git clone https://github.com/arthrod/wordcraft-web wordcraft && cd wordcraft
+git checkout 49d2f021fc120d4cac896931e75eb3810f4e5b58
 mkdir -p apps/wc-render && cp -r <this folder>/{Cargo.toml,src} apps/wc-render/
 cargo build -p wc-render --release --target wasm32-unknown-unknown
 cargo install wasm-bindgen-cli --version 0.2.129 --locked --root /tmp/wb
