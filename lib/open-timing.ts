@@ -24,9 +24,14 @@ export function longTasksSupported(
  */
 export const QUIET_MS = 2000;
 
-/** True when no long task has ended within the last QUIET_MS. */
-export function quietSince(x: { now: number; lastBusy: number }): boolean {
-  return x.now - x.lastBusy >= QUIET_MS;
+/**
+ * True when QUIET_MS have passed since the last long task ended AND since the
+ * load completed. Without the second, a load longer than the window with no
+ * long task in it (a network or worker-bound load) counted as quiet the moment
+ * it returned, and work started after `load()` resolved was never waited for.
+ */
+export function quietSince(x: { now: number; lastBusy: number; loadDone?: number }): boolean {
+  return x.now - Math.max(x.lastBusy, x.loadDone ?? x.lastBusy) >= QUIET_MS;
 }
 
 /**
@@ -67,4 +72,27 @@ export class LoadQueue {
     this.#tail = mine.catch(() => {});
     return mine;
   }
+}
+
+/**
+ * Prepare a document (read a file, build a blank one), then load it in turn,
+ * unless a newer open took the page while it was being prepared or waiting:
+ * that one's document must stay. True when this open loaded and still owns
+ * the page. An overtaken open that fails says nothing; the current one throws.
+ */
+export async function ownedLoad<T>(
+  owner: OpenOwner,
+  queue: LoadQueue,
+  prepare: () => Promise<T>,
+  load: (doc: T) => Promise<void>,
+): Promise<boolean> {
+  const mine = owner.start();
+  try {
+    const doc = await prepare();
+    await queue.run(() => (owner.owns(mine) ? load(doc) : Promise.resolve()));
+  } catch (err) {
+    if (!owner.owns(mine)) return false;
+    throw err;
+  }
+  return owner.owns(mine);
 }

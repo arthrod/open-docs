@@ -20,7 +20,7 @@ import {
   parseArenaMessage,
 } from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
-import { LoadQueue, longTasksSupported, OpenOwner, quietSince, settledMs as settledAfter } from "./open-timing.ts";
+import { LoadQueue, longTasksSupported, OpenOwner, ownedLoad, quietSince, settledMs as settledAfter } from "./open-timing.ts";
 
 const slug = document.body.dataset.slug ?? "";
 const editorName = document.body.dataset.name ?? slug;
@@ -359,14 +359,14 @@ async function withAdapter(label: string, fn: (a: EditorAdapter) => Promise<void
 const newDoc = () =>
   withAdapter("New document", async (a) => {
     if (a.viewOnly) return setStatus(`${a.name} is a view-only viewer`, "err");
-    openOwner.start(); // a sample still being measured no longer owns the page
     // The document is being replaced from this moment, as in openSiteSample: an assistant answer
     // computed for the one on screen must not land on its successor while that one loads, and the
     // sample timing left on <html> describes a document that is going away.
     docGen++;
     delete document.documentElement.dataset.odLoaded;
-    const blank = await window.od.blankDocx();
-    await loads.run(() => a.load(blank));
+    // A sample still being measured no longer owns the page; and a document opened while this
+    // blank one was being built stays: this open then loads nothing and says nothing.
+    if (!(await ownedLoad(openOwner, loads, () => window.od.blankDocx(), (blank) => a.load(blank)))) return;
     newDocument();
     setDocName("Untitled document");
     postChild(childOpened(slug, docName()));
@@ -421,18 +421,19 @@ async function timedOpen(doc: string, owner: number, open: () => Promise<void>, 
     await loads.run(() => (openOwner.owns(owner) ? open() : Promise.resolve()));
     if (!openOwner.owns(owner)) return null;
     loaded();
+    const loadDone = performance.now();
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const ms = Math.round(performance.now() - t0);
     let settledMs: number | null = null;
     let settleTimedOut = false;
     if (observer) {
       const GIVE_UP = 180_000;
-      while (!quietSince({ now: performance.now(), lastBusy }) && performance.now() - t0 < GIVE_UP) {
+      while (!quietSince({ now: performance.now(), lastBusy, loadDone }) && performance.now() - t0 < GIVE_UP) {
         await new Promise((r) => setTimeout(r, 100));
         for (const e of observer.takeRecords()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
         if (!openOwner.owns(owner)) return null;
       }
-      const quiet = quietSince({ now: performance.now(), lastBusy });
+      const quiet = quietSince({ now: performance.now(), lastBusy, loadDone });
       settleTimedOut = !quiet;
       settledMs = settledAfter({ t0, ms, lastBusy, quiet });
     }
@@ -504,11 +505,11 @@ async function importFile(file: File) {
   let openError: string | undefined;
   const ok = await withAdapter(`Import ${file.name}`, async (a) => {
     try {
-      openOwner.start(); // a sample still being measured no longer owns the page
       docGen++; // as in newDoc: the document on screen is being replaced from now on
       delete document.documentElement.dataset.odLoaded;
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      await loads.run(() => a.load(bytes));
+      // As in newDoc: a document opened while this file was being read stays.
+      const mine = await ownedLoad(openOwner, loads, async () => new Uint8Array(await file.arrayBuffer()), (bytes) => a.load(bytes));
+      if (!mine) return;
     } catch (err) {
       openError = (err as Error)?.message ?? String(err);
       throw err;
