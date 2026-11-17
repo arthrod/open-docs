@@ -13,7 +13,7 @@ export interface SampleRow {
   startupMs: number | null;
   /** Menu click → the adapter's load() resolved (+2 frames). */
   loadMs: number | null;
-  /** Menu click → end of the last long main-thread task before a quiet second. */
+  /** Menu click → end of the last long main-thread task before two quiet seconds. */
   settledMs: number | null;
   heapBytes: number | null;
   /** Renderer processes' resident memory before the sample was opened, and after. */
@@ -111,7 +111,7 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
   return `<section class="band" id="samples"><div class="wrap">
   <h2 class="sec-label"><span class="sq" aria-hidden="true"></span> / Samples</h2>
   <p class="sec-copy">Every engine opening the two harder samples from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(data.environment ?? "")}.
-  <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for a second (work in a worker or on the GPU is not seen).
+  <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for two seconds (work in a worker or on the GPU is not seen).
   <b>JS heap</b>: JavaScript objects only. <b>Renderer memory</b>: resident memory of Chrome's renderer processes, which also counts WebAssembly memory, canvases and the DOM; in brackets, how much it grew when the sample was opened, run by run (a view-only engine already shows the rich sample, so its bracket is what replacing that one cost).
   Microsoft's and Google's viewers render on their own servers, so only their frame's load is timed.</p>
   ${tables}

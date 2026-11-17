@@ -20,7 +20,7 @@ import {
   parseArenaMessage,
 } from "./embed.ts";
 import { fmtBytes, fmtMs, type Measurement, measure } from "./metrics.ts";
-import { LoadQueue, longTasksSupported, OpenOwner, settledMs as settledAfter } from "./open-timing.ts";
+import { LoadQueue, longTasksSupported, OpenOwner, quietSince, settledMs as settledAfter } from "./open-timing.ts";
 
 const slug = document.body.dataset.slug ?? "";
 const editorName = document.body.dataset.name ?? slug;
@@ -379,7 +379,7 @@ const newDoc = () =>
  *   ms         from the click to two frames after the adapter's `load()`
  *              resolved: the engine SAYS it is done.
  *   settledMs  from the click to the end of the last long task (> 50 ms on
- *              the main thread) before a full quiet second: the page HAS
+ *              the main thread) before two quiet seconds (QUIET_MS): the page HAS
  *              stopped working. Some loaders return before they draw
  *              (docx-editor.dev's `ref.load` is fire-and-forget), and some
  *              keep paginating after they return, so this is the number to
@@ -426,13 +426,13 @@ async function timedOpen(doc: string, owner: number, open: () => Promise<void>, 
     let settledMs: number | null = null;
     let settleTimedOut = false;
     if (observer) {
-      const QUIET = 1000, GIVE_UP = 180_000;
-      while (performance.now() - lastBusy < QUIET && performance.now() - t0 < GIVE_UP) {
+      const GIVE_UP = 180_000;
+      while (!quietSince({ now: performance.now(), lastBusy }) && performance.now() - t0 < GIVE_UP) {
         await new Promise((r) => setTimeout(r, 100));
         for (const e of observer.takeRecords()) lastBusy = Math.max(lastBusy, e.startTime + e.duration);
         if (!openOwner.owns(owner)) return null;
       }
-      const quiet = performance.now() - lastBusy >= QUIET;
+      const quiet = quietSince({ now: performance.now(), lastBusy });
       settleTimedOut = !quiet;
       settledMs = settledAfter({ t0, ms, lastBusy, quiet });
     }

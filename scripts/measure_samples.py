@@ -14,12 +14,12 @@ Per run:
                  when its mount() resolved (<html data-od-ready>, the figure its chip shows)
   loadMs         Menu click → two frames after the adapter's load() resolved
                  (lib/ui.ts `timedOpen`, read from <html data-od-loaded>)
-  settledMs      Menu click → end of the last long main-thread task before a
-                 quiet second: some loaders return before they draw, some keep
+  settledMs      Menu click → end of the last long main-thread task before two
+                 quiet seconds: some loaders return before they draw, some keep
                  paginating after they return, so compare THIS on a long file
   heapBytes      JSHeapUsedSize of the top page (Chrome DevTools Protocol), 2 s
-                 after the page reported the load (which it does after a quiet
-                 second, or after 180 s of a main thread that never went quiet):
+                 after the page reported the load (which it does after two quiet
+                 seconds, or after 180 s of a main thread that never went quiet):
                  JavaScript objects only, no WebAssembly memory
   rendererRss    resident memory of every renderer process of this Chrome
                  (`ps`), same moment: this one does include WebAssembly memory,
@@ -164,7 +164,7 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
                 out["settledMs"] = loaded["settledMs"]
             if loaded.get("settleTimedOut"):
                 out["settleTimedOut"] = True  # still busy when the page stopped waiting: no settled time
-            await asyncio.sleep(2.0)  # trailing requests (the page already waited for a quiet second)
+            await asyncio.sleep(2.0)  # trailing requests (the page already waited for two quiet seconds)
             out.update(chrome_memory(profile))
             cdp = await ctx.new_cdp_session(page)
             await cdp.send("Performance.enable")

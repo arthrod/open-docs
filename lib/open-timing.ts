@@ -16,6 +16,20 @@ export function longTasksSupported(
 }
 
 /**
+ * How long the main thread must go without a long task before the page counts
+ * as settled. Two seconds, not one: docen reports loaded, waits a second, then
+ * paginates in one task of minutes, and a one-second window sometimes closed
+ * in that pause and reported the page settled before its heaviest work began.
+ * Work an engine starts later than this after its last long task is not seen.
+ */
+export const QUIET_MS = 2000;
+
+/** True when no long task has ended within the last QUIET_MS. */
+export function quietSince(x: { now: number; lastBusy: number }): boolean {
+  return x.now - x.lastBusy >= QUIET_MS;
+}
+
+/**
  * Click → the end of the last long task before the page went quiet, never
  * less than the loader's own time `ms`. Null when the page never went quiet
  * within the wait (`quiet: false`): the last task seen is then not when it

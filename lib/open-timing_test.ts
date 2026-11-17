@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert@1.0.13";
-import { longTasksSupported, OpenOwner, settledMs } from "./open-timing.ts";
+import { longTasksSupported, OpenOwner, QUIET_MS, quietSince, settledMs } from "./open-timing.ts";
 
 Deno.test("long tasks are observable only where the browser lists the entry type", () => {
   assertEquals(longTasksSupported({ supportedEntryTypes: ["longtask", "paint"] }), true);
@@ -16,6 +16,13 @@ Deno.test("settled is the end of the last long task, never earlier than the load
 
 Deno.test("a page still busy when the wait gave up has no settled time", () => {
   assertEquals(settledMs({ t0: 0, ms: 400, lastBusy: 179_950, quiet: false }), null);
+});
+
+Deno.test("a pause shorter than the quiet window is not quiet: docen waits a second before it paginates", () => {
+  // Measured 2026-11-17 on the 500 pages: a long task ended at 4636 ms and the next (162 s long) began at 5701 ms.
+  assertEquals(quietSince({ now: 5700, lastBusy: 4636 }), false);
+  assertEquals(quietSince({ now: 4636 + QUIET_MS - 1, lastBusy: 4636 }), false);
+  assertEquals(quietSince({ now: 4636 + QUIET_MS, lastBusy: 4636 }), true);
 });
 
 Deno.test("only the newest open owns the page: an older one that finishes later does not", () => {
