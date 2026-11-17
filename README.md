@@ -247,7 +247,7 @@ Read these with care:
 Re-measure with:
 
 ```sh
-uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 3 \
+uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 5 \
   --out docs/samples/$(date +%F).json --latest docs/samples/latest.json --shots .scratch/shots
 ```
 
@@ -265,7 +265,10 @@ One (engine, sample) per launch of the installed Google Chrome, headed, with a
 fresh profile. The page opens on its blank document, then the script clicks the
 Menu's own button. **Loaded** is the click until the adapter's `load()` returns
 (plus two frames). **Settled** is the click until the main thread has been quiet
-for a full second, taken from the Long Tasks API: docx-editor.dev's loader
+for two seconds (counted from the later of the last long task and the load's
+return), taken from the Long Tasks API. Work an engine starts more than two
+seconds after it last kept the thread busy is not seen, and the wait gives up
+after 180 s ("still busy"). docx-editor.dev's loader
 returns before it draws, and several engines keep paginating after theirs
 returns, so on the 500-page file Settled is the number to compare. Work in a
 worker or on the GPU is invisible to it. **JS heap** is JavaScript objects only.
@@ -326,11 +329,11 @@ Read these with care:
 
 - **WordCraft and Nutrient have no score.** On Google's machine their engines (about 60 and 70 MB) do not
   download, the page shows "failed to start", and an error box paints fast: the scores published here before
-  2026-11-16 (WordCraft 100, Nutrient 74) were of that failure page. The measuring script now reads the page's
+  2026-11-16 (WordCraft 100, Nutrient 75) were of that failure page. The measuring script now reads the page's
   own console error from the report and records such an analysis as a failure. Why the download fails there is
   not known; the same files download normally in a browser and with `curl`.
 - **A score is a median of five analyses, and the analyses disagree**: the last column lists each one. Mobile
-  scores of the same page ten minutes apart differ by 30 points or more for several engines.
+  scores of the same page in the same run differ by 30 points or more for several engines.
 - **PageSpeed sometimes refuses an address** ("Unable to resolve …") that it analyses a minute later. Those are
   listed as `fail`, with PageSpeed's own words in the data file.
 - **On the 500 pages, LCP is mostly this site's frame**, which paints before any document. What the document
