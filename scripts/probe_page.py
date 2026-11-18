@@ -3,7 +3,8 @@
     uv run --with playwright python -I scripts/probe_page.py https://editors.benchmarks.law/e/opendoc 90
 
 For an engine that fails on a measuring machine and works elsewhere: every console error, every
-failed or refused request (all frames), and the page's own status after the wait.
+failed or refused request (all frames), and the page's own status after the wait. For each frame,
+`webgl` is true or false when the frame can be read, and null when it cannot (another origin).
 """
 import asyncio, json, sys, tempfile
 
@@ -38,7 +39,7 @@ async def main() -> None:
             state = await page.evaluate(
                 """() => ({ ready: document.documentElement.dataset.odReady || null,
                            error: document.querySelector('.od-error')?.innerText?.slice(0, 300) || null,
-                           frames: [...document.querySelectorAll('iframe')].map((f) => { try { const d = f.contentDocument; return { src: f.src.slice(0, 120), body: d?.body?.className, text: d?.body?.innerText?.slice(0, 200), webgl: !!d?.createElement('canvas').getContext('webgl2') }; } catch (e) { return { src: f.src.slice(0, 120), blocked: String(e).slice(0, 80) }; } }) })"""
+                           frames: [...document.querySelectorAll('iframe')].map((f) => { try { const d = f.contentDocument; return { src: f.src.slice(0, 120), body: d?.body?.className, text: d?.body?.innerText?.slice(0, 200), webgl: d ? !!d.createElement('canvas').getContext('webgl2') : null }; } catch (e) { return { src: f.src.slice(0, 120), blocked: String(e).slice(0, 80) }; } }) })"""
             )
             print("state", json.dumps(state), flush=True)
             print("responses by status", json.dumps(statuses), flush=True)

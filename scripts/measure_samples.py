@@ -44,7 +44,7 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, stopped_path
+from measure_lib import chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, stopped_path, where_note
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
@@ -237,7 +237,7 @@ async def main():
             xs = [x for x in raw if x["engine"] == e and x["sample"] == s]
             if xs:  # a run that was stopped early leaves the engines it never reached as they were
                 summary.setdefault(s, {})[e] = sample_row(xs)
-    where = os.environ.get("MEASURE_WHERE") or f"{platform.system()} {platform.machine()}"
+    where = where_note(f"{platform.system()} {platform.machine()}")
     result = {
         "measuredAt": datetime.date.today().isoformat(),
         "environment": f"{chrome_note(raw)} (installed, headed) via Playwright, fresh profile per run (cold cache), {runs_note(runs, raw)}, median; {where}; {load_note(raw)}",
