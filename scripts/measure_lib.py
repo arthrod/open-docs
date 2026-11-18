@@ -9,6 +9,7 @@ import asyncio
 import datetime
 import json
 import os
+import shlex
 import re
 import statistics
 import subprocess
@@ -262,6 +263,47 @@ def lorem_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--chapters", type=int, default=50)
     p.add_argument("--words", type=int, default=4450, help="words of body text per chapter")
     return p.parse_args(argv)
+
+
+def chrome_args(env: dict | None = None) -> list[str]:
+    """Extra Chrome start-up flags from OD_CHROME_ARGS, none by default.
+
+    Split as a shell would: flags are separated by spaces, and quotes keep a value with spaces
+    whole (`--user-agent="Benchmark Browser"`). A container needs them: Chrome will not start as
+    root with its sandbox, and a small /dev/shm crashes it on a large document. A flag can change
+    what is measured, so where_note() puts them in the published environment line.
+    """
+    return shlex.split((os.environ if env is None else env).get("OD_CHROME_ARGS", ""))
+
+
+def where_note(default: str, env: dict | None = None) -> str:
+    """Where a pass was measured: MEASURE_WHERE or `default`, plus any Chrome flag it does not name."""
+    env = os.environ if env is None else env
+    where = env.get("MEASURE_WHERE") or default
+    unsaid = [a for a in chrome_args(env) if a not in where]
+    return f"{where}; Chrome started with {' '.join(unsaid)}" if unsaid else where
+
+
+def chrome_memory_of(rows: list[tuple[int, int, int, str]], profile: str) -> dict:
+    """Renderer and GPU memory of the Chrome started on `profile`, from `ps` rows (pid, ppid, rss, command).
+
+    Every process below the browser process counts, not only its direct children: on Linux
+    Chrome forks renderers from its zygote, whose parent is the browser, so a parent-only
+    filter reads 0 there.
+    """
+    # The whole argument, not a prefix of it: /tmp/p must not also take the Chrome on /tmp/pq.
+    owned = {pid for pid, _, _, cmd in rows if f"--user-data-dir={profile}" in cmd.split() and "--type=" not in cmd}
+    while True:
+        more = {pid for pid, ppid, _, _ in rows if ppid in owned and pid not in owned}
+        if not more:
+            break
+        owned |= more
+    mine = [(rss, cmd) for pid, _, rss, cmd in rows if pid in owned]
+    return {
+        "rendererRss": sum(rss for rss, cmd in mine if "--type=renderer" in cmd),
+        "renderers": sum(1 for _, cmd in mine if "--type=renderer" in cmd),
+        "gpuRss": sum(rss for rss, cmd in mine if "--type=gpu-process" in cmd),
+    }
 
 
 def machine_load() -> dict:

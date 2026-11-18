@@ -331,3 +331,60 @@ def test_a_stopped_run_writes_beside_the_days_file_not_over_it():
     now = datetime.datetime(2026, 11, 17, 5, 6, 7, tzinfo=datetime.timezone.utc)
     assert lib.stopped_path("results/raw/2026-11-17-browser-showcase.json", now) == "results/raw/2026-11-17-browser-showcase-stopped-050607Z.json"
     assert lib.stopped_path(None) is None
+
+
+def test_chrome_memory_counts_renderers_below_the_zygote_on_linux_and_direct_children_on_macos():
+    """The same process tree is read on both systems: renderers below the zygote (Linux) or the browser (macOS)."""
+    linux = [
+        (10, 1, 500, "/opt/google/chrome/chrome --user-data-dir=/tmp/p --no-sandbox"),
+        (11, 10, 50, "/opt/google/chrome/chrome --type=zygote --user-data-dir=/tmp/p"),
+        (12, 11, 70, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/p"),
+        (13, 11, 30, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/p"),
+        (14, 10, 20, "/opt/google/chrome/chrome --type=gpu-process --user-data-dir=/tmp/p"),
+        (20, 1, 500, "/opt/google/chrome/chrome --user-data-dir=/tmp/other"),
+        (21, 20, 999, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/other"),
+    ]
+    assert lib.chrome_memory_of(linux, "/tmp/p") == {"rendererRss": 100, "renderers": 2, "gpuRss": 20}
+    mac = [
+        (10, 1, 500, "Google Chrome --user-data-dir=/tmp/p"),
+        (12, 10, 70, "Google Chrome Helper (Renderer) --type=renderer --user-data-dir=/tmp/p"),
+        (14, 10, 20, "Google Chrome Helper (GPU) --type=gpu-process --user-data-dir=/tmp/p"),
+    ]
+    assert lib.chrome_memory_of(mac, "/tmp/p") == {"rendererRss": 70, "renderers": 1, "gpuRss": 20}
+    assert lib.chrome_memory_of(linux, "/tmp/none") == {"rendererRss": 0, "renderers": 0, "gpuRss": 0}
+
+
+def test_chrome_args_come_from_the_environment_and_default_to_none():
+    """An explicit mapping makes the result independent of the process environment."""
+    assert lib.chrome_args({}) == []
+    assert lib.chrome_args({"OD_CHROME_ARGS": "--no-sandbox  --disable-dev-shm-usage"}) == ["--no-sandbox", "--disable-dev-shm-usage"]
+
+
+def test_chrome_args_keep_a_quoted_value_whole_and_read_the_process_environment(monkeypatch):
+    """Shell quoting applies, and a call without a mapping reads os.environ (what the launchers do)."""
+    assert lib.chrome_args({"OD_CHROME_ARGS": '--user-agent="Benchmark Browser" --no-sandbox'}) == ["--user-agent=Benchmark Browser", "--no-sandbox"]
+    monkeypatch.setenv("OD_CHROME_ARGS", "--no-sandbox")
+    assert lib.chrome_args() == ["--no-sandbox"]
+    monkeypatch.delenv("OD_CHROME_ARGS")
+    assert lib.chrome_args() == []
+
+
+def test_where_note_names_the_chrome_flags_the_description_left_out():
+    """A published environment line always shows the start-up flags, said by the operator or not."""
+    assert lib.where_note("Linux x86_64", {}) == "Linux x86_64"
+    assert lib.where_note("Linux x86_64", {"MEASURE_WHERE": "a laptop"}) == "a laptop"
+    assert lib.where_note("Linux x86_64", {"OD_CHROME_ARGS": "--no-sandbox"}) == "Linux x86_64; Chrome started with --no-sandbox"
+    both = {"MEASURE_WHERE": "a job, Chrome with --no-sandbox", "OD_CHROME_ARGS": "--no-sandbox --disable-gpu"}
+    assert lib.where_note("x", both) == "a job, Chrome with --no-sandbox; Chrome started with --disable-gpu"
+
+
+def test_chrome_memory_does_not_take_a_chrome_whose_profile_path_only_starts_the_same():
+    """/tmp/p and /tmp/pq are two browsers: each one's renderers count for itself only."""
+    rows = [
+        (10, 1, 500, "chrome --user-data-dir=/tmp/p --no-first-run"),
+        (11, 10, 40, "chrome --type=renderer --user-data-dir=/tmp/p"),
+        (20, 1, 500, "chrome --user-data-dir=/tmp/pq --no-first-run"),
+        (21, 20, 900, "chrome --type=renderer --user-data-dir=/tmp/pq"),
+    ]
+    assert lib.chrome_memory_of(rows, "/tmp/p") == {"rendererRss": 40, "renderers": 1, "gpuRss": 0}
+    assert lib.chrome_memory_of(rows, "/tmp/pq") == {"rendererRss": 900, "renderers": 1, "gpuRss": 0}

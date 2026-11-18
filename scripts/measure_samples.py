@@ -44,7 +44,7 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, stopped_path
+from measure_lib import chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, stopped_path, where_note
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
@@ -86,20 +86,14 @@ def chrome_memory(profile: str) -> dict:
         parts = line.split(None, 3)
         if len(parts) == 4:
             rows.append((int(parts[0]), int(parts[1]), int(parts[2]) * 1024, parts[3]))
-    roots = {pid for pid, _, _, cmd in rows if f"--user-data-dir={profile}" in cmd and "--type=" not in cmd}
-    kids = [(rss, cmd) for _, ppid, rss, cmd in rows if ppid in roots]
-    return {
-        "rendererRss": sum(rss for rss, cmd in kids if "--type=renderer" in cmd),
-        "renderers": sum(1 for _, cmd in kids if "--type=renderer" in cmd),
-        "gpuRss": sum(rss for rss, cmd in kids if "--type=gpu-process" in cmd),
-    }
+    return chrome_memory_of(rows, profile)
 
 
 async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
     out: dict = {"engine": slug, "sample": sample, **machine_load()}
     with tempfile.TemporaryDirectory() as profile:
         ctx = await pw.chromium.launch_persistent_context(
-            profile, channel="chrome", headless=False, viewport={"width": 1280, "height": 900}
+            profile, channel="chrome", headless=False, args=chrome_args(), viewport={"width": 1280, "height": 900}
         )
         try:
             # Keep these page loads out of the site's own metrics table.
@@ -243,7 +237,7 @@ async def main():
             xs = [x for x in raw if x["engine"] == e and x["sample"] == s]
             if xs:  # a run that was stopped early leaves the engines it never reached as they were
                 summary.setdefault(s, {})[e] = sample_row(xs)
-    where = os.environ.get("MEASURE_WHERE") or f"{platform.system()} {platform.machine()}"
+    where = where_note(f"{platform.system()} {platform.machine()}")
     result = {
         "measuredAt": datetime.date.today().isoformat(),
         "environment": f"{chrome_note(raw)} (installed, headed) via Playwright, fresh profile per run (cold cache), {runs_note(runs, raw)}, median; {where}; {load_note(raw)}",
