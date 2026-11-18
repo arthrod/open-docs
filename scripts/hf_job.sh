@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Measure both sites on a Hugging Face Jobs machine (Linux, no GPU). Billed by the minute.
 #
-#   SITE=smoke|editors|viewer|both|probe  RUNS=<n>  PROBE_URLS="<url> …" (probe only)  HF_TOKEN=<token with write access>
+#   SITE=smoke|editors|viewer|both|probe|retake  (retake: RETAKE_FROM=<date> V_ENGINES=… E_ENGINES=…)
+#    RUNS=<n>  PROBE_URLS="<url> …" (probe only)  HF_TOKEN=<token with write access>
 #
 # Run as the job's command, in the python:3.12 image, as root:
 #   curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/<ref>/scripts/hf_job.sh | bash
@@ -64,6 +65,33 @@ viewer() {
   step 40m $PW scripts/measure_server_client.py all showcase,redline,lorem-500 "$RUNS" --out results/server-client.json --raw "results/raw/$D-server-client.json" >/dev/null 2>/tmp/sc.log; tail -2 /tmp/sc.log | cut -c1-300
   mkdir -p results/logs; cp /tmp/*.log results/logs/; up results "$D/viewer/results"
 }
+# Some engines again, on top of the files an earlier job uploaded the same day (RETAKE_FROM: its
+# date folder). Each script merges by engine, so the other engines' rows stay as they were.
+retake() {
+  cat > /tmp/down.py <<'PY'
+import sys
+from huggingface_hub import snapshot_download
+snapshot_download("arthrod/open-docs-measurements", repo_type="dataset", allow_patterns=[sys.argv[1] + "/*"], local_dir="/tmp/prev")
+PY
+  uv run -q --with huggingface_hub python /tmp/down.py "$RETAKE_FROM" || { echo "cannot read the earlier files"; exit 1; }
+  if [ -n "${V_ENGINES:-}" ]; then
+    cd /w/viewer; export MEASURE_WHERE="from $HW"
+    cp -R "/tmp/prev/$RETAKE_FROM/viewer/results/." results/
+    step 12m $PW scripts/measure.py "$V_ENGINES" "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase-retake.json" >/dev/null 2>/tmp/r1.log; tail -3 /tmp/r1.log | cut -c1-400
+    step 12m $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline-retake.json" >/dev/null 2>/tmp/r2.log; tail -3 /tmp/r2.log | cut -c1-400
+    step 15m $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500-retake.json" >/dev/null 2>/tmp/r3.log; tail -3 /tmp/r3.log | cut -c1-400
+    mkdir -p results/logs; cp /tmp/r?.log results/logs/; up results "$D/viewer/results"
+  fi
+  if [ -n "${E_ENGINES:-}" ]; then
+    cd /w/editors; export MEASURE_WHERE="$HW"
+    cp -R "/tmp/prev/$RETAKE_FROM/editors/samples/." docs/samples/
+    for S in showcase redline lorem-500; do
+      step 15m $PW scripts/measure_samples.py "$E_ENGINES" $S "$RUNS" --out "docs/samples/$D-$S-retake.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S-retake.log
+      grep -o '"error": "[^"]*' /tmp/$S-retake.log | cut -c1-200 | sort | uniq -c | head; cp /tmp/$S-retake.log docs/samples/
+    done
+    up docs/samples "$D/editors/samples"; up shots "$D/editors/shots"
+  fi
+}
 # "both": one site after the other, never at once. Two Chromes, or two jobs asking the same
 # val, would time each other.
 case "$SITE" in
@@ -71,6 +99,7 @@ case "$SITE" in
   editors) editors ;;
   viewer) viewer ;;
   both) viewer; editors ;;
+  retake) retake ;;
   probe) cd /w/editors; for u in $PROBE_URLS; do echo "### $u"; timeout 4m $PW scripts/probe_page.py "$u" 100 2>&1 | cut -c1-600 | head -150; done ;;
   *) echo "unknown SITE=$SITE"; exit 1 ;;
 esac
