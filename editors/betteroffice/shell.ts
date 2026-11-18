@@ -1,6 +1,6 @@
 /** Server-side shell for BetterOffice's DOCX editor. */
 import { vendorBase } from "../../server/npm-vendor.ts";
-import { REACT_IMPORTS } from "../../server/router.ts";
+import { REACT_IMPORTS } from "../../server/react-imports.ts";
 
 export default {
   slug: "betteroffice",

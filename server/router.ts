@@ -51,13 +51,8 @@ export interface EditorShell {
   noAgent?: boolean;
 }
 
-/** React, resolved once, for every adapter that loads a React package with `?external=react,react-dom`. */
-export const REACT_IMPORTS: Record<string, string> = {
-  "react": "https://esm.sh/react@18.2.0",
-  "react/": "https://esm.sh/react@18.2.0/",
-  "react-dom": "https://esm.sh/react-dom@18.2.0",
-  "react-dom/": "https://esm.sh/react-dom@18.2.0/",
-};
+export { REACT_IMPORTS } from "./react-imports.ts";
+import { REACT_IMPORTS } from "./react-imports.ts";
 
 export function registerEditor(app: Hono, opts: EditorShell) {
   app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts, c.req.query("embed") === "1")));
