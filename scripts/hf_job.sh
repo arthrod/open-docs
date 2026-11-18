@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Measure both sites on a Hugging Face Jobs machine (Linux, no GPU). Billed by the minute.
 #
-#   SITE=smoke|editors|viewer|both  RUNS=<n>  HF_TOKEN=<token with write access>
+#   SITE=smoke|editors|viewer|both|probe  RUNS=<n>  PROBE_URLS="<url> …" (probe only)  HF_TOKEN=<token with write access>
 #
 # Run as the job's command, in the python:3.12 image, as root:
 #   curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/<ref>/scripts/hf_job.sh | bash
@@ -71,6 +71,7 @@ case "$SITE" in
   editors) editors ;;
   viewer) viewer ;;
   both) viewer; editors ;;
+  probe) cd /w/editors; for u in $PROBE_URLS; do echo "### $u"; timeout 4m $PW scripts/probe_page.py "$u" 100 2>&1 | cut -c1-600 | head -150; done ;;
   *) echo "unknown SITE=$SITE"; exit 1 ;;
 esac
 echo "done $(date -u +%T)"
