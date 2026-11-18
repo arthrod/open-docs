@@ -280,8 +280,8 @@ Read these with care:
   starts work more than two seconds after it last kept the thread busy would
   read as settled before that work.
 
-The published figures were made by this job (two passes on 2026-11-18; the dated file lists
-each pass's job, command and commits under `passes`):
+The published figures combine two passes on 2026-11-18; the dated file lists
+each pass's job, command and commits under `passes`. To run a new full pass:
 
 ```sh
 hf jobs run --flavor cpu-upgrade --timeout 4h --secrets HF_TOKEN -e SITE=editors -e RUNS=3 python:3.12 \
@@ -299,7 +299,8 @@ uv run --with playwright python -I scripts/measure_samples.py all showcase,redli
 The published sample figures are taken on a Hugging Face Jobs machine (`cpu-upgrade`: 8 vCPU,
 32 GB, Linux, no GPU) by [`scripts/hf_job.sh`](scripts/hf_job.sh), because a timing taken on a
 laptop that is doing other work is slower than the engine, and anyone can rent the same machine.
-Every run records the load average and the Chrome version, so the dated file shows both. That
+Runs record the load average; Chrome versions are recorded after successful navigation,
+so some failed runs omit them. The dated file preserves these records. That
 load average and core count are the shared host's (64 cores), not our 8 vCPU: it reached 65
 during these runs, and how much of that slowed our Chrome cannot be told from inside the job.
 Chrome runs headed under Xvfb and draws in software. Read the figures as that machine's; what
