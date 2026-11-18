@@ -17,6 +17,7 @@ export const editorMounts: string[] = [
   "wordcraft",
   "react-docx",
   "univer",
+  "opendoc",
   // Proprietary, view-only viewers (server/registry.ts kind: "viewer").
   "word-online",
   "google-viewer",

@@ -26,6 +26,7 @@ step. Each one opens on a **blank document**, imports and exports real
 | [WordCraft](https://editors.benchmarks.law/e/wordcraft) | `wordcraft-web` 0.18.1 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
 | [react-docx](https://editors.benchmarks.law/e/react-docx) | `@extend-ai/react-docx@0.15.0` (`/vanilla`, served from this origin) | Rust → WASM parser, DOM layout (Preact) | native | markdown → Plate → docx-io .docx → opened as a new document (not undoable) | its .docx (`getDocxBytes()`) → `lib/docx-markdown.ts` |
 | [Univer](https://editors.benchmarks.law/e/univer) | `@univerjs/presets@1.5.2` + `preset-docs-core` | Canvas | none: text only, read by `lib/docx-markdown.ts` (its .docx import and export are in its Server SDK); no .docx export | markdown → `lib/univer-doc.ts` → a new document (not undoable) | its body → `lib/univer-doc.ts` |
+| [OpenDoc](https://editors.benchmarks.law/e/opendoc) | its editor application, snapshot of 2026-11-05 (commit `5ac261c`), in a same-origin frame | Rust → WASM engine, canvas | native (through its own file input) | markdown → Plate → docx-io .docx → opened as a new document (not undoable) | its .docx export (caught before the download) → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
 ships one (Docxodus, SuperDoc, docen, docx-editor.dev, folio, WordCraft), and a

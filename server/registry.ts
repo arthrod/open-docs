@@ -213,6 +213,21 @@ export const editors: EditorMeta[] = [
       { name: "DreamNum", kind: "company", github: "https://github.com/dream-num" },
     ],
   },
+  {
+    slug: "opendoc",
+    name: "OpenDoc",
+    packages: ["OpenDoc editor application (opendoc.casualoffice.org, snapshot 2026-11-05)"],
+    delivery: "wasm",
+    license: "Apache-2.0",
+    repo: "https://github.com/CasualOffice/opendoc",
+    blurb:
+      "A deterministic Rust engine in WebAssembly that reads, lays out, paints and saves DOCX and ODT itself, with its own editor application; pre-release.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "CasualOffice", kind: "company", github: "https://github.com/CasualOffice" },
+    ],
+  },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
     slug: "word-online",

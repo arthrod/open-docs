@@ -18,6 +18,7 @@ const RENDER: Record<string, string> = {
   "wordcraft": "Rust WASM (egui canvas)",
   "react-docx": "Rust WASM parser + DOM layout",
   "univer": "Canvas",
+  "opendoc": "Rust WASM engine → canvas",
   "word-online": "Microsoft's servers (iframe)",
   "google-viewer": "Google's servers (iframe)",
   "apryse": "WASM office engine → canvas",
