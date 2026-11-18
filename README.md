@@ -3,9 +3,9 @@
 [![Live on Val Town](https://img.shields.io/badge/live-editors.benchmarks.law-2557d6)](https://editors.benchmarks.law)
 [![Val Town](https://img.shields.io/badge/runs%20on-Val%20Town-111)](https://www.val.town/x/arthrod/open-docs)
 [![Release](https://img.shields.io/github/v/tag/arthrod/open-docs?label=release)](https://github.com/arthrod/open-docs/tags)
-[![Editors](https://img.shields.io/badge/editors-8-informational)](#the-editors)
+[![Editors](https://img.shields.io/badge/editors-13-informational)](#the-editors)
 
-Eight open-source Word editors, running entirely in the browser with no build
+Thirteen open-source Word editors, running entirely in the browser with no build
 step. Each one opens on a **blank document**, imports and exports real
 **.docx** files, has an **AI assistant** that edits the open document, and is
 **measured on every visit**: startup time, JS memory and download size.
