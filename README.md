@@ -24,6 +24,7 @@ step. Each one opens on a **blank document**, imports and exports real
 | [docx-editor.dev](https://editors.benchmarks.law/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → its own DOCX clipboard-fragment paste (undoable) | its .docx → `lib/docx-markdown.ts` |
 | [folio](https://editors.benchmarks.law/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | its `fromMarkdown` → `mergeDocumentContent` → `toProseDoc`, one transaction (undoable) | its .docx (`save()`) → `lib/docx-markdown.ts` |
 | [WordCraft](https://editors.benchmarks.law/e/wordcraft) | `wordcraft-web` 0.18.1 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
+| [react-docx](https://editors.benchmarks.law/e/react-docx) | `@extend-ai/react-docx@0.15.0` (`/vanilla`, served from this origin) | Rust → WASM parser, DOM layout (Preact) | native | markdown → Plate → docx-io .docx → opened as a new document (not undoable) | its .docx (`getDocxBytes()`) → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
 ships one (Docxodus, SuperDoc, docen, docx-editor.dev, folio, WordCraft), and a

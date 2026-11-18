@@ -48,7 +48,7 @@ from measure_lib import chrome_note, close_context, load_note, machine_load, mer
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
-EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft"]
+EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft", "react-docx"]
 VIEWERS = ["word-online", "google-viewer", "apryse", "nutrient"]
 ALL = EDITORS + VIEWERS
 # sample name → the Menu button that loads it
@@ -66,6 +66,7 @@ PAGES = """() => {
     'eigenpal': n('.layout-page'),
     'folio': n('.folio-page, .folio-page-shell, [data-page-number]'),
     'docxodus': n('.page-box'),
+    'react-docx': n('[data-docx-page-wrapper]'),
   };
 }"""
 

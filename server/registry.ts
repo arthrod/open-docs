@@ -183,6 +183,21 @@ export const editors: EditorMeta[] = [
       { name: "ArtCraft", kind: "company", linkedin: "https://www.linkedin.com/company/artcraft-ai/", github: "https://github.com/storytold" },
     ],
   },
+  {
+    slug: "react-docx",
+    name: "react-docx",
+    packages: ["@extend-ai/react-docx"],
+    delivery: "jsdelivr",
+    license: "MIT",
+    repo: "https://github.com/extend-hq/react-docx",
+    blurb:
+      "Paginated DOCX viewer and editor on a Rust/WASM parser (Rust Office), with review and thumbnails; a framework-free entry with Preact inside.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "Extend", kind: "company", github: "https://github.com/extend-hq" },
+    ],
+  },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
     slug: "word-online",
