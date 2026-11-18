@@ -20,6 +20,7 @@ const RENDER: Record<string, string> = {
   "univer": "Canvas",
   "opendoc": "Rust WASM engine → canvas",
   "betteroffice": "Rust WASM engines in a Worker → canvas",
+  "onlyoffice": "Canvas (sdkjs) + x2t converter in WASM",
   "word-online": "Microsoft's servers (iframe)",
   "google-viewer": "Google's servers (iframe)",
   "apryse": "WASM office engine → canvas",

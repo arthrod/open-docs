@@ -243,6 +243,22 @@ export const editors: EditorMeta[] = [
       { name: "openooxml", kind: "company", github: "https://github.com/openooxml" },
     ],
   },
+  {
+    slug: "onlyoffice",
+    name: "OnlyOffice (CryptPad build)",
+    packages: ["cryptpad/onlyoffice-editor v9.3.2+3", "cryptpad/onlyoffice-x2t-wasm v9.3.2+3"],
+    delivery: "wasm",
+    license: "AGPL-3.0",
+    repo: "https://github.com/cryptpad/onlyoffice-editor",
+    blurb:
+      "OnlyOffice's document editor with no document server: CryptPad's build replaces the co-editing socket with messages to the page, and OnlyOffice's own converter (x2t) runs in WebAssembly.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "CryptPad (XWiki)", kind: "company", github: "https://github.com/cryptpad" },
+      { name: "Ascensio System (ONLYOFFICE)", kind: "company", github: "https://github.com/ONLYOFFICE" },
+    ],
+  },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
     slug: "word-online",

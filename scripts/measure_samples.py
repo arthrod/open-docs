@@ -48,7 +48,7 @@ from measure_lib import chrome_note, close_context, load_note, machine_load, mer
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
-EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft", "react-docx", "univer", "opendoc", "betteroffice"]
+EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft", "react-docx", "univer", "opendoc", "betteroffice", "onlyoffice"]
 VIEWERS = ["word-online", "google-viewer", "apryse", "nutrient"]
 ALL = EDITORS + VIEWERS
 # sample name → the Menu button that loads it
