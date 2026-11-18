@@ -7,6 +7,10 @@
 /** package → the one version this site serves. */
 export const VENDORED: Record<string, string> = {
   "@extend-ai/react-docx": "0.15.0",
+  "@betteroffice/docx": "0.5.1",
+  "@betteroffice/docx-react": "0.5.1",
+  "@betteroffice/docx-i18n": "0.5.1",
+  "@betteroffice/fonts": "0.4.2",
 };
 
 const PREFIX = "/vendor/npm/";

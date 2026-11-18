@@ -228,6 +228,21 @@ export const editors: EditorMeta[] = [
       { name: "CasualOffice", kind: "company", github: "https://github.com/CasualOffice" },
     ],
   },
+  {
+    slug: "betteroffice",
+    name: "BetterOffice",
+    packages: ["@betteroffice/docx-react", "@betteroffice/docx"],
+    delivery: "jsdelivr",
+    license: "Apache-2.0",
+    repo: "https://github.com/openooxml/betteroffice",
+    blurb:
+      "Rust-native OOXML engines (parse, edit, layout) compiled to WebAssembly and run in a Worker, with a React editor, review cards and collaboration.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "openooxml", kind: "company", github: "https://github.com/openooxml" },
+    ],
+  },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
     slug: "word-online",

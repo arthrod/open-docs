@@ -19,6 +19,7 @@ const RENDER: Record<string, string> = {
   "react-docx": "Rust WASM parser + DOM layout",
   "univer": "Canvas",
   "opendoc": "Rust WASM engine → canvas",
+  "betteroffice": "Rust WASM engines in a Worker → canvas",
   "word-online": "Microsoft's servers (iframe)",
   "google-viewer": "Google's servers (iframe)",
   "apryse": "WASM office engine → canvas",

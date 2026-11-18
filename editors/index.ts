@@ -18,6 +18,7 @@ export const editorMounts: string[] = [
   "react-docx",
   "univer",
   "opendoc",
+  "betteroffice",
   // Proprietary, view-only viewers (server/registry.ts kind: "viewer").
   "word-online",
   "google-viewer",
