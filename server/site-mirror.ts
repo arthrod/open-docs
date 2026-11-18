@@ -50,12 +50,24 @@ const TYPES: Record<string, string> = {
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
+/** The sites allowed to show a mirrored page under their own origin (they pass engine files through). */
+const SISTER_ORIGINS = new Set(["https://viewers.benchmarks.law"]);
+
+/**
+ * The origin a mirrored page is shown under: this one, or the sister site that says it is
+ * passing the page through. Any other claimed origin is ignored, so a request cannot make the
+ * page load its engine from an address of the requester's choosing.
+ */
+export const pageOrigin = (own: string, claimed: string | undefined) =>
+  claimed && SISTER_ORIGINS.has(claimed) ? claimed : own;
+
 export async function serveMirror(path: string, here: string): Promise<Response> {
   const t = mirrorTarget(path);
   if (!t) return new Response("not a mirrored file", { status: 404 });
   const key = `od_mirror_${t.site}_${MIRRORS[t.site].snapshot}_${t.file.replaceAll("/", "__")}`;
   const type = TYPES[t.file.split(".").pop()!.toLowerCase()] ?? "application/octet-stream";
-  const headers = { "content-type": type, "cache-control": "public, max-age=31536000, immutable" };
+  // A page differs by the origin it is shown under, so a cache must not hand one site's to the other.
+  const headers = { "content-type": type, "cache-control": "public, max-age=31536000, immutable", "vary": "x-od-shown-at" };
   const stored = await blob.get(key).catch(() => undefined);
   const page = MIRRORS[t.site].page;
   const shaped = (bytes: Uint8Array): Uint8Array<ArrayBuffer> =>

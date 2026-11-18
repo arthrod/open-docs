@@ -5,6 +5,8 @@ const BASE = vendorBase("@extend-ai/react-docx");
 
 export default {
   slug: "react-docx",
+  // Its files must come from the origin of the page showing it (a Worker or a frame it reaches into).
+  sameOrigin: true,
   title: "react-docx",
   entry: "/editors/react-docx/main.ts",
   // The package's files come from this origin (server/npm-vendor.ts): its import worker is

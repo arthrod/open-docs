@@ -15,7 +15,7 @@ import { fixtureMarkerFreeDocx, fixtureBriefDocx, fixtureSourcesText } from "./e
 import { ICONS_VERSION } from "./editors/docen/assets.ts";
 import { serveWordcraft, WORDCRAFT_BASE } from "./editors/wordcraft/assets.ts";
 import { serveVendored } from "./server/npm-vendor.ts";
-import { serveMirror } from "./server/site-mirror.ts";
+import { pageOrigin, serveMirror } from "./server/site-mirror.ts";
 import { serveOnlyoffice } from "./server/onlyoffice.ts";
 
 const app = new Hono();
@@ -69,7 +69,7 @@ app.get("/api/svg-raw/:file", async (c) => {
 // Pinned npm packages that must come from this origin (server/npm-vendor.ts).
 app.get("/vendor/npm/*", (c) => serveVendored(c.req.path));
 // Dated snapshots of engines published only as a website (server/site-mirror.ts).
-app.get("/vendor/opendoc/*", (c) => serveMirror(c.req.path, new URL(c.req.url).origin));
+app.get("/vendor/opendoc/*", (c) => serveMirror(c.req.path, pageOrigin(new URL(c.req.url).origin, c.req.header("x-od-shown-at"))));
 app.get("/vendor/onlyoffice/*", (c) => serveOnlyoffice(c.req.path, c.req.header("accept-encoding") ?? ""));
 
 // WordCraft's wasm build, cached in blob storage (editors/wordcraft/assets.ts).

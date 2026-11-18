@@ -39,6 +39,12 @@ export interface EditorShell {
   /** Extra import-map entries (bare specifiers / URL remaps) for this editor. */
   importMap?: Record<string, string>;
   /**
+   * The engine's files must come from the origin of the page showing it (it starts a Worker from
+   * them, or reaches into a frame of them). A site that embeds this shell elsewhere (the viewer
+   * site) then passes those files through its own origin instead of linking to this one.
+   */
+  sameOrigin?: boolean;
+  /**
    * Render NO assistant panel and NO toggle button (page works standalone —
    * e.g. cite-check, whose owner explicitly does not want the agent there).
    */

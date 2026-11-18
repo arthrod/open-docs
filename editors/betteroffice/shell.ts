@@ -4,6 +4,8 @@ import { REACT_IMPORTS } from "../../server/router.ts";
 
 export default {
   slug: "betteroffice",
+  // Its files must come from the origin of the page showing it (a Worker or a frame it reaches into).
+  sameOrigin: true,
   title: "BetterOffice",
   entry: "/editors/betteroffice/main.ts",
   // The packages' files come from this origin (server/npm-vendor.ts): the engine runs in a
