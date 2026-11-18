@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Measure both sites on a Hugging Face Jobs machine (Linux, no GPU). Billed by the minute.
 #
-#   SITE=smoke|editors|viewer  RUNS=<n>  HF_TOKEN=<token with write access>
+#   SITE=smoke|editors|viewer|both  RUNS=<n>  HF_TOKEN=<token with write access>
 #
 # Run as the job's command, in the python:3.12 image, as root:
 #   curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/<ref>/scripts/hf_job.sh | bash
@@ -14,7 +14,7 @@ pip install -q uv || exit 1
 D=$(date +%F)
 export OD_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage"
 export OD_TIMEOUT_S=600
-HW="a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage"
+HW="a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage"
 cat > /tmp/up.py <<'PY'
 import sys
 from huggingface_hub import HfApi
@@ -35,14 +35,15 @@ export DISPLAY=:99
 sleep 2
 step() { local t=$1; shift; echo "== $(date -u +%T) $*"; timeout "$t" "$@"; local rc=$?; echo "== rc=$rc $(cat /proc/loadavg)"; return 0; }
 PW="uv run -q --with playwright python -I"
-if [ "$SITE" = smoke ]; then
+smoke() {
   mkdir -p /tmp/out
   cd /w/editors; export MEASURE_WHERE="$HW"
   step 6m $PW scripts/measure_samples.py docxodus,onlyoffice redline 1 --out /tmp/out/editors.json --latest /tmp/out/editors-latest.json --shots /tmp/out/shots 2>&1 | tail -4 | cut -c1-900
   cd /w/viewer; export MEASURE_WHERE="from $HW"
   step 6m $PW scripts/measure.py docxodus,betteroffice 1 --doc redline --samples /tmp/out/viewer-samples.json --raw /tmp/out/viewer-raw.json 2>&1 | tail -6 | cut -c1-900
   ls -la /tmp/out; up /tmp/out "$D/smoke"
-elif [ "$SITE" = editors ]; then
+}
+editors() {
   cd /w/editors; export MEASURE_WHERE="$HW"
   for S in showcase redline lorem-500; do
     T=55m; [ "$S" = lorem-500 ] && T=90m
@@ -51,7 +52,8 @@ elif [ "$SITE" = editors ]; then
     cp /tmp/$S.log docs/samples/ 2>/dev/null; up docs/samples "$D/editors/samples"
   done
   up shots "$D/editors/shots"
-elif [ "$SITE" = viewer ]; then
+}
+viewer() {
   cd /w/viewer; export MEASURE_WHERE="from $HW"
   step 25m $PW scripts/measure.py all "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase.json" >/dev/null 2>/tmp/b1.log; tail -2 /tmp/b1.log | cut -c1-300; up results "$D/viewer/results"
   step 25m $PW scripts/measure.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline.json" >/dev/null 2>/tmp/b2.log; tail -2 /tmp/b2.log | cut -c1-300; up results "$D/viewer/results"
@@ -61,5 +63,14 @@ elif [ "$SITE" = viewer ]; then
   up results "$D/viewer/results"
   step 40m $PW scripts/measure_server_client.py all showcase,redline,lorem-500 "$RUNS" --out results/server-client.json --raw "results/raw/$D-server-client.json" >/dev/null 2>/tmp/sc.log; tail -2 /tmp/sc.log | cut -c1-300
   mkdir -p results/logs; cp /tmp/*.log results/logs/; up results "$D/viewer/results"
-fi
+}
+# "both": one site after the other, never at once. Two Chromes, or two jobs asking the same
+# val, would time each other.
+case "$SITE" in
+  smoke) smoke ;;
+  editors) editors ;;
+  viewer) viewer ;;
+  both) viewer; editors ;;
+  *) echo "unknown SITE=$SITE"; exit 1 ;;
+esac
 echo "done $(date -u +%T)"
