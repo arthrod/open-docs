@@ -265,7 +265,7 @@ uv run --with playwright python -I scripts/measure_samples.py all showcase,redli
   --out docs/samples/$(date +%F).json --latest docs/samples/latest.json --shots .scratch/shots
 ```
 
-The published figures are taken on a GitHub-hosted macOS runner by the
+The figures above were taken on a GitHub-hosted macOS runner by the
 [Measure workflow](.github/workflows/measure.yml) (push a branch named
 `measure/<anything>`), because a timing taken on a laptop that is doing other
 work is slower than the engine. Every run records the machine's load average
@@ -275,6 +275,11 @@ gives the load average over the runs, part of it Chrome itself; a fresh runner s
 workflow waits out before measuring). It is used because it runs none of our other work and anyone can repeat
 the run. Read the figures as that machine's; what carries to another machine is the order between engines, not
 the seconds.
+
+Linux containers and Hugging Face Jobs are also supported; see the
+[measurement guide](docs/MEASUREMENTS.md) for job modes, uploads, retakes,
+Chrome flags, and page diagnostics. These commands do not replace the published
+figures automatically.
 
 One (engine, sample) per launch of the installed Google Chrome, headed, with a
 fresh profile. The page opens on its blank document, then the script clicks the
@@ -290,7 +295,9 @@ worker or on the GPU is invisible to it. **JS heap** is JavaScript objects only.
 **Renderer memory** is the resident memory of Chrome's renderer processes read
 with `ps`, before and after the sample opens; it includes WebAssembly memory,
 canvases and the DOM, and also Chrome's spare renderer, so read the growth and
-compare engines with each other.
+compare engines with each other. The process scan follows all browser descendants,
+including renderers forked through the Linux zygote; GPU-process RSS is counted
+separately.
 
 ### Lighthouse
 
