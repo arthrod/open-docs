@@ -179,7 +179,7 @@ Every engine opening each sample from its own Menu. The table on the
 file beside it.
 
 <!-- samples:start -->
-Measured 2026-11-18: Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs, median; a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage; machine load (1-minute average) median 8.6, highest 65.4, on 64 cores.
+Measured 2026-11-18: Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs (6 for Univer, measured in both passes of the day; OpenDoc in the second only), median; a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage; machine load (1-minute average) median 10.5, highest 65.4, on 64 cores.
 
 **Rich sample (`showcase.docx`, 3 pages)**
 
@@ -280,11 +280,20 @@ Read these with care:
   starts work more than two seconds after it last kept the thread busy would
   read as settled before that work.
 
-Re-measure with:
+The published figures were made by this job (two passes on 2026-11-18; the dated file lists
+each pass's job, command and commits under `passes`):
 
 ```sh
-uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 5 \
-  --out docs/samples/$(date +%F).json --latest docs/samples/latest.json --shots .scratch/shots
+hf jobs run --flavor cpu-upgrade --timeout 4h --secrets HF_TOKEN -e SITE=editors -e RUNS=3 python:3.12 \
+  bash -c 'curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/main/scripts/hf_job.sh -o /tmp/job.sh && bash /tmp/job.sh'
+```
+
+The same measuring on your own machine, which gives that machine's figures and must not be
+written over the published `latest.json`:
+
+```sh
+uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 3 \
+  --out .scratch/samples/$(date +%F).json --latest .scratch/samples/latest.json --shots .scratch/shots
 ```
 
 The published sample figures are taken on a Hugging Face Jobs machine (`cpu-upgrade`: 8 vCPU,

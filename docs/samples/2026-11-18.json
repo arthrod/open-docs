@@ -1,7 +1,25 @@
 {
  "measuredAt": "2026-11-18",
- "environment": "Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs, median; a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage; machine load (1-minute average) median 8.6, highest 65.4, on 64 cores",
+ "environment": "Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs (6 for Univer, measured in both passes of the day; OpenDoc in the second only), median; a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage; machine load (1-minute average) median 10.5, highest 65.4, on 64 cores",
  "base": "https://editors.benchmarks.law",
+ "passes": [
+  {
+   "job": "https://huggingface.co/jobs/arthrod/6afd7634884144d2f44fc91f",
+   "what": "every engine, 3 runs per sample",
+   "started": "2026-11-18T09:56Z",
+   "command": "SITE=both RUNS=3 scripts/hf_job.sh (flavor cpu-upgrade, timeout 6h)",
+   "scripts": "open-docs b01016df81da3d9ac75a9d0b6583ead24bf30ca0",
+   "site": "editors.benchmarks.law as deployed from main f3e9e4e"
+  },
+  {
+   "job": "https://huggingface.co/jobs/arthrod/6afda0a1e41aae15936c72ae",
+   "what": "OpenDoc and Univer again, 3 runs per sample",
+   "started": "2026-11-18T12:57Z",
+   "command": "SITE=retake RUNS=3 RETAKE_FROM=2026-11-18 E_ENGINES=opendoc,univer scripts/hf_job.sh (flavor cpu-upgrade, timeout 90m)",
+   "scripts": "open-docs 5c4b17db5a3cfbd0254c66717946bc66fe76855d",
+   "site": "the same, plus the OpenDoc adapter fix f0aad3e (pull request 65)"
+  }
+ ],
  "samples": {
   "showcase": {
    "canvas-editor": {
