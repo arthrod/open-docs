@@ -54,16 +54,31 @@ async function open(bytes: Uint8Array) {
   transfer.items.add(new w.File([bytes.slice()], "document.docx"));
   input.files = transfer.files;
   input.dispatchEvent(new w.Event("change", { bubbles: true }));
-  await until(() => pages().some((c) => !c.hasAttribute("data-od-old")) && d.body.classList.contains("doc-loaded"), "show the document");
+  await until(() => {
+    // After an edit it asks "Discard unsaved changes?" before replacing the document. The
+    // replacement was asked for here, so its own "Discard and open" button is pressed.
+    const dialog = d.getElementById("confirmDialog");
+    if (dialog && !dialog.hidden) d.getElementById("confirmAccept")?.click();
+    return pages().some((c) => !c.hasAttribute("data-od-old")) && d.body.classList.contains("doc-loaded");
+  }, "show the document");
+}
+
+const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+let exporting: Promise<unknown> = Promise.resolve();
+/** One export at a time: the catch below is on the frame's globals, and two would undo each other. */
+function exported(): Promise<Uint8Array> {
+  const next = exporting.then(exportOnce, exportOnce);
+  exporting = next.catch(() => undefined);
+  return next;
 }
 
 /** The .docx its own exporter writes, caught on the way to the download. */
-async function exported(): Promise<Uint8Array> {
+async function exportOnce(): Promise<Uint8Array> {
   const w = win();
   const make = w.URL.createObjectURL, click = w.HTMLAnchorElement.prototype.click;
   let blob: Blob | undefined;
   w.URL.createObjectURL = (b: Blob | MediaSource) => {
-    if (b instanceof w.Blob) blob = b;
+    if (b instanceof w.Blob && b.type === DOCX) blob = b;
     return make.call(w.URL, b);
   };
   w.HTMLAnchorElement.prototype.click = function () {}; // no file lands in the visitor's downloads
@@ -103,7 +118,8 @@ window.od.register({
     frame = document.createElement("iframe");
     frame.title = "OpenDoc";
     frame.style.cssText = "flex:1;min-width:0;border:0";
-    frame.src = `${APP}?blank=1`;
+    // `od-at` tells the mirror which site shows the page (it builds the engine's address with it).
+    frame.src = `${APP}?blank=1&od-at=${encodeURIComponent(location.origin + (window.od.vendorRoot ?? ""))}`;
     root.append(frame);
     await until(() => {
       try {

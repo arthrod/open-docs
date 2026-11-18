@@ -57,6 +57,9 @@ const TYPES: Record<string, string> = {
   xml: "application/xml", txt: "text/plain; charset=utf-8", bin: "application/octet-stream",
 };
 
+/** One key per file: the name is escaped whole, so no two names meet. */
+export const zipBlobKey = (archive: string, name: string) => `od_zip2_${archive}_${encodeURIComponent(name)}`;
+
 export type Archive = { key: string; url: string; index: ZipIndex };
 
 /**
@@ -74,7 +77,7 @@ export async function serveZipEntry(archive: Archive, file: string, acceptEncodi
     "vary": "accept-encoding",
     ...(br ? { "content-encoding": "br" } : {}),
   };
-  const key = `od_zip_${archive.key}_${name.replaceAll("/", "__")}`;
+  const key = zipBlobKey(archive.key, name);
   const stored = await blob.get(key).catch(() => undefined);
   if (stored?.ok) return new Response(stored.body, { headers });
   const bytes = await entryBytes(remoteRange(archive.url), name, entry[0], entry[1], entry[2]);

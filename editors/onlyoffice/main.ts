@@ -49,7 +49,11 @@ const script = (src: string) =>
   });
 
 let starting: Promise<X2T> | undefined;
-const converter = () => (starting ??= startConverter());
+// A failed start is not kept: the next call tries again.
+const converter = () => (starting ??= startConverter().catch((err) => {
+  starting = undefined;
+  throw err;
+}));
 async function startConverter(): Promise<X2T> {
   await script(`${BASE}x2t/x2t.js`);
   const m = host.Module;
@@ -96,6 +100,8 @@ let root: HTMLDivElement | undefined;
 let editor: DocEditor | undefined;
 let media: Record<string, string> = {};
 let opened = 0;
+/** Settles the open() still waiting when a newer one replaces its editor. */
+let superseded: (() => void) | undefined;
 
 const api = (): Api => {
   const frame = root?.querySelector("iframe") as HTMLIFrameElement | null;
@@ -114,6 +120,7 @@ async function open(bytes: Uint8Array) {
   for (const f of m.FS.readdir(`${W}media`)) {
     if (!f.startsWith(".")) media[f] = URL.createObjectURL(new Blob([m.FS.readFile(`${W}media/${f}`).slice()]));
   }
+  superseded?.(); // the document it was waiting for will never be shown
   editor?.destroyEditor();
   root!.innerHTML = `<div id="oo-holder"></div>`;
   host.APP ??= {}; // sdkjs reads parent.APP
@@ -122,8 +129,11 @@ async function open(bytes: Uint8Array) {
     const timer = setTimeout(() => reject(new Error("OnlyOffice did not show the document within 120 s")), 120_000);
     const done = (err?: Error) => {
       clearTimeout(timer);
+      if (superseded === finish) superseded = undefined;
       err ? reject(err) : resolve();
     };
+    const finish = () => done();
+    superseded = finish;
     const ed = new host.DocsAPI!.DocEditor("oo-holder", {
       document: {
         fileType: "docx",
@@ -143,7 +153,7 @@ async function open(bytes: Uint8Array) {
       },
       events: {
         onDocumentReady: () => turn === opened && done(),
-        onError: (e: { data?: { errorDescription?: string } }) => done(new Error(`OnlyOffice: ${e?.data?.errorDescription ?? "error"}`)),
+        onError: (e: { data?: { errorDescription?: string } }) => turn === opened && done(new Error(`OnlyOffice: ${e?.data?.errorDescription ?? "error"}`)),
       },
     });
     editor = ed;

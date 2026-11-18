@@ -26,3 +26,9 @@ Deno.test("univer: the body reads back as Markdown with its headings", () => {
   const md = "# Title\n\nFirst.\n\n## Part\n\nSecond.";
   assertEquals(univerBodyToMarkdown(blocksToUniverBody(markdownToBlocks(md), H), H).trim(), md);
 });
+
+Deno.test("univer: a level-5 heading reads back as level 5 when level 6 shares its style", () => {
+  const shared = { 1: 11, 2: 12, 3: 13, 4: 14, 5: 15, 6: 15 }; // Univer has five heading styles
+  const body = blocksToUniverBody(markdownToBlocks("##### Five"), shared);
+  assertEquals(univerBodyToMarkdown(body, shared).trim(), "##### Five");
+});

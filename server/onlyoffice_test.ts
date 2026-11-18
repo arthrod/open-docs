@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1.0.13";
 import { onlyofficeTarget } from "./onlyoffice.ts";
+import { zipBlobKey } from "./zip-mirror.ts";
 
 Deno.test("onlyoffice: converter and editor paths go to their own archives", () => {
   const x = onlyofficeTarget("/vendor/onlyoffice/9.3.2-3/x2t/x2t.wasm")!;
@@ -17,4 +18,13 @@ Deno.test("onlyoffice: paths outside the snapshot or climbing out of it are refu
   assertEquals(onlyofficeTarget("/vendor/onlyoffice/9.9.9/x2t/x2t.js"), undefined);
   assertEquals(onlyofficeTarget("/vendor/onlyoffice/9.3.2-3/../secret"), undefined);
   assertEquals(onlyofficeTarget("/vendor/onlyoffice/9.3.2-3/"), undefined);
+});
+
+Deno.test("onlyoffice: a malformed escape is refused, not thrown", () => {
+  assertEquals(onlyofficeTarget("/vendor/onlyoffice/9.3.2-3/x2t/%c0%af"), undefined);
+});
+
+Deno.test("zip mirror: two different files never share a storage key", () => {
+  assertEquals(zipBlobKey("k", "web-apps/apps/api.js") === zipBlobKey("k", "web-apps__apps__api.js"), false);
+  assertEquals(zipBlobKey("k", "fonts/fonts/opens___.ttf"), "od_zip2_k_fonts%2Ffonts%2Fopens___.ttf");
 });

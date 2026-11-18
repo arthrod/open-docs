@@ -26,7 +26,12 @@ const X2T: Archive = {
 export function onlyofficeTarget(path: string): { archive: Archive; file: string } | undefined {
   if (!path.startsWith(ONLYOFFICE_BASE)) return undefined;
   // sdkjs asks for its fonts at "fonts//fonts/<name>": doubled slashes are one.
-  const file = decodeURIComponent(path.slice(ONLYOFFICE_BASE.length)).replace(/\/{2,}/g, "/");
+  let file: string;
+  try {
+    file = decodeURIComponent(path.slice(ONLYOFFICE_BASE.length)).replace(/\/{2,}/g, "/");
+  } catch {
+    return undefined; // a malformed escape
+  }
   if (!file || file.includes("..")) return undefined;
   return file.startsWith("x2t/") ? { archive: X2T, file: file.slice(4) } : { archive: EDITOR, file };
 }

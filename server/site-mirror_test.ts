@@ -24,3 +24,9 @@ Deno.test("site mirror: only the sister site may say the page is shown under its
     if (pageOrigin(own, bad) !== own) throw new Error(`accepted ${bad}`);
   }
 });
+
+Deno.test("site mirror: a name that could collide with another file's storage key is refused", async () => {
+  const { mirrorTarget } = await import("./site-mirror.ts");
+  if (mirrorTarget("/vendor/opendoc/2026-11-05/src__app__main.mjs") !== null) throw new Error("accepted a colliding name");
+  if (mirrorTarget("/vendor/opendoc/2026-11-05/src/app/main.mjs") === null) throw new Error("refused a plain name");
+});

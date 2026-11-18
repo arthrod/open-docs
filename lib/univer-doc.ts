@@ -69,7 +69,9 @@ export function univerBodyToMarkdown(
   body: Pick<UniverBody, "dataStream"> & { paragraphs?: UniverBody["paragraphs"] },
   headings: HeadingStyles,
 ): string {
-  const level = new Map(Object.entries(headings).map(([l, v]) => [v, Number(l)]));
+  // Two levels may share a style (Univer has five heading styles): the lower level is the one read back.
+  const level = new Map<number, number>();
+  for (const [l, v] of Object.entries(headings)) if (!level.has(v)) level.set(v, Number(l));
   const out: string[] = [];
   let from = 0;
   for (const p of body.paragraphs ?? []) {

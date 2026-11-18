@@ -37,6 +37,8 @@ export function mirrorTarget(path: string): { site: string; file: string; upstre
     if (!path.startsWith(base)) continue;
     const file = path.slice(base.length);
     if (!/^[A-Za-z0-9_][A-Za-z0-9._-]*(\/[A-Za-z0-9_][A-Za-z0-9._-]*)*$/.test(file)) return null;
+    // The storage key writes "/" as "__", so a name with "__" could be handed another file's bytes.
+    if (file.includes("__")) return null;
     return { site, file, upstream: `${m.origin}/${file}` };
   }
   return null;
@@ -58,6 +60,8 @@ const SISTER = /^https:\/\/viewers\.benchmarks\.law(\/[a-z0-9]{1,16})?$/;
  * path segment it passes these files under) that says it is passing the page through. Any other claimed origin is ignored, so a request cannot make the
  * page load its engine from an address of the requester's choosing.
  */
+// The claim travels in the query (`od-at`), not a header: the edge keys its cache on the URL and
+// ignores Vary, so a header would let one site be handed the other's page.
 export const pageOrigin = (own: string, claimed: string | undefined) =>
   claimed && SISTER.test(claimed) ? claimed : own;
 
@@ -66,8 +70,12 @@ export async function serveMirror(path: string, here: string): Promise<Response>
   if (!t) return new Response("not a mirrored file", { status: 404 });
   const key = `od_mirror_${t.site}_${MIRRORS[t.site].snapshot}_${t.file.replaceAll("/", "__")}`;
   const type = TYPES[t.file.split(".").pop()!.toLowerCase()] ?? "application/octet-stream";
-  // A page differs by the origin it is shown under, so a cache must not hand one site's to the other.
-  const headers = { "content-type": type, "cache-control": "public, max-age=31536000, immutable", "vary": "x-od-shown-at" };
+  // A page is rewritten here, so it is kept only briefly: this platform's edge kept an early,
+  // unrewritten copy for a year under "immutable" (2026-11-18). Other files never change.
+  const headers = {
+    "content-type": type,
+    "cache-control": type.startsWith("text/html") ? "public, max-age=300" : "public, max-age=31536000, immutable",
+  };
   const stored = await blob.get(key).catch(() => undefined);
   const page = MIRRORS[t.site].page;
   const shaped = (bytes: Uint8Array): Uint8Array<ArrayBuffer> =>

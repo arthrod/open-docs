@@ -21,6 +21,7 @@ import { docxToMarkdown } from "/lib/docx-markdown.ts";
 import { blocksToUniverBody, type HeadingStyles, univerBodyToMarkdown } from "/lib/univer-doc.ts";
 
 const N = NamedStyleType as unknown as Record<string, number>;
+// Univer has five heading styles: a level-6 heading is shown, and read back, as level 5.
 const HEADINGS: HeadingStyles = {
   1: N.HEADING_1, 2: N.HEADING_2, 3: N.HEADING_3, 4: N.HEADING_4, 5: N.HEADING_5, 6: N.HEADING_5,
 };
