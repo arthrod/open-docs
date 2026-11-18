@@ -331,3 +331,28 @@ def test_a_stopped_run_writes_beside_the_days_file_not_over_it():
     now = datetime.datetime(2026, 11, 17, 5, 6, 7, tzinfo=datetime.timezone.utc)
     assert lib.stopped_path("results/raw/2026-11-17-browser-showcase.json", now) == "results/raw/2026-11-17-browser-showcase-stopped-050607Z.json"
     assert lib.stopped_path(None) is None
+
+
+def test_chrome_memory_counts_renderers_below_the_zygote_on_linux_and_direct_children_on_macos():
+    linux = [
+        (10, 1, 500, "/opt/google/chrome/chrome --user-data-dir=/tmp/p --no-sandbox"),
+        (11, 10, 50, "/opt/google/chrome/chrome --type=zygote --user-data-dir=/tmp/p"),
+        (12, 11, 70, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/p"),
+        (13, 11, 30, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/p"),
+        (14, 10, 20, "/opt/google/chrome/chrome --type=gpu-process --user-data-dir=/tmp/p"),
+        (20, 1, 500, "/opt/google/chrome/chrome --user-data-dir=/tmp/other"),
+        (21, 20, 999, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/other"),
+    ]
+    assert lib.chrome_memory_of(linux, "/tmp/p") == {"rendererRss": 100, "renderers": 2, "gpuRss": 20}
+    mac = [
+        (10, 1, 500, "Google Chrome --user-data-dir=/tmp/p"),
+        (12, 10, 70, "Google Chrome Helper (Renderer) --type=renderer --user-data-dir=/tmp/p"),
+        (14, 10, 20, "Google Chrome Helper (GPU) --type=gpu-process --user-data-dir=/tmp/p"),
+    ]
+    assert lib.chrome_memory_of(mac, "/tmp/p") == {"rendererRss": 70, "renderers": 1, "gpuRss": 20}
+    assert lib.chrome_memory_of(linux, "/tmp/none") == {"rendererRss": 0, "renderers": 0, "gpuRss": 0}
+
+
+def test_chrome_args_come_from_the_environment_and_default_to_none():
+    assert lib.chrome_args({}) == []
+    assert lib.chrome_args({"OD_CHROME_ARGS": "--no-sandbox  --disable-dev-shm-usage"}) == ["--no-sandbox", "--disable-dev-shm-usage"]

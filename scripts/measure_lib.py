@@ -264,6 +264,37 @@ def lorem_args(argv: list[str]) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def chrome_args(env: dict | None = None) -> list[str]:
+    """Extra Chrome start-up flags from OD_CHROME_ARGS (space-separated), none by default.
+
+    A container needs them: Chrome will not start as root with its sandbox, and a small /dev/shm
+    crashes it on a large document. Whatever is passed belongs in MEASURE_WHERE, since a flag
+    can change what is measured.
+    """
+    return (os.environ if env is None else env).get("OD_CHROME_ARGS", "").split()
+
+
+def chrome_memory_of(rows: list[tuple[int, int, int, str]], profile: str) -> dict:
+    """Renderer and GPU memory of the Chrome started on `profile`, from `ps` rows (pid, ppid, rss, command).
+
+    Every process below the browser process counts, not only its direct children: on Linux
+    Chrome forks renderers from its zygote, whose parent is the browser, so a parent-only
+    filter reads 0 there.
+    """
+    owned = {pid for pid, _, _, cmd in rows if f"--user-data-dir={profile}" in cmd and "--type=" not in cmd}
+    while True:
+        more = {pid for pid, ppid, _, _ in rows if ppid in owned and pid not in owned}
+        if not more:
+            break
+        owned |= more
+    mine = [(rss, cmd) for pid, _, rss, cmd in rows if pid in owned]
+    return {
+        "rendererRss": sum(rss for rss, cmd in mine if "--type=renderer" in cmd),
+        "renderers": sum(1 for _, cmd in mine if "--type=renderer" in cmd),
+        "gpuRss": sum(rss for rss, cmd in mine if "--type=gpu-process" in cmd),
+    }
+
+
 def machine_load() -> dict:
     """How busy the machine is right now: the 1-minute load average and the core count.
 
