@@ -17,7 +17,7 @@ export const REVISION_NOTES: Record<string, string> = {
   "onlyoffice": "native: deletions struck and insertions underlined in the text, in the author's colour; its own review and comment panels open from its side bar",
   "betteroffice": "native: deletions struck and insertions underlined in the text, and a card per change and per comment (author, date, accept / reject) in its review sidebar",
   "opendoc": "native: insertions and deletions in the text, and a card per change and per comment (author, date, Accept / Reject) in its review pane",
-  "univer": "not drawn: it has no .docx reader, so it is given the text as this site reads it, every change accepted",
+  "univer": "not drawn: it has no .docx reader, so it is given the text as this site reads it, with insertions and moved-in text kept and deletions left out",
   "react-docx": "native: insertions underlined in the text, and a margin card per deletion and per comment (author, date, Accept / Reject); it ships with both hidden, and this page turns them on",
   "word-online": "not drawn: Microsoft's embed viewer shows the text as if every change were accepted",
   "google-viewer": "native: insertions and deletions in the text",

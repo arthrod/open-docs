@@ -100,6 +100,8 @@ let root: HTMLDivElement | undefined;
 let editor: DocEditor | undefined;
 let media: Record<string, string> = {};
 let opened = 0;
+/** The object URL of the document binary the current editor was given. */
+let binUrl: string | undefined;
 /** Settles the open() still waiting when a newer one replaces its editor. */
 let superseded: (() => void) | undefined;
 
@@ -122,6 +124,8 @@ async function open(bytes: Uint8Array) {
   }
   superseded?.(); // the document it was waiting for will never be shown
   editor?.destroyEditor();
+  if (binUrl) URL.revokeObjectURL(binUrl); // the editor that read it is gone
+  binUrl = URL.createObjectURL(new Blob([bin.slice()]));
   root!.innerHTML = `<div id="oo-holder"></div>`;
   host.APP ??= {}; // sdkjs reads parent.APP
   const readOnly = !!window.od.viewer;
@@ -139,7 +143,7 @@ async function open(bytes: Uint8Array) {
         fileType: "docx",
         key: "fresh",
         title: "document.docx",
-        url: URL.createObjectURL(new Blob([bin.slice()])),
+        url: binUrl,
         permissions: { download: false, print: true, edit: !readOnly, review: !readOnly, comment: !readOnly },
       },
       documentType: "word",

@@ -161,6 +161,7 @@ function paragraphRuns(p: Element, ctx: Ctx): Run[] {
           break;
         }
         case "ins":
+        case "moveTo": // moved-in text is at its accepted place here; "moveFrom" is skipped below
         case "smartTag":
         case "sdt":
         case "sdtContent":

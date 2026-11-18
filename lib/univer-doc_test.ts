@@ -32,3 +32,27 @@ Deno.test("univer: a level-5 heading reads back as level 5 when level 6 shares i
   const body = blocksToUniverBody(markdownToBlocks("##### Five"), shared);
   assertEquals(univerBodyToMarkdown(body, shared).trim(), "##### Five");
 });
+
+const back = (md: string) => univerBodyToMarkdown(blocksToUniverBody(markdownToBlocks(md), H), H).trim();
+
+Deno.test("univer: a new numbered list after a bullet list starts at 1", () => {
+  const b = blocksToUniverBody(markdownToBlocks("1. A\n2. B\n\n- C\n\n1. D"), H);
+  assertEquals(b.dataStream, "1. A\r2. B\r• C\r1. D\r\n");
+});
+
+Deno.test("univer: bold, italic and strike are read back, so an edit elsewhere keeps them", () => {
+  assertEquals(back("Pay **today** or *never*, ~~maybe~~."), "Pay **today** or *never*, ~~maybe~~.");
+});
+
+Deno.test("univer: lists read back as Markdown lists, nested items included", () => {
+  // The writer's own indentation may differ; what matters is that it parses back to the same list.
+  const again = markdownToBlocks(back("- Parent\n  - Child\n- Next"));
+  assertEquals(again.map((b) => [b.kind, b.level ?? 0, b.runs.map((r) => r.text).join("")]), [["li", 0, "Parent"], ["li", 1, "Child"], ["li", 0, "Next"]]);
+  assertEquals(back("1. One\n2. Two"), "1. One\n2. Two");
+});
+
+Deno.test("univer: text that looks like Markdown stays text", () => {
+  const md = "\\# Appendix";
+  assertEquals(back(md), md);
+  assertEquals(markdownToBlocks(back(md))[0].kind, "p");
+});

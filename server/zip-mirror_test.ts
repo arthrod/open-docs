@@ -38,3 +38,8 @@ Deno.test("zip mirror: an offset that is not that entry's header is refused", as
   }
   assertEquals(message.includes("b/second.txt"), true);
 });
+
+Deno.test("zip mirror: Brotli is sent only to a browser that takes it", async () => {
+  const { acceptsBrotli } = await import("./zip-mirror.ts");
+  assertEquals(["gzip, deflate, br, zstd", "br", "br;q=0.5", "gzip, br;q=0", "br; q=0.0", "gzip", "", "brotli"].map(acceptsBrotli), [true, true, true, false, false, false, false, false]);
+});

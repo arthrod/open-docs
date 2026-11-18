@@ -54,6 +54,9 @@ async function shown(reopened: boolean, what: string): Promise<Controller> {
     }
     await new Promise((r) => setTimeout(r, 10));
   }
+  // The document may have arrived during the last wait.
+  const last = viewer?.getController();
+  if (last?.hasDocument && !last.isLoading && sawLoading) return last;
   throw new Error(`react-docx did not ${what} within 60 s`);
 }
 
@@ -74,6 +77,8 @@ window.od.register({
   revisions: REVISION_NOTES["react-docx"],
   applyInHistory: false,
   mergeQuality: "rebuild",
+  // Its reader runs in a Worker, whose downloads this page's Resource Timing does not list.
+  extraResources: ["docx-import-worker.js", "docx_wasm_bg.wasm"].map((f) => new URL(f, import.meta.resolve("@extend-ai/react-docx/vanilla")).href),
 
   async mount() {
     const root = await waitFor<HTMLDivElement>("#rd-root");

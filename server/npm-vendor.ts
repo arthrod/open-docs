@@ -36,7 +36,10 @@ export async function serveVendored(path: string): Promise<Response> {
   const upstream = vendorUpstream(path);
   if (!upstream) return new Response("not a vendored file", { status: 404 });
   const res = await fetch(upstream);
-  if (!res.ok) return new Response(`upstream ${res.status}`, { status: res.status === 404 ? 404 : 502 });
+  if (!res.ok) {
+    await res.body?.cancel(); // an unread body keeps its connection
+    return new Response(`upstream ${res.status}`, { status: res.status === 404 ? 404 : 502 });
+  }
   return new Response(res.body, {
     headers: {
       "content-type": res.headers.get("content-type") ?? "application/octet-stream",

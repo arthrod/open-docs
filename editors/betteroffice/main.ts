@@ -52,6 +52,17 @@ window.od.register({
   revisions: REVISION_NOTES["betteroffice"],
   applyInHistory: false,
   mergeQuality: "rebuild",
+  // Its engines run in a Worker, whose downloads this page's Resource Timing does not list:
+  // the Worker's two entry files and the four engines. (Chunks the Worker imports beyond its
+  // entry are shared with the page and already listed there.)
+  extraResources: [
+    "docxWorker.mjs",
+    "yrs/docxWorker.mjs",
+    "generated/edit/docx_edit_bg.wasm",
+    "generated/parse/docx_parse_bg.wasm",
+    "generated/layout/docx_layout_bg.wasm",
+    "generated/opc/ooxml_opc_bg.wasm",
+  ].map((f) => new URL(f, import.meta.resolve("@betteroffice/docx")).href),
 
   async mount() {
     const root = await waitFor<HTMLDivElement>("#bo-root");

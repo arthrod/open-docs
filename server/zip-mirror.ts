@@ -57,6 +57,17 @@ const TYPES: Record<string, string> = {
   xml: "application/xml", txt: "text/plain; charset=utf-8", bin: "application/octet-stream",
 };
 
+/** True when an Accept-Encoding header takes Brotli ("br;q=0" refuses it). */
+export function acceptsBrotli(acceptEncoding: string): boolean {
+  for (const part of acceptEncoding.split(",")) {
+    const [name, ...params] = part.trim().toLowerCase().split(";").map((s) => s.trim());
+    if (name !== "br") continue;
+    const q = params.find((p) => p.startsWith("q="));
+    return !q || Number(q.slice(2)) > 0;
+  }
+  return false;
+}
+
 /** One key per file: the name is escaped whole, so no two names meet. */
 export const zipBlobKey = (archive: string, name: string) => `od_zip2_${archive}_${encodeURIComponent(name)}`;
 
@@ -67,7 +78,7 @@ export type Archive = { key: string; url: string; index: ZipIndex };
  * CryptPad's build does) and the browser accepts Brotli, that copy is sent as it is.
  */
 export async function serveZipEntry(archive: Archive, file: string, acceptEncoding: string): Promise<Response> {
-  const br = /\bbr\b/.test(acceptEncoding) && archive.index[`${file}.br`] ? `${file}.br` : undefined;
+  const br = acceptsBrotli(acceptEncoding) && archive.index[`${file}.br`] ? `${file}.br` : undefined;
   const name = br ?? file;
   const entry = archive.index[name];
   if (!entry || file.endsWith(".br")) return new Response("not in the archive index", { status: 404 });

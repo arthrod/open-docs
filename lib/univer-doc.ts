@@ -4,7 +4,7 @@
 // separately distributed Server SDK), so a document reaches it as text: paragraphs, heading
 // styles, bold / italic / underline / strike, and list items with a typed marker. Tables,
 // pictures, fonts and page set-up do not carry over.
-import { type Block, type Run } from "./markdown.ts";
+import { type Block, blocksToMarkdown, type Run } from "./markdown.ts";
 
 /** Heading level (1 to 6) → Univer's NamedStyleType value, passed in by the page. */
 export type HeadingStyles = Record<number, number>;
@@ -27,7 +27,8 @@ const style = (r: Run): Record<string, unknown> | undefined => {
 
 export function blocksToUniverBody(blocks: Block[], headings: HeadingStyles): UniverBody {
   const body: UniverBody = { dataStream: "", textRuns: [], paragraphs: [], sectionBreaks: [] };
-  const counters = new Map<number, number>();
+  // Per level: which list is open there (numbers or bullets, and the list's id) and its last number.
+  const counters = new Map<number, { key: string; n: number }>();
   const paragraph = (runs: Run[], prefix = "", namedStyleType?: number) => {
     body.dataStream += prefix;
     for (const r of runs) {
@@ -50,8 +51,11 @@ export function blocksToUniverBody(blocks: Block[], headings: HeadingStyles): Un
     else if (b.kind === "li") {
       const level = b.level ?? 0;
       for (const k of [...counters.keys()]) if (k > level) counters.delete(k);
-      const n = (counters.get(level) ?? (b.start ?? 1) - 1) + 1;
-      counters.set(level, n);
+      // A different list at this level (bullets after numbers, or another list) starts its own count.
+      const key = `${!!b.ordered}|${b.list ?? ""}`;
+      const open = counters.get(level);
+      const n = (open?.key === key ? open.n : (b.start ?? 1) - 1) + 1;
+      counters.set(level, { key, n });
       paragraph(b.runs, "\t".repeat(level) + (b.ordered ? `${n}. ` : "• "));
     } else if (b.kind === "table") {
       for (const row of b.rows ?? []) paragraph(row.flatMap((cell, i) => [...(i ? [{ text: "\t" }] : []), ...cell]));
@@ -64,21 +68,60 @@ export function blocksToUniverBody(blocks: Block[], headings: HeadingStyles): Un
   return body;
 }
 
-/** The text of a Univer body as Markdown: one paragraph per block, headings by their style. */
-export function univerBodyToMarkdown(
-  body: Pick<UniverBody, "dataStream"> & { paragraphs?: UniverBody["paragraphs"] },
-  headings: HeadingStyles,
-): string {
+type ReadBody = Pick<UniverBody, "dataStream"> & {
+  paragraphs?: UniverBody["paragraphs"];
+  textRuns?: { st: number; ed: number; ts?: Record<string, unknown> }[];
+};
+
+const on = (v: unknown) => v === 1 || (typeof v === "object" && v !== null && (v as { s?: unknown }).s === 1);
+
+/** The runs of [from, to): the text cut at the body's style runs, each piece with its styles. */
+function runsOf(body: ReadBody, from: number, to: number): Run[] {
+  const runs: Run[] = [];
+  const plain = (a: number, b: number) => {
+    if (b > a) runs.push({ text: body.dataStream.slice(a, b) });
+  };
+  let at = from;
+  for (const r of [...(body.textRuns ?? [])].sort((a, b) => a.st - b.st)) {
+    const st = Math.max(r.st, at), ed = Math.min(r.ed, to);
+    if (ed <= st) continue;
+    plain(at, st);
+    const ts = r.ts ?? {};
+    const styled = { bold: on(ts.bl), italic: on(ts.it), underline: on(ts.ul), strike: on(ts.st) };
+    runs.push({ text: body.dataStream.slice(st, ed), ...Object.fromEntries(Object.entries(styled).filter(([, v]) => v)) });
+    at = ed;
+  }
+  plain(at, to);
+  return runs;
+}
+
+/**
+ * A Univer body as Markdown, written by the site's own writer (so text that looks like Markdown
+ * is escaped): headings by their style, list items by their typed marker, and bold, italic and
+ * strike from the style runs. Underline has no Markdown and is not written.
+ */
+export function univerBodyToMarkdown(body: ReadBody, headings: HeadingStyles): string {
   // Two levels may share a style (Univer has five heading styles): the lower level is the one read back.
   const level = new Map<number, number>();
   for (const [l, v] of Object.entries(headings)) if (!level.has(v)) level.set(v, Number(l));
-  const out: string[] = [];
+  const blocks: Block[] = [];
   let from = 0;
   for (const p of body.paragraphs ?? []) {
-    const text = body.dataStream.slice(from, p.startIndex).replace(/[\r\n]/g, "");
-    from = p.startIndex + 1;
+    const to = p.startIndex;
+    const text = body.dataStream.slice(from, to);
     const h = level.get(p.paragraphStyle?.namedStyleType ?? -1);
-    if (text.trim()) out.push(h ? `${"#".repeat(h)} ${text}` : text);
+    const item = h ? null : /^(\t*)(• |(\d{1,9})\. )/.exec(text);
+    if (h) blocks.push({ kind: "heading", level: h, runs: runsOf(body, from, to) });
+    else if (item) {
+      blocks.push({
+        kind: "li",
+        level: item[1].length,
+        ordered: item[3] !== undefined,
+        ...(item[3] !== undefined ? { start: Number(item[3]) } : {}),
+        runs: runsOf(body, from + item[0].length, to),
+      });
+    } else if (text.trim()) blocks.push({ kind: "p", runs: runsOf(body, from, to) });
+    from = to + 1;
   }
-  return out.join("\n\n") + "\n";
+  return blocksToMarkdown(blocks).trimEnd() + "\n";
 }

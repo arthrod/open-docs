@@ -141,3 +141,11 @@ Deno.test("docx: a cell paragraph inside a content control is read, and its list
   assertEquals(md.includes("in a control"), true);
   assertEquals(md.trim().split("\n").at(-1), "3. c");
 });
+
+Deno.test("reader: text moved by a tracked move is read at its destination, once", async () => {
+  const md = await docxToMarkdown(docx(
+    `<w:p><w:r><w:t>Start.</w:t></w:r><w:moveFrom w:id="1" w:author="A" w:date="2026-01-01T00:00:00Z"><w:r><w:t>Moved text.</w:t></w:r></w:moveFrom></w:p>` +
+      `<w:p><w:moveTo w:id="2" w:author="A" w:date="2026-01-01T00:00:00Z"><w:r><w:t>Moved text.</w:t></w:r></w:moveTo><w:r><w:t> End.</w:t></w:r></w:p>`,
+  ));
+  assertEquals(md.trim(), "Start.\n\nMoved text. End.");
+});
