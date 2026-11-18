@@ -33,6 +33,8 @@ CPUS=$(awk '$1 != "max" { printf "%g", $1 / $2 }' /sys/fs/cgroup/cpu.max 2>/dev/
 echo "cpu quota: ${CPUS:-not readable}; memory limit: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo not readable)"
 [ -z "$CPUS" ] || [ "$CPUS" = 8 ] || [ -n "${ANY_FLAVOR:-}" ] || { echo "this is not cpu-upgrade (8 vCPU): start the job with --flavor cpu-upgrade"; exit 2; }
 HW="a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage"
+# The curl timings start no Chrome: their description names the machine only.
+HW_CURL="a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64; the load average and core count recorded with each run are the shared host's)"
 cat > /tmp/up.py <<'PY'
 import sys
 from huggingface_hub import HfApi
@@ -86,9 +88,11 @@ viewer() {
   step 25m $PW scripts/measure.py all "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase.json" >/dev/null 2>/tmp/b1.log; tail -2 /tmp/b1.log | cut -c1-300; up results "$D/viewer/results"
   step 25m $PW scripts/measure.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline.json" >/dev/null 2>/tmp/b2.log; tail -2 /tmp/b2.log | cut -c1-300; up results "$D/viewer/results"
   step 35m $PW scripts/measure.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500.json" >/dev/null 2>/tmp/b3.log; tail -2 /tmp/b3.log | cut -c1-300; up results "$D/viewer/results"
+  export MEASURE_WHERE="from $HW_CURL"
   step 5m python3 -I scripts/measure_server.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-server-redline.json" >/dev/null; up results "$D/viewer/results"
   step 8m python3 -I scripts/measure_server.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-server-lorem-500.json" >/dev/null
   up results "$D/viewer/results"
+  export MEASURE_WHERE="from $HW"
   step 40m $PW scripts/measure_server_client.py all showcase,redline,lorem-500 "$RUNS" --out results/server-client.json --raw "results/raw/$D-server-client.json" >/dev/null 2>/tmp/sc.log; tail -2 /tmp/sc.log | cut -c1-300
   mkdir -p results/logs; cp /tmp/*.log results/logs/; up results "$D/viewer/results"
 }
