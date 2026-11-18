@@ -14,7 +14,7 @@ import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-const BASE = `${location.origin}/vendor/onlyoffice/9.3.2-3/`;
+const BASE = `${location.origin}${window.od.vendorRoot ?? ""}/vendor/onlyoffice/9.3.2-3/`;
 const W = "/working/";
 
 type FS = {

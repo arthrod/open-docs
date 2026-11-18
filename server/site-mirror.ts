@@ -51,15 +51,15 @@ const TYPES: Record<string, string> = {
 };
 
 /** The sites allowed to show a mirrored page under their own origin (they pass engine files through). */
-const SISTER_ORIGINS = new Set(["https://viewers.benchmarks.law"]);
+const SISTER = /^https:\/\/viewers\.benchmarks\.law(\/[a-z0-9]{1,16})?$/;
 
 /**
- * The origin a mirrored page is shown under: this one, or the sister site that says it is
- * passing the page through. Any other claimed origin is ignored, so a request cannot make the
+ * The address a mirrored page is shown under: this origin, or the sister site (with the one
+ * path segment it passes these files under) that says it is passing the page through. Any other claimed origin is ignored, so a request cannot make the
  * page load its engine from an address of the requester's choosing.
  */
 export const pageOrigin = (own: string, claimed: string | undefined) =>
-  claimed && SISTER_ORIGINS.has(claimed) ? claimed : own;
+  claimed && SISTER.test(claimed) ? claimed : own;
 
 export async function serveMirror(path: string, here: string): Promise<Response> {
   const t = mirrorTarget(path);

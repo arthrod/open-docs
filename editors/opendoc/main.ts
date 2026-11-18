@@ -20,7 +20,7 @@ import { REVISION_NOTES } from "/lib/revision-notes.ts";
 import { markdownToDocx } from "/lib/plate-docx.ts";
 import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
-const APP = "/vendor/opendoc/2026-11-05/editor.html";
+const APP = `${window.od.vendorRoot ?? ""}/vendor/opendoc/2026-11-05/editor.html`;
 
 type Result = { ok: boolean; refusal?: { code: string; message?: string } };
 type Session = { execute(command: string, args?: unknown[]): Promise<Result> };
