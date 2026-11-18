@@ -179,102 +179,134 @@ Every engine opening each sample from its own Menu. The table on the
 file beside it.
 
 <!-- samples:start -->
-Measured 2026-11-17: Google Chrome 156.0.8078.80 (installed, headed) via Playwright, fresh profile per run (cold cache), 5 runs, median; GitHub Actions macos-latest runner (Apple silicon); machine load (1-minute average) median 4.8, highest 10.6, on 3 cores.
+Measured 2026-11-18: Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs (6 for Univer, measured in both passes of the day; OpenDoc in the second only), median; a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage; machine load (1-minute average) median 10.5, highest 65.4, on 64 cores.
 
 **Rich sample (`showcase.docx`, 3 pages)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 842 ms | 842 ms | 9 MB | 546 MB (+67 MB) | 3 | 5 of 5 |
-| Docxodus | 986 ms | 986 ms | 8 MB | 722 MB (+44 MB) | n/a | 5 of 5 |
-| SuperDoc | 1.13 s | 1.13 s | 18 MB | 785 MB (+107 MB) | 3 | 5 of 5 |
-| Plate | 766 ms | 766 ms | 11 MB | 532 MB (+59 MB) | n/a | 5 of 5 |
-| docen | 405 ms | 405 ms | 24 MB | 600 MB (+39 MB) | n/a | 5 of 5 |
-| docx-editor.dev | 255 ms | 1.02 s | 31 MB | 639 MB (+102 MB) | n/a | 5 of 5 |
-| folio | 449 ms | 541 ms | 21 MB | 604 MB (+71 MB) | 3 | 5 of 5 |
-| WordCraft | 582 ms | 582 ms | 3 MB | 1011 MB (+51 MB) | n/a | 5 of 5 |
-| Word Online viewer | 541 ms | n/a | n/a | 925 MB (+94 MB) | n/a | 5 of 5 |
-| Google viewer | 904 ms | n/a | n/a | 643 MB (+20 MB) | n/a | 5 of 5 |
-| Apryse WebViewer | 206 ms | 206 ms | 18 MB | 792 MB (+22 MB) | n/a | 4 of 5 |
-| Nutrient | 4.44 s | 4.44 s | 25 MB | 1143 MB (+268 MB) | n/a | 5 of 5 |
+| canvas-editor | 397 ms | 397 ms | 9 MB | 468 MB (+48 MB) | 3 | 2 of 3 |
+| Docxodus | 824 ms | 824 ms | 9 MB | 564 MB (+14 MB) | n/a | 2 of 3 |
+| SuperDoc | 1.08 s | 1.08 s | 17 MB | 623 MB (+67 MB) | 3 | 2 of 3 |
+| Plate | 430 ms | 430 ms | 12 MB | 454 MB (+56 MB) | n/a | 2 of 3 |
+| docen | 218 ms | 218 ms | 25 MB | 563 MB (+76 MB) | n/a | 2 of 3 |
+| docx-editor.dev | 190 ms | 781 ms | 25 MB | 552 MB (+95 MB) | n/a | 3 of 3 |
+| folio | 322 ms | 438 ms | 22 MB | 480 MB (+61 MB) | 3 | 3 of 3 |
+| WordCraft | 508 ms | 18.3 s | 5 MB | 542 MB (−189 MB) | n/a | 3 of 3 |
+| Word Online viewer | 207 ms | n/a | n/a | 786 MB (−133 MB) | n/a | 3 of 3 |
+| Google viewer | 462 ms | n/a | n/a | 627 MB (+25 MB) | n/a | 3 of 3 |
+| Apryse WebViewer | 220 ms | 220 ms | 19 MB | 705 MB (+41 MB) | n/a | 2 of 3 |
+| Nutrient | 3.71 s | 3.71 s | 27 MB | 776 MB (+171 MB) | n/a | 3 of 3 |
+| react-docx | 655 ms | 655 ms | 15 MB | 527 MB (+39 MB) | 3 | 2 of 3 |
+| Univer | 249 ms | 249 ms | 29 MB | 514 MB (+41 MB) | n/a | 5 of 6 |
+| BetterOffice | 887 ms | 887 ms | 16 MB | 654 MB (+69 MB) | 3 | 3 of 3 |
+| OnlyOffice (CryptPad build) | 2.04 s | 2.04 s | 104 MB | 901 MB (+234 MB) | 3 | 3 of 3 |
+| OpenDoc | 578 ms | 702 ms | 15 MB | 710 MB (+96 MB) | 3 | 2 of 3 |
 
 **Redline (`redline.docx`, 3 pages)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 770 ms | 770 ms | 8 MB | 540 MB (+62 MB) | 3 | 5 of 5 |
-| Docxodus | 998 ms | 998 ms | 9 MB | 725 MB (+46 MB) | n/a | 5 of 5 |
-| SuperDoc | 1.44 s | 1.44 s | 19 MB | 824 MB (+150 MB) | 3 | 5 of 5 |
-| Plate | 691 ms | 691 ms | 12 MB | 536 MB (+62 MB) | n/a | 5 of 5 |
-| docen | 420 ms | 420 ms | 28 MB | 608 MB (+46 MB) | n/a | 5 of 5 |
-| docx-editor.dev | 248 ms | 988 ms | 28 MB | 639 MB (+105 MB) | n/a | 4 of 5 |
-| folio | 486 ms | 659 ms | 18 MB | 608 MB (+78 MB) | 3 | 5 of 5 |
-| WordCraft | 513 ms | 513 ms | 4 MB | 1082 MB (+117 MB) | n/a | 5 of 5 |
-| Word Online viewer | 492 ms | n/a | n/a | 1122 MB (+349 MB) | n/a | 5 of 5 |
-| Google viewer | 795 ms | n/a | n/a | 644 MB (+21 MB) | n/a | 5 of 5 |
-| Apryse WebViewer | 305 ms | 305 ms | 19 MB | 790 MB (+22 MB) | n/a | 4 of 5 |
-| Nutrient | 4.44 s | 4.44 s | 25 MB | 1075 MB (+197 MB) | n/a | 5 of 5 |
+| canvas-editor | 449 ms | 449 ms | 10 MB | 476 MB (+58 MB) | 3 | 2 of 3 |
+| Docxodus | 1.18 s | 1.18 s | 9 MB | 579 MB (+42 MB) | n/a | 2 of 3 |
+| SuperDoc | 1.52 s | 1.52 s | 22 MB | 661 MB (+106 MB) | 3 | 3 of 3 |
+| Plate | 486 ms | 486 ms | 12 MB | 456 MB (+59 MB) | n/a | 3 of 3 |
+| docen | 273 ms | 273 ms | 29 MB | 560 MB (+71 MB) | n/a | 3 of 3 |
+| docx-editor.dev | 160 ms | 696 ms | 25 MB | 547 MB (+90 MB) | n/a | 3 of 3 |
+| folio | 423 ms | 539 ms | 18 MB | 480 MB (+62 MB) | 3 | 2 of 3 |
+| WordCraft | 535 ms | 32.9 s | 4 MB | 542 MB (−117 MB) | n/a | 2 of 3 |
+| Word Online viewer | 334 ms | n/a | n/a | 873 MB (+185 MB) | n/a | 3 of 3 |
+| Google viewer | 622 ms | n/a | n/a | 627 MB (+20 MB) | n/a | 3 of 3 |
+| Apryse WebViewer | 298 ms | 298 ms | 18 MB | 714 MB (+56 MB) | n/a | 2 of 3 |
+| Nutrient | 3.72 s | 3.72 s | 27 MB | 784 MB (+176 MB) | n/a | 3 of 3 |
+| react-docx | 798 ms | 861 ms | 17 MB | 514 MB (+27 MB) | 3 | 2 of 3 |
+| Univer | 263 ms | 263 ms | 32 MB | 516 MB (+41 MB) | n/a | 4 of 6 |
+| BetterOffice | 1.03 s | 1.16 s | 17 MB | 697 MB (+116 MB) | 3 | 3 of 3 |
+| OnlyOffice (CryptPad build) | 2.09 s | 2.09 s | 104 MB | 889 MB (+221 MB) | 3 | 3 of 3 |
+| OpenDoc | 652 ms | 850 ms | 14 MB | 694 MB (+86 MB) | 3 | 3 of 3 |
 
 **500 pages (`lorem-500.docx`)**
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 17.1 s | 17.4 s | 699 MB | 1564 MB (+1086 MB) | 637 | 5 of 5 |
-| Docxodus | 4.62 s | 4.62 s | 10 MB | 945 MB (+244 MB) | n/a | 5 of 5 |
-| SuperDoc | 8.31 s | 8.31 s | 37 MB | 1280 MB (+602 MB) | 25 | 5 of 5 |
-| Plate | 36.3 s | 36.9 s | 67 MB | 712 MB (+236 MB) | n/a | 5 of 5 |
-| docen | 5.30 s | still busy after 180 s | 128 MB | 1926 MB (+1364 MB) | n/a | 5 of 5 |
-| docx-editor.dev | 310 ms | 1.68 s | 150 MB | 831 MB (+296 MB) | n/a | 5 of 5 |
-| folio | 9.17 s | 9.17 s | 46 MB | 2569 MB (+2035 MB) | 500 | 5 of 5 |
-| WordCraft | 3.11 s | 3.11 s | 3 MB | 1188 MB (+206 MB) | n/a | 5 of 5 |
-| Word Online viewer | 20.4 s | n/a | n/a | 927 MB (+235 MB) | n/a | 5 of 5 |
-| Google viewer | 1.15 s | n/a | n/a | 664 MB (+39 MB) | n/a | 5 of 5 |
-| Apryse WebViewer | 758 ms | 838 ms | 26 MB | 939 MB (+170 MB) | n/a | 5 of 5 |
-| Nutrient | 14.1 s | 14.1 s | 26 MB | 1093 MB (+213 MB) | n/a | 5 of 5 |
+| canvas-editor | 16.6 s | 16.6 s | 680 MB | 4134 MB (+3717 MB) | 661 | 3 of 3 |
+| Docxodus | 4.60 s | 4.60 s | 10 MB | 753 MB (+202 MB) | n/a | 3 of 3 |
+| SuperDoc | 12.8 s | 12.8 s | 35 MB | 1076 MB (+520 MB) | 25 | 3 of 3 |
+| Plate | 58.0 s | 58.0 s | 69 MB | 623 MB (+226 MB) | n/a | 3 of 3 |
+| docen | 4.07 s | still busy after 180 s | 127 MB | 3528 MB (+3042 MB) | n/a | 3 of 3 |
+| docx-editor.dev | 284 ms | 1.19 s | 149 MB | 707 MB (+250 MB) | n/a | 3 of 3 |
+| folio | 9.76 s | 9.76 s | 45 MB | 2402 MB (+1983 MB) | 500 | 3 of 3 |
+| WordCraft | 2.52 s | 20.6 s | 4 MB | 708 MB (+9 MB) | n/a | 3 of 3 |
+| Word Online viewer | 580 ms | n/a | n/a | 905 MB (−68 MB) | n/a | 3 of 3 |
+| Google viewer | 14.2 s | n/a | n/a | 641 MB (+39 MB) | n/a | 2 of 3 |
+| Apryse WebViewer | 650 ms | 984 ms | 48 MB | 1980 MB (+1315 MB) | n/a | 3 of 3 |
+| Nutrient | 13.0 s | 13.0 s | 29 MB | 736 MB (+132 MB) | n/a | 3 of 3 |
+| react-docx | 5.38 s | 5.38 s | 98 MB | 915 MB (+430 MB) | 500 | 3 of 3 |
+| Univer | 14.3 s | 14.3 s | 1772 MB | 2395 MB (+1920 MB) | n/a | 6 of 6 |
+| BetterOffice | 5.03 s | 5.47 s | 31 MB | 1300 MB (+716 MB) | 500 | 3 of 3 |
+| OnlyOffice (CryptPad build) | 3.40 s | 3.56 s | 161 MB | 948 MB (+265 MB) | 409 | 3 of 3 |
+| OpenDoc | 2.33 s | 4.53 s | 17 MB | 916 MB (+307 MB) | 500 | 3 of 3 |
 <!-- samples:end -->
 
 Read these with care:
 
-- **WordCraft's figures are from release 0.17.0.** The site now serves 0.18.1 (since
-  2026-11-17). Its rows here and in the Lighthouse tables were not measured again after the
-  upgrade, so they describe the previous release.
-- **docen on 500 pages** answers "loaded" after about 5 s on the runner and shows
-  page 1, but in all five runs its main thread was still busy when the wait gave
-  up at 180 s, so it has no Settled figure. On an M-series Mac (one run by hand,
-  2026-11-16, not in the data files) it answered after 2.0 s, paused about a
-  second, then ran one task of 162 s and was settled 170 s after the click. The
-  tab is not usable during that time.
-- **canvas-editor** draws 637 pages for the 500 and holds about 700 MB of
-  JavaScript heap.
+- **These figures are from another machine than the ones before 2026-11-18**, so they do not
+  continue the earlier series: a Linux machine with 8 vCPU and no GPU (Chrome draws in software),
+  3 runs per engine and sample where the earlier files have 5. The earlier files stay in
+  `docs/samples/`.
+- **WordCraft is now measured on release 0.18.1** in these tables. The Lighthouse tables were
+  not taken again and still describe 0.17.0.
+- **OpenDoc's rows come from a second pass the same day.** In the first pass all 9 of its starts
+  failed: the adapter handed it a document before its engine was ready, which a slower machine
+  shows every time. The adapter was fixed and OpenDoc measured again; the 9 failed runs are in
+  the dated file under `discarded`. **Univer** was measured in both passes (6 runs).
+- **docen on 500 pages** answers "loaded" after about 4 s and shows page 1, but in all three
+  runs its main thread was still busy when the wait gave up at 180 s, so it has no Settled
+  figure. The tab is not usable during that time.
+- **Page counts differ by engine** on the 500-page file: canvas-editor draws 661 and OnlyOffice
+  409, each from its own layout. canvas-editor also holds about 680 MB of JavaScript heap and
+  4 GB of renderer memory there.
 - **Pages shown** counts what is in the DOM: SuperDoc keeps only the pages near
   the viewport (25), so its number is not a page count of the document.
 - **Renderer memory growth** can be negative: the "before" reading is taken one
   second after startup, when the engine's start-up garbage is still resident.
-- Three of the 180 runs did not load, all on the short samples: docx-editor.dev
-  once (its adapter module never registered, so one of its imports did not
-  arrive), Apryse once with "could not open the document" and once with the
-  page itself answering an error status. Each reason is in the dated file.
+- 18 of the 162 runs did not load, 17 of them on the two short samples. Eleven times the page
+  itself answered an error status and once a sample download answered HTTP 429 (the site's
+  rate limit on one machine loading engine after engine); three runs were not ready within
+  600 s (Apryse twice, Univer once); OpenDoc once did not start within 120 s; react-docx once
+  missed one of its modules; the Google viewer once did not load. Each reason is in the dated
+  file, and the last column of the tables says how many runs each median stands on.
 - **Settled cannot see everything**: see the definition below. An engine that
   starts work more than two seconds after it last kept the thread busy would
   read as settled before that work.
 
-Re-measure with:
+The published figures were made by this job (two passes on 2026-11-18; the dated file lists
+each pass's job, command and commits under `passes`):
 
 ```sh
-uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 5 \
-  --out docs/samples/$(date +%F).json --latest docs/samples/latest.json --shots .scratch/shots
+hf jobs run --flavor cpu-upgrade --timeout 4h --secrets HF_TOKEN -e SITE=editors -e RUNS=3 python:3.12 \
+  bash -c 'curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/main/scripts/hf_job.sh -o /tmp/job.sh && bash /tmp/job.sh'
 ```
 
-The published figures are taken on a GitHub-hosted macOS runner by the
-[Measure workflow](.github/workflows/measure.yml) (push a branch named
-`measure/<anything>`), because a timing taken on a laptop that is doing other
-work is slower than the engine. Every run records the machine's load average
-and the Chrome version, so the dated file shows both.
-That runner is a 3-core virtual machine: slower than a recent laptop and not idle (the heading of the tables
-gives the load average over the runs, part of it Chrome itself; a fresh runner starts far busier, which the
-workflow waits out before measuring). It is used because it runs none of our other work and anyone can repeat
-the run. Read the figures as that machine's; what carries to another machine is the order between engines, not
-the seconds.
+The same measuring on your own machine, which gives that machine's figures and must not be
+written over the published `latest.json`:
+
+```sh
+uv run --with playwright python -I scripts/measure_samples.py all showcase,redline,lorem-500 3 \
+  --out .scratch/samples/$(date +%F).json --latest .scratch/samples/latest.json --shots .scratch/shots
+```
+
+The published sample figures are taken on a Hugging Face Jobs machine (`cpu-upgrade`: 8 vCPU,
+32 GB, Linux, no GPU) by [`scripts/hf_job.sh`](scripts/hf_job.sh), because a timing taken on a
+laptop that is doing other work is slower than the engine, and anyone can rent the same machine.
+Every run records the load average and the Chrome version, so the dated file shows both. That
+load average and core count are the shared host's (64 cores), not our 8 vCPU: it reached 65
+during these runs, and how much of that slowed our Chrome cannot be told from inside the job.
+Chrome runs headed under Xvfb and draws in software. Read the figures as that machine's; what
+carries to another machine is the order between engines, not the seconds. The
+[Measure workflow](.github/workflows/measure.yml) (push a branch named `measure/<anything>`)
+still takes the same figures on a GitHub-hosted macOS runner, where the files before 2026-11-18
+come from.
 
 One (engine, sample) per launch of the installed Google Chrome, headed, with a
 fresh profile. The page opens on its blank document, then the script clicks the
