@@ -121,13 +121,20 @@ window.od.register({
     // `od-at` tells the mirror which site shows the page (it builds the engine's address with it).
     frame.src = `${APP}?blank=1&od-at=${encodeURIComponent(location.origin + (window.od.vendorRoot ?? ""))}`;
     root.append(frame);
+    // Its file input is there before its engine is: the engine (28 MB of WebAssembly) marks the
+    // page "engine-ready" when it can take a document, and "engine-failed" when it cannot start.
+    // A file handed over earlier is lost in an error of its own (seen on a slower machine,
+    // 2026-11-18: nine starts out of nine).
     await until(() => {
       try {
-        return !!win().opendoc && !!frame!.contentDocument!.getElementById("file");
-      } catch {
+        const html = frame!.contentDocument!.documentElement;
+        if (html.classList.contains("engine-failed")) throw new Error("OpenDoc's engine failed to start");
+        return !!win().opendoc && !!frame!.contentDocument!.getElementById("file") && html.classList.contains("engine-ready");
+      } catch (err) {
+        if (err instanceof Error && err.message.startsWith("OpenDoc's engine")) throw err;
         return false;
       }
-    }, "start");
+    }, "start", 120_000);
     // Its own blank start is an empty "drop a file" screen, so it is given a blank document.
     const v = window.od.viewer;
     await open(v ? await v.initialDocx() : await window.od.blankDocx());
