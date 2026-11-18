@@ -14,6 +14,7 @@ export const REVISION_NOTES: Record<string, string> = {
   "eigenpal": "partly: the accepted text, inserted words coloured; deleted words hidden (All Markup needs the vendor's paid review module)",
   "folio": "native: insertions and deletions in the text, with change bars; comment threads and a card per change (author, date) in its review panel (Comments and Changes)",
   "wordcraft": "native: insertions, deletions and comment balloons",
+  "univer": "not drawn: it has no .docx reader, so it is given the text as this site reads it, every change accepted",
   "react-docx": "native: insertions underlined in the text, and a margin card per deletion and per comment (author, date, Accept / Reject); it ships with both hidden, and this page turns them on",
   "word-online": "not drawn: Microsoft's embed viewer shows the text as if every change were accepted",
   "google-viewer": "native: insertions and deletions in the text",

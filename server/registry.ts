@@ -198,6 +198,21 @@ export const editors: EditorMeta[] = [
       { name: "Extend", kind: "company", github: "https://github.com/extend-hq" },
     ],
   },
+  {
+    slug: "univer",
+    name: "Univer",
+    packages: ["@univerjs/presets", "@univerjs/preset-docs-core"],
+    delivery: "esm-sh",
+    license: "Apache-2.0",
+    repo: "https://github.com/dream-num/univer",
+    blurb:
+      "Office SDK with a canvas document editor. Its open-source packages have no .docx import or export (those are in its Server SDK), so documents arrive here as text.",
+    docxRoundTrip: false,
+    agent: true,
+    makers: [
+      { name: "DreamNum", kind: "company", github: "https://github.com/dream-num" },
+    ],
+  },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
     slug: "word-online",

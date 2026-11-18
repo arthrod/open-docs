@@ -17,6 +17,7 @@ const RENDER: Record<string, string> = {
   "folio": "ProseMirror + layout",
   "wordcraft": "Rust WASM (egui canvas)",
   "react-docx": "Rust WASM parser + DOM layout",
+  "univer": "Canvas",
   "word-online": "Microsoft's servers (iframe)",
   "google-viewer": "Google's servers (iframe)",
   "apryse": "WASM office engine → canvas",
