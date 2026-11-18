@@ -15,6 +15,11 @@ export const editorMounts: string[] = [
   "eigenpal",
   "folio",
   "wordcraft",
+  "react-docx",
+  "univer",
+  "opendoc",
+  "betteroffice",
+  "onlyoffice",
   // Proprietary, view-only viewers (server/registry.ts kind: "viewer").
   "word-online",
   "google-viewer",

@@ -183,6 +183,82 @@ export const editors: EditorMeta[] = [
       { name: "ArtCraft", kind: "company", linkedin: "https://www.linkedin.com/company/artcraft-ai/", github: "https://github.com/storytold" },
     ],
   },
+  {
+    slug: "react-docx",
+    name: "react-docx",
+    packages: ["@extend-ai/react-docx"],
+    delivery: "jsdelivr",
+    license: "MIT",
+    repo: "https://github.com/extend-hq/react-docx",
+    blurb:
+      "Paginated DOCX viewer and editor on a Rust/WASM parser (Rust Office), with review and thumbnails; a framework-free entry with Preact inside.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "Extend", kind: "company", github: "https://github.com/extend-hq" },
+    ],
+  },
+  {
+    slug: "univer",
+    name: "Univer",
+    packages: ["@univerjs/presets", "@univerjs/preset-docs-core"],
+    delivery: "esm-sh",
+    license: "Apache-2.0",
+    repo: "https://github.com/dream-num/univer",
+    blurb:
+      "Office SDK with a canvas document editor. Its open-source packages have no .docx import or export (those are in its Server SDK), so documents arrive here as text.",
+    docxRoundTrip: false,
+    agent: true,
+    makers: [
+      { name: "DreamNum", kind: "company", github: "https://github.com/dream-num" },
+    ],
+  },
+  {
+    slug: "opendoc",
+    name: "OpenDoc",
+    packages: ["OpenDoc editor application (opendoc.casualoffice.org, snapshot 2026-11-05)"],
+    delivery: "wasm",
+    license: "Apache-2.0",
+    repo: "https://github.com/CasualOffice/opendoc",
+    blurb:
+      "A deterministic Rust engine in WebAssembly that reads, lays out, paints and saves DOCX and ODT itself, with its own editor application; pre-release.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "CasualOffice", kind: "company", github: "https://github.com/CasualOffice" },
+    ],
+  },
+  {
+    slug: "betteroffice",
+    name: "BetterOffice",
+    packages: ["@betteroffice/docx-react", "@betteroffice/docx"],
+    delivery: "jsdelivr",
+    license: "Apache-2.0",
+    repo: "https://github.com/openooxml/betteroffice",
+    blurb:
+      "Rust-native OOXML engines (parse, edit, layout) compiled to WebAssembly and run in a Worker, with a React editor, review cards and collaboration.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "openooxml", kind: "company", github: "https://github.com/openooxml" },
+    ],
+  },
+  {
+    slug: "onlyoffice",
+    name: "OnlyOffice (CryptPad build)",
+    packages: ["cryptpad/onlyoffice-editor v9.3.2+3", "cryptpad/onlyoffice-x2t-wasm v9.3.2+3"],
+    delivery: "wasm",
+    license: "AGPL-3.0",
+    repo: "https://github.com/cryptpad/onlyoffice-editor",
+    blurb:
+      "OnlyOffice's document editor with no document server: CryptPad's build replaces the co-editing socket with messages to the page, and OnlyOffice's own converter (x2t) runs in WebAssembly.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "CryptPad (XWiki)", kind: "company", github: "https://github.com/cryptpad" },
+      { name: "Ascensio System (ONLYOFFICE)", kind: "company", github: "https://github.com/ONLYOFFICE" },
+    ],
+  },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
     slug: "word-online",

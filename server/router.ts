@@ -39,19 +39,20 @@ export interface EditorShell {
   /** Extra import-map entries (bare specifiers / URL remaps) for this editor. */
   importMap?: Record<string, string>;
   /**
+   * The engine's files must come from the origin of the page showing it (it starts a Worker from
+   * them, or reaches into a frame of them). A site that embeds this shell elsewhere (the viewer
+   * site) then passes those files through its own origin instead of linking to this one.
+   */
+  sameOrigin?: boolean;
+  /**
    * Render NO assistant panel and NO toggle button (page works standalone —
    * e.g. cite-check, whose owner explicitly does not want the agent there).
    */
   noAgent?: boolean;
 }
 
-/** React, resolved once, for every adapter that loads a React package with `?external=react,react-dom`. */
-export const REACT_IMPORTS: Record<string, string> = {
-  "react": "https://esm.sh/react@18.2.0",
-  "react/": "https://esm.sh/react@18.2.0/",
-  "react-dom": "https://esm.sh/react-dom@18.2.0",
-  "react-dom/": "https://esm.sh/react-dom@18.2.0/",
-};
+export { REACT_IMPORTS } from "./react-imports.ts";
+import { REACT_IMPORTS } from "./react-imports.ts";
 
 export function registerEditor(app: Hono, opts: EditorShell) {
   app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts, c.req.query("embed") === "1")));
