@@ -57,16 +57,23 @@ SAMPLES = {
     "redline": '.od-fixture[data-file="redline.docx"]',
     "lorem-500": '.od-fixture[data-file="lorem-500.docx"]',
 }
-# What each engine's DOM offers as a page count (None: it draws to one canvas, or in a frame).
+# What each engine offers as a page count: its DOM, or its own figure (None: it has no pages to count).
 PAGES = """() => {
   const n = (s) => document.querySelectorAll(s).length;
+  // "Page 1 of 3", in whatever language the browser asks for: the last number.
+  const last = (t) => { const m = (t || '').match(/\\d+/g); return m ? Number(m[m.length - 1]) : null; };
   return {
     'canvas-editor': n('.ce-page-container canvas'),
     'superdoc': n('.superdoc-page'),
     'eigenpal': n('.layout-page'),
     'folio': n('.folio-page, .folio-page-shell, [data-page-number]'),
     'docxodus': n('.page-box'),
-    'react-docx': n('[data-docx-page-wrapper]'),
+    // These keep only a window of pages in the DOM (react-docx: 3 of 500, seen 2026-11-18), so the
+    // count is the engine's own.
+    'react-docx': window.__reactDocx?.()?.getController?.()?.totalPages ?? null,
+    'betteroffice': window.__betteroffice?.()?.getTotalPages?.() ?? null,
+    'opendoc': last(document.querySelector('#opendoc-root iframe')?.contentDocument?.getElementById('statPages')?.textContent),
+    'onlyoffice': document.querySelector('#oo-root iframe')?.contentWindow?.editor?.getCountPages?.() ?? null,
   };
 }"""
 
