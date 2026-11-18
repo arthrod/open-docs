@@ -257,9 +257,11 @@ Read these with care:
 - **WordCraft is now measured on release 0.18.1** in these tables. The Lighthouse tables were
   not taken again and still describe 0.17.0.
 - **OpenDoc's rows come from a second pass the same day.** In the first pass all 9 of its starts
-  failed: the adapter handed it a document before its engine was ready, which a slower machine
-  shows every time. The adapter was fixed and OpenDoc measured again; the 9 failed runs are in
-  the dated file under `discarded`. **Univer** was measured in both passes (6 runs).
+  failed: eight timed out waiting for a document and one was not ready within 600 s. The adapter
+  was changed to wait for engine readiness before handing over a document, and OpenDoc was
+  measured again; the records do not establish that readiness caused every first-pass failure.
+  The 9 failed runs are in the dated file under `discarded`. **Univer** was measured in both
+  passes (6 runs).
 - **docen on 500 pages** answers "loaded" after about 4 s and shows page 1, but in all three
   runs its main thread was still busy when the wait gave up at 180 s, so it has no Settled
   figure. The tab is not usable during that time.
@@ -280,8 +282,12 @@ Read these with care:
   starts work more than two seconds after it last kept the thread busy would
   read as settled before that work.
 
-The published figures were made by this job (two passes on 2026-11-18; the dated file lists
-each pass's job, command and commits under `passes`):
+The published figures combine two jobs on 2026-11-18: a full pass with `SITE=both RUNS=3`
+(timeout 6h), then a retake with `SITE=retake RUNS=3 RETAKE_FROM=2026-11-18
+E_ENGINES=opendoc,univer` (timeout 90m). The [dated file](docs/samples/2026-11-18.json)
+lists each job, command and script/site commits under `passes`.
+
+To start a new full pass for this site using the current script:
 
 ```sh
 hf jobs run --flavor cpu-upgrade --timeout 4h --secrets HF_TOKEN -e SITE=editors -e RUNS=3 python:3.12 \
@@ -299,11 +305,12 @@ uv run --with playwright python -I scripts/measure_samples.py all showcase,redli
 The published sample figures are taken on a Hugging Face Jobs machine (`cpu-upgrade`: 8 vCPU,
 32 GB, Linux, no GPU) by [`scripts/hf_job.sh`](scripts/hf_job.sh), because a timing taken on a
 laptop that is doing other work is slower than the engine, and anyone can rent the same machine.
-Every run records the load average and the Chrome version, so the dated file shows both. That
+Every run records the load average; the Chrome version is recorded after the editor becomes
+ready, so early failures can omit it. The dated file retains these per-run records. That
 load average and core count are the shared host's (64 cores), not our 8 vCPU: it reached 65
 during these runs, and how much of that slowed our Chrome cannot be told from inside the job.
-Chrome runs headed under Xvfb and draws in software. Read the figures as that machine's; what
-carries to another machine is the order between engines, not the seconds. The
+Chrome runs headed under Xvfb and draws in software. Read the figures as that machine's;
+neither timings nor the order between engines are guaranteed on another machine. The
 [Measure workflow](.github/workflows/measure.yml) (push a branch named `measure/<anything>`)
 still takes the same figures on a GitHub-hosted macOS runner, where the files before 2026-11-18
 come from.
