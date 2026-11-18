@@ -9,6 +9,7 @@ import asyncio
 import datetime
 import json
 import os
+import shlex
 import re
 import statistics
 import subprocess
@@ -265,13 +266,22 @@ def lorem_args(argv: list[str]) -> argparse.Namespace:
 
 
 def chrome_args(env: dict | None = None) -> list[str]:
-    """Extra Chrome start-up flags from OD_CHROME_ARGS (space-separated), none by default.
+    """Extra Chrome start-up flags from OD_CHROME_ARGS, none by default.
 
-    A container needs them: Chrome will not start as root with its sandbox, and a small /dev/shm
-    crashes it on a large document. Whatever is passed belongs in MEASURE_WHERE, since a flag
-    can change what is measured.
+    Split as a shell would: flags are separated by spaces, and quotes keep a value with spaces
+    whole (`--user-agent="Benchmark Browser"`). A container needs them: Chrome will not start as
+    root with its sandbox, and a small /dev/shm crashes it on a large document. A flag can change
+    what is measured, so where_note() puts them in the published environment line.
     """
-    return (os.environ if env is None else env).get("OD_CHROME_ARGS", "").split()
+    return shlex.split((os.environ if env is None else env).get("OD_CHROME_ARGS", ""))
+
+
+def where_note(default: str, env: dict | None = None) -> str:
+    """Where a pass was measured: MEASURE_WHERE or `default`, plus any Chrome flag it does not name."""
+    env = os.environ if env is None else env
+    where = env.get("MEASURE_WHERE") or default
+    unsaid = [a for a in chrome_args(env) if a not in where]
+    return f"{where}; Chrome started with {' '.join(unsaid)}" if unsaid else where
 
 
 def chrome_memory_of(rows: list[tuple[int, int, int, str]], profile: str) -> dict:
@@ -281,7 +291,8 @@ def chrome_memory_of(rows: list[tuple[int, int, int, str]], profile: str) -> dic
     Chrome forks renderers from its zygote, whose parent is the browser, so a parent-only
     filter reads 0 there.
     """
-    owned = {pid for pid, _, _, cmd in rows if f"--user-data-dir={profile}" in cmd and "--type=" not in cmd}
+    # The whole argument, not a prefix of it: /tmp/p must not also take the Chrome on /tmp/pq.
+    owned = {pid for pid, _, _, cmd in rows if f"--user-data-dir={profile}" in cmd.split() and "--type=" not in cmd}
     while True:
         more = {pid for pid, ppid, _, _ in rows if ppid in owned and pid not in owned}
         if not more:
