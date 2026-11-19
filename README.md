@@ -260,6 +260,11 @@ Read these with care:
   failed: the adapter handed it a document before its engine was ready, which a slower machine
   shows every time. The adapter was fixed and OpenDoc measured again; the 9 failed runs are in
   the dated file under `discarded`. **Univer** was measured in both passes (6 runs).
+  The second pass was a separate job on the same machine type, and its load-average readings
+  do not continue the first job's, so it ran on another host of that type (64 cores, 493 GB).
+  A third job that evening, meant to take every row on one host, was not used: its host ran at
+  a load of 77 to 148, and its upload token expired before two of the three sample files were
+  saved.
 - **docen on 500 pages** answers "loaded" after about 4 s and shows page 1, but in all three
   runs its main thread was still busy when the wait gave up at 180 s, so it has no Settled
   figure. The tab is not usable during that time.
