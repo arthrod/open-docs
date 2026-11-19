@@ -3,7 +3,7 @@
 Plate's own `.docx` export and import, `@platejs/docx-io@53.5.5`, unchanged,
 as one browser module. open-docs uses it for Plate's **Export .docx** and as the
 markdown → `.docx` converter for engines that cannot import markdown themselves
-(Docxodus, docx-editor.dev, folio): markdown → Plate (`@platejs/markdown`) →
+(including Docxodus, docx-editor.dev and react-docx): markdown → Plate (`@platejs/markdown`) →
 `.docx` (this).
 
 Why a bundle: esm.sh cannot build `docx-io` (its `xmlbuilder2` build has no

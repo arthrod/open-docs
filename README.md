@@ -3,12 +3,13 @@
 [![Live on Val Town](https://img.shields.io/badge/live-editors.benchmarks.law-2557d6)](https://editors.benchmarks.law)
 [![Val Town](https://img.shields.io/badge/runs%20on-Val%20Town-111)](https://www.val.town/x/arthrod/open-docs)
 [![Release](https://img.shields.io/github/v/tag/arthrod/open-docs?label=release)](https://github.com/arthrod/open-docs/tags)
-[![Editors](https://img.shields.io/badge/editors-8-informational)](#the-editors)
+[![Editors](https://img.shields.io/badge/editors-13-informational)](#the-editors)
 
-Eight open-source Word editors, running entirely in the browser with no build
-step. Each one opens on a **blank document**, imports and exports real
-**.docx** files, has an **AI assistant** that edits the open document, and is
-**measured on every visit**: startup time, JS memory and download size.
+Thirteen open-source Word editors, running entirely in the browser with no build
+step. Each one opens on a **blank document**, has an **AI assistant** that edits
+the open document, and is **measured on every visit**: startup time, JS memory
+and download size. DOCX import and export support varies by editor; Univer
+imports text only and has no DOCX export (see the table below).
 
 **Live:** <https://editors.benchmarks.law> · **Source:** <https://editors.benchmarks.law/source>
 
@@ -106,7 +107,9 @@ compact top bar — editor dropdown, metrics chip, assistant toggle — and a
 The **metrics chip** shows startup / JS heap / loaded bytes for *this* page
 load; click it for the breakdown by file type and origin. The **Assistant**
 panel drafts, rewrites, restructures or summarises; with *Auto-apply* on, edits
-land immediately and each has an **Undo**.
+land immediately. **Undo** is offered only when the adapter applies the edit
+in the editor's native history. react-docx opens a rebuilt DOCX instead, so its
+assistant edits have no Undo.
 
 **Phones and narrow windows.** The layout follows the window: the bar drops
 labels, the Menu becomes a full-width sheet, the assistant becomes a sheet over
@@ -155,6 +158,7 @@ Seen on `redline.docx` on 2026-11-15 (screenshots from
 | folio | Insertions and deletions in the text, with change bars; comment threads and a card per change (author, date) in its Comments & Changes panel | Opens that panel when the document has comments or changes (folio opens it by itself only on a wide stage; seen 2026-11-16) |
 | docen | Insertions and deletions in the text | Nothing |
 | WordCraft | Insertions, deletions and comment balloons | Nothing |
+| react-docx | Insertions underlined in the text; margin cards for deletions and comments | Enables the vendor's tracked-change and comment displays when present; both are hidden by default |
 | Docxodus | Insertions, deletions and comment threads | Turns on its own All Markup view (`showRevisions: true`; its default draws the document as if accepted) |
 | docx-editor.dev | The accepted text with inserted words coloured; **deleted words are not shown** | Nothing. Its layout uses the `proposed` view unless a review module is registered, and that module is in the paid `@docx-editor.dev/pro`. Forcing `reviewDisplayMode="all-markup"` without it stops the editor from starting. |
 | canvas-editor | Inserted words underlined, deleted words struck, both red | **Rewrites the file first** ([`lib/revisions.ts`](lib/revisions.ts)). `plugin-docx@1.0.0` skips `w:ins` and `w:del` alike, so without this the inserted *and* the deleted words vanish: "rose 14.2 %" opened as "rose . %". |
@@ -172,6 +176,10 @@ What those two engines still cannot show is theirs: who made each change and
 when, accept and reject, and comments.
 
 ### The samples, measured
+
+react-docx is available in `scripts/measure_samples.py`, but the dated sample
+and Lighthouse results below predate its integration and contain no react-docx
+measurements.
 
 Every engine opening each sample from its own Menu. The table on the
 [landing page](https://editors.benchmarks.law/#samples) is
@@ -422,8 +430,11 @@ importer/exporter, and the losses are listed under the vendors:
 
 1. The assistant's edit lands in the engine's **own undo history** as one
    edit, so the edit card's Undo/Redo drive the engine's native undo/redo. A
-   path that rebuilds the document or resets the history (`openMarkdown`,
-   `load`, `renderAsync`, `file.open`) is not used for applying.
+   path that rebuilds the document or resets the history is used only when
+   the integration cannot apply in native history; the assistant then offers
+   no Undo/Redo. For react-docx, Markdown is converted through Plate/docx-io
+   to a new DOCX and opened with `setOptions({ file })`, because its controller
+   has no whole-document replacement command.
 2. Among the engine's own importers that can do that, the one that keeps the
    most is used: its markdown importer (Plate, SuperDoc, folio, Docxodus'
    session), its own HTML paste pipeline fed by `marked` (docen,
@@ -531,7 +542,8 @@ JS heap leaves out WebAssembly memory, so WordCraft and Docxodus read low.
 
 ```
 index.ts                  Hono app: editor routes, /editors/* /lib/* (served + transpiled),
-                          /api/svg-raw/*, /vendor/wordcraft/<v>/*
+                          /api/svg-raw/*, /vendor/wordcraft/<v>/*, /vendor/npm/*
+server/npm-vendor.ts      allowlisted npm package versions proxied from jsDelivr
 server/router.ts          shared shell (top bar, stage, assistant) + /api/{sample,blank}.docx,
                           import, agent, metrics, log
 server/agent.ts           the assistant (std/openai, gpt-5.6-luna)
@@ -586,6 +598,13 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   `exportToDocx` with Plate's static components (headings keep their styles;
   Word opens the file without a repair prompt, in Compatibility Mode). It
   ignores a picture's width and writes its natural size.
+- **react-docx**: the framework-free `/vanilla` entry uses Preact internally.
+  `/vendor/npm/@extend-ai/react-docx@0.15.0/*` serves its files from this
+  origin because its import worker is started relative to `import.meta.url`.
+  The shell maps `/vanilla` and `/internal` to these files and pins `fast-png`
+  to 8.0.0 on esm.sh. [`server/npm-vendor.ts`](server/npm-vendor.ts) accepts
+  only allowlisted package/version pairs and plain file paths; other versions,
+  packages, encoded paths and dot segments return 404.
 - **WordCraft**: val files are text-only and nothing mirrors release assets with
   CORS, so `/vendor/wordcraft/0.18.1/*` installs itself on first request:
   it downloads the pinned release zip from GitHub, checks its SHA-256, stores
@@ -620,9 +639,10 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   inline HTML through its own `remarkMdx`, so those survive there.
 - **List numbering restarts and start numbers** (`3.` as the first item) are
   not carried through markdown: every numbered list starts at 1.
-- **Assistant writes replace the whole document.** Undo works through the
-  assistant card. SuperDoc and Plate also put the change in the editor's own
-  undo stack.
+- **Assistant writes replace the whole document.** The assistant card offers
+  Undo only for adapters that apply in native history. react-docx rebuilds and
+  opens a DOCX, so an assistant edit cannot be undone there; its controller
+  undo/redo commands still serve ordinary editor history.
 - **JS heap** is Chromium-only; other browsers show "n/a".
 - **WordCraft** needs WebGPU or WebGL2 and is a 22 MB (compressed) download;
   its UI follows the browser's language.
@@ -658,7 +678,7 @@ Append `?debug` to the SuperDoc page to log every worker message.
 ## Licenses
 
 Each editor keeps its own license: MIT for canvas-editor, Docxodus, Plate and
-docen; Apache-2.0 for folio and docx-editor.dev; Apache-2.0 / MIT for WordCraft;
+docen and react-docx; Apache-2.0 for folio and docx-editor.dev; Apache-2.0 / MIT for WordCraft;
 **AGPL-3.0 for SuperDoc**. AGPL is fine for this public val but is a real
 constraint for a closed product. The four viewers are proprietary. Microsoft's
 and Google's are free hosted services. Apryse and Nutrient run unlicensed in
