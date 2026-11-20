@@ -250,10 +250,14 @@ const filled = (shd: Element | undefined) =>
 
 /** Every run that has text is in a monospace face, on a shaded background (its own or the paragraph's). */
 function shadedMono(p: Element, pPr: Element | undefined): boolean {
-  const withText = [...p.getElementsByTagNameNS(W, "r")].filter((r) => kids(r, "t").some((t) => (t.textContent ?? "").length));
-  if (!withText.length) return false;
+  const all = [...p.getElementsByTagNameNS(W, "r")];
+  const withText = all.filter((r) => kids(r, "t").some((t) => (t.textContent ?? "").length));
+  // No text at all: an empty line of code when its (empty) runs are formatted as code. joinCode
+  // keeps it as a line inside a block and drops it anywhere else. A paragraph with no run is spacing.
+  const judged = withText.length ? withText : all;
+  if (!judged.length) return false;
   const paragraphShaded = filled(kid(pPr, "shd"));
-  return withText.every((r) => {
+  return judged.every((r) => {
     const rPr = kid(r, "rPr");
     const fonts = kid(rPr, "rFonts");
     return MONO.test(wAttr(fonts, "ascii") ?? wAttr(fonts, "hAnsi") ?? "") && (paragraphShaded || filled(kid(rPr, "shd")));
@@ -265,16 +269,27 @@ function shadedMono(p: Element, pPr: Element | undefined): boolean {
  * only paragraphs in a code style, and a fence per line is not what was written.
  */
 function joinCode(blocks: Block[]): Block[] {
+  const text = (b: Block) => b.runs.map((r) => r.text).join("");
   const out: Block[] = [];
   for (const b of blocks) {
     const last = out[out.length - 1];
-    if (b.kind === "code" && last?.kind === "code") {
-      out[out.length - 1] = { ...last, runs: [{ ...last.runs[0], text: `${last.runs.map((r) => r.text).join("")}\n${b.runs.map((r) => r.text).join("").replace(/^\s+$/, "")}` }] };
+    // A paragraph that carries a list's counter event (an unmarked level) stays a block of its
+    // own: merged into the block before, its event was lost and the items after it miscounted.
+    if (b.kind === "code" && last?.kind === "code" && !b.counts) {
+      out[out.length - 1] = { ...last, runs: [{ ...last.runs[0], text: `${text(last)}\n${text(b).replace(/^\s+$/, "")}` }] };
     } else out.push(b);
   }
   // Blank lines at either end of a block are an engine's padding (docen closes a code block
-  // with an empty code paragraph), not lines of code.
-  return out.map((b) => b.kind !== "code" ? b : { ...b, runs: [{ ...b.runs[0], text: b.runs.map((r) => r.text).join("").replace(/^(\s*\n)+|(\n\s*)+$/g, "") }] });
+  // with an empty code paragraph), not lines of code. Line by line: one expression for "blank
+  // lines at the end" backtracks without end on a block with many blank lines inside.
+  return out.map((b) => {
+    if (b.kind !== "code") return b;
+    const lines = text(b).split("\n");
+    let from = 0, to = lines.length;
+    while (from < to && !lines[from].trim()) from++;
+    while (to > from && !lines[to - 1].trim()) to--;
+    return { ...b, runs: [{ ...b.runs[0], text: lines.slice(from, to).join("\n") }] };
+  });
 }
 
 function paragraphBlock(p: Element, ctx: Ctx): Block {
@@ -329,11 +344,11 @@ function paragraphBlockOf(p: Element, ctx: Ctx): Block {
   // A quote with no style: a left border and a left indent, which is how an HTML blockquote
   // arrives (Plate's exporter writes exactly that, and it is what the assistant's own
   // Markdown becomes). Either alone is an indented or a bordered paragraph; a paragraph in a
-  // code style or with any numbering (even switched off) is what that says first.
+  // code style or with any numbering (its own or its style's, even switched off) is what that says first.
   const left = kid(kid(pPr, "pBdr"), "left");
   const ind = kid(pPr, "ind");
   if (
-    !numPr && left && !/^(none|nil)$/.test(wAttr(left, "val") ?? "none") &&
+    !numPr && numId === undefined && left && !/^(none|nil)$/.test(wAttr(left, "val") ?? "none") &&
     Number(wAttr(ind, "left") ?? wAttr(ind, "start") ?? 0) > 0 && text.trim()
   ) return { kind: "quote", runs };
   return { kind: "p", align: align as Block["align"], runs };

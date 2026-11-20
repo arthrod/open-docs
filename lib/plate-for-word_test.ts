@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert@1.0.13";
-import { forWord } from "./plate-for-word.ts";
+import { forWord, type WordNode } from "./plate-for-word.ts";
 
 Deno.test("forWord: inline code is monospace, wherever it is nested", () => {
   assertEquals(
@@ -19,7 +19,7 @@ Deno.test("forWord: a code block is one block per line, and a blank line keeps a
 });
 
 Deno.test("forWord: a line break in a table cell is a paragraph break; outside a cell it is left alone", () => {
-  const cell = (children: unknown[]) => [{ type: "table", children: [{ type: "tr", children: [{ type: "td", children }] }] }];
+  const cell = (children: WordNode[]): WordNode[] => [{ type: "table", children: [{ type: "tr", children: [{ type: "td", children }] }] }];
   assertEquals(
     forWord(cell([{ type: "p", children: [{ text: "x" }, { text: "\n" }, { text: "z", bold: true }] }])),
     cell([{ type: "p", children: [{ text: "x" }] }, { type: "p", children: [{ text: "z", bold: true }] }]),

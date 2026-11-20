@@ -228,3 +228,48 @@ Deno.test("docx: review of the quote and code rules: shading switched off, a bor
   const bytes = zipSync({ "word/document.xml": strToU8(`<w:document ${W}><w:body>${body}</w:body></w:document>`), "word/styles.xml": strToU8(styles) });
   assertEquals(docxToMarkdown(bytes).trim(), "`FILE`\n\n```\na = 1\n```\n\n```\nb = 2\n```\n\nlist-shaped");
 });
+
+// --- review of pull request 72 (CodeRabbit, CodeAnt, SonarCloud; 2026-11-20) ---
+
+Deno.test("docx: an empty line inside shaded monospace code is a line of the block; alone it is nothing", () => {
+  const empty = `<w:p><w:r><w:rPr>${MONO_SHADED}</w:rPr><w:t></w:t></w:r></w:p>`;
+  const md = docxToMarkdown(docx(`<w:p>${run("a", MONO_SHADED)}</w:p>${empty}<w:p>${run("b", MONO_SHADED)}</w:p><w:p>${run("then")}</w:p>${empty}<w:p>${run("end")}</w:p>`));
+  assertEquals(md.trim(), "```\na\n\nb\n```\n\nthen\n\nend");
+});
+
+Deno.test("docx: a code paragraph that carries a list's counter event is not merged away", () => {
+  // Lists 2 and 3: level 0 shows no marker, level 1 counts. A code paragraph of list 3 at level 0
+  // between two level-1 items of list 3 starts their numbering again, also right after a code
+  // paragraph of list 2.
+  const outline = `<w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="none"/></w:lvl>` +
+    `<w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="decimal"/></w:lvl></w:abstractNum>` +
+    `<w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num><w:num w:numId="3"><w:abstractNumId w:val="1"/></w:num>`;
+  const code = (t: string, numId: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="${numId}"/></w:numPr></w:pPr><w:r><w:t>${t}</w:t></w:r></w:p>`;
+  const md = docxToMarkdown(docxWith(p("x", "3", 1) + code("c1", "2") + code("c2", "3") + p("y", "3", 1), outline));
+  assertEquals(md.match(/\d+\. \w/g), ["1. x", "1. y"]);
+});
+
+Deno.test("docx: a code block with many blank lines inside is trimmed at its ends in linear time", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run(t)}</w:p>`;
+  const body = code(" ") + code("  a = 1") + code(" ").repeat(40) + code("b = 2") + code(" ");
+  const bytes = zipSync({ "word/document.xml": strToU8(`<w:document ${W}><w:body>${body}</w:body></w:document>`), "word/styles.xml": strToU8(styles) });
+  const t0 = performance.now();
+  const md = docxToMarkdown(bytes);
+  assertEquals(md.trim(), "```\n  a = 1\n" + "\n".repeat(40) + "b = 2\n```");
+  assertEquals(performance.now() - t0 < 2000, true);
+});
+
+Deno.test("docx: numbering that comes from the style keeps a bordered, indented paragraph from being a quote", () => {
+  const styles = `<w:styles ${W}>` +
+    `<w:style w:type="paragraph" w:styleId="Outline"><w:name w:val="Outline"/><w:pPr><w:numPr><w:numId w:val="2"/></w:numPr></w:pPr></w:style>` +
+    `<w:style w:type="paragraph" w:styleId="Off"><w:name w:val="Off"/><w:pPr><w:numPr><w:numId w:val="0"/></w:numPr></w:pPr></w:style></w:styles>`;
+  const numbering = `<w:numbering ${W}><w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="none"/></w:lvl></w:abstractNum><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num></w:numbering>`;
+  const bordered = (style: string, t: string) => `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ""}<w:ind w:left="284"/><w:pBdr><w:left w:val="single" w:sz="18"/></w:pBdr></w:pPr>${run(t)}</w:p>`;
+  const bytes = zipSync({
+    "word/document.xml": strToU8(`<w:document ${W}><w:body>${bordered("Outline", "in a list")}${bordered("Off", "numbering off")}${bordered("", "a quote")}</w:body></w:document>`),
+    "word/styles.xml": strToU8(styles),
+    "word/numbering.xml": strToU8(numbering),
+  });
+  assertEquals(docxToMarkdown(bytes).trim(), "in a list\n\nnumbering off\n\n> a quote");
+});

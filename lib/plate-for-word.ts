@@ -12,18 +12,25 @@
  *    A cell's paragraphs are its lines, in Word and in the reader.
  * lib/docx-markdown.ts reads all three back, and joins the code lines into one fence.
  */
-// deno-lint-ignore no-explicit-any
-export function forWord(nodes: any[], inCell = false): any[] {
-  // deno-lint-ignore no-explicit-any
-  return nodes.flatMap((n: any): any[] => {
-    if (typeof n?.text === "string") return [n.code ? { ...n, fontFamily: "Courier New" } : n];
-    if (inCell && n?.type === "p" && Array.isArray(n.children) && n.children.some((c: { text?: string }) => c.text?.includes("\n"))) {
-      // deno-lint-ignore no-explicit-any
-      const lines: any[][] = [[]];
+/** A Plate text leaf: its text and its marks (`code`, `bold`, a font family …). */
+export type WordLeaf = { text: string; code?: boolean; [mark: string]: unknown };
+/** A Plate element: its type, its children, and whatever its plugin keeps on it. */
+export type WordElement = { type?: string; children: WordNode[]; [prop: string]: unknown };
+export type WordNode = WordLeaf | WordElement;
+
+const isLeaf = (n: WordNode): n is WordLeaf => typeof (n as WordLeaf)?.text === "string";
+const isElement = (n: WordNode): n is WordElement => Array.isArray((n as WordElement)?.children);
+
+export function forWord(nodes: WordNode[], inCell = false): WordNode[] {
+  return nodes.flatMap((n): WordNode[] => {
+    if (isLeaf(n)) return [n.code ? { ...n, fontFamily: "Courier New" } : n];
+    if (!isElement(n)) return [n];
+    if (inCell && n.type === "p" && n.children.some((c) => isLeaf(c) && c.text.includes("\n"))) {
+      const lines: WordNode[][] = [[]];
       for (const c of forWord(n.children)) {
-        if (typeof c?.text !== "string" || !c.text.includes("\n")) lines[lines.length - 1].push(c);
+        if (!isLeaf(c) || !c.text.includes("\n")) lines[lines.length - 1].push(c);
         else {
-          c.text.split("\n").forEach((part: string, i: number) => {
+          c.text.split("\n").forEach((part, i) => {
             if (i) lines.push([]);
             if (part) lines[lines.length - 1].push({ ...c, text: part });
           });
@@ -31,14 +38,12 @@ export function forWord(nodes: any[], inCell = false): any[] {
       }
       return lines.map((children) => ({ ...n, children: children.length ? children : [{ text: "" }] }));
     }
-    // deno-lint-ignore no-explicit-any
-    if (n?.type === "code_block" && Array.isArray(n.children) && n.children.length > 1 && n.children.every((l: any) => l?.type === "code_line")) {
-      // deno-lint-ignore no-explicit-any
-      return n.children.map((line: any) => ({
+    if (n.type === "code_block" && n.children.length > 1 && n.children.every((l) => isElement(l) && l.type === "code_line")) {
+      return (n.children as WordElement[]).map((line) => ({
         ...n,
-        children: [{ ...line, children: (line.children ?? []).some((c: { text?: string }) => c.text) ? line.children : [{ text: " " }] }],
+        children: [{ ...line, children: line.children.some((c) => isLeaf(c) && c.text) ? line.children : [{ text: " " }] }],
       }));
     }
-    return [Array.isArray(n?.children) ? { ...n, children: forWord(n.children, inCell || n.type === "td" || n.type === "th") } : n];
+    return [{ ...n, children: forWord(n.children, inCell || n.type === "td" || n.type === "th") }];
   });
 }
