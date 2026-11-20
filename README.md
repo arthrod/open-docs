@@ -95,7 +95,8 @@ compact top bar — editor dropdown, metrics chip, assistant toggle — and a
 - **New blank document** (⌥N). Pages also *open* blank.
 - **Open .docx from your computer…** (⌘O), or drag a .docx onto the page.
 - **Export this document as .docx** (⌘S): the document you are editing, in the
-  editor's own bytes, named after the document name.
+  editor's own bytes, named after the document name. Not in Univer, which has
+  no .docx export.
 - **Load the rich sample**: a Word-valid showcase (title/subtitle, three heading
   levels, every common run format, nested bullets and numbers, a table with a
   shaded header and a merged cell, a quote, a code block, a hyperlink, a chart
@@ -112,7 +113,9 @@ compact top bar — editor dropdown, metrics chip, assistant toggle — and a
 The **metrics chip** shows startup / JS heap / loaded bytes for *this* page
 load; click it for the breakdown by file type and origin. The **Assistant**
 panel drafts, rewrites, restructures or summarises; with *Auto-apply* on, edits
-land immediately and each has an **Undo**.
+land immediately and each has an **Undo**, except in react-docx, Univer,
+OpenDoc, BetterOffice and OnlyOffice: there an edit opens a new document
+([why](#the-assistant)), so export first if you want the one before it.
 
 **Phones and narrow windows.** The layout follows the window: the bar drops
 labels, the Menu becomes a full-width sheet, the assistant becomes a sheet over
@@ -373,7 +376,11 @@ fresh profile. The page opens on its blank document, then the script clicks the
 Menu's own button. **Loaded** is the click until the adapter's `load()` returns
 (plus two frames). **Settled** is the click until the main thread has been quiet
 for two seconds (counted from the later of the last long task and the load's
-return), taken from the Long Tasks API. Work an engine starts more than two
+return), taken from the Long Tasks API. With the script of 2026-11-20, where an
+engine's page count still moved after that, Settled is when the count last
+changed (the run says `settledBy: "pages"` and keeps the other reading as
+`settledMsLongTasks`; the row counts such runs in `settledByPages`), and a run
+whose count was still moving after 180 s has no Settled. Work an engine starts more than two
 seconds after it last kept the thread busy is not seen, and the wait gives up
 after 180 s ("still busy"). docx-editor.dev's loader
 returns before it draws, and several engines keep paginating after theirs
