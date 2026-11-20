@@ -5,6 +5,7 @@
  * every run).
  */
 import LATEST from "../docs/samples/latest.json" with { type: "json" };
+import CAVEATS from "../docs/samples/caveats.json" with { type: "json" };
 import type { EditorMeta } from "./registry.ts";
 import { FIXTURES } from "./fixtures.ts";
 import { REVISION_NOTES } from "../lib/revision-notes.ts";
@@ -28,6 +29,10 @@ export interface SampleRow {
   rendererGrowth?: number | null;
   /** How many runs were still busy when the page stopped waiting (180 s): those have no settled time. */
   settleTimedOut?: number;
+  /** How many runs still had a moving page count when the wait gave up: `pages` is then not the document's. */
+  pagesStillChanging?: number;
+  /** How many runs' heap could not be collected before it was read: `heapBytes` then holds garbage. */
+  heapNotCollected?: number;
   /** An error from a run that did load: its timing stands, some later readings are missing. */
   incomplete?: string | null;
   /** When and where this row was measured, when a partial re-run measured it apart from the others. */
@@ -63,7 +68,19 @@ const INTRO: Record<string, string> = {
     "500 pages in Microsoft Word. <b>Settled</b> is the number to compare: some engines report “loaded” before they draw, and some keep paginating after.",
 };
 
-export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST as SampleMeasurements): string {
+/**
+ * Published figures that were looked at again and found wrong, unreliable or about the machine
+ * (docs/samples/caveats.json; the README's "Figures to distrust" has the evidence). Said under
+ * the engine's name, because a wrong figure with no warning beside it is read as right.
+ */
+export type Caveats = Record<string, Record<string, string> | string>;
+
+export function samplesBand(
+  all: EditorMeta[],
+  data: SampleMeasurements = LATEST as SampleMeasurements,
+  // The caveats are about the published file: another data set (a test's) has none unless it brings its own.
+  caveats: Caveats = data === (LATEST as unknown) ? (CAVEATS as Caveats) : {},
+): string {
   const tables = FIXTURES.map((f) => {
     const id = f.file.replace(/\.docx$/, "");
     const rows = data.samples?.[id];
@@ -85,7 +102,9 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
       const partial = num(r.loadMs) != null && got < runs.length
         ? ` <small class="prov-warn">${got} of ${runs.length} runs loaded${r.failed ? `: ${esc(String(r.failed).split("\n")[0].slice(0, 120))}` : ""}</small>`
         : "";
-      const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}${elsewhere}${incomplete}${partial}`;
+      const told = caveats[id];
+      const caveat = told && typeof told === "object" && told[e.slug] ? ` <small class="prov-warn">read with care: ${esc(told[e.slug])}</small>` : "";
+      const name = `<a href="/e/${e.slug}">${esc(e.name)}</a>${e.kind === "viewer" ? ` <span class="vo">view-only</span>` : ""}${elsewhere}${incomplete}${partial}${caveat}`;
       if (num(r.loadMs) == null) {
         return `<tr><td>${name}</td><td colspan="${redline ? 4 : 5}"><b>did not open it</b>: ${esc(String(r.failed ?? "no answer").split("\n")[0].slice(0, 160))}</td>${
           redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : ""
@@ -101,9 +120,9 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
         // Some runs settled and some never did: the median stands on the ones that did, and says so.
         !frame && num(r.settledMs) != null && num(r.settleTimedOut) ? ` <small class="prov-warn">${num(r.settleTimedOut)} of ${(r.runs ?? []).filter((x) => x != null).length} runs still busy after 180 s</small>` : ""
       }</td>
-      <td class="n">${frame ? "n/a" : mb(r.heapBytes)}</td>
+      <td class="n">${frame ? "n/a" : mb(r.heapBytes)}${!frame && num(r.heapNotCollected) ? ` <small class="prov-warn">not collected first in ${num(r.heapNotCollected)} run(s)</small>` : ""}</td>
       <td class="n" title="before ${mb(r.rendererRssReady)}, after ${mb(r.rendererRss)}">${mb(r.rendererRss)}${grew != null ? ` <small>(${grew >= 0 ? "+" : "−"}${mb(Math.abs(grew))})</small>` : ""}</td>
-      ${redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : `<td class="n hide-sm">${num(r.pages) ?? "n/a"}</td>`}
+      ${redline ? `<td class="hide-sm">${esc(REVISION_NOTES[e.slug] ?? "")}</td>` : `<td class="n hide-sm">${num(r.pages) ?? "n/a"}${num(r.pagesStillChanging) ? ` <small class="prov-warn">still changing in ${num(r.pagesStillChanging)} run(s)</small>` : ""}</td>`}
     </tr>`;
     };
     return `<h3 class="smp-h" id="sample-${id}">The ${esc(f.label)} sample <small>${esc(f.file)} · ${esc(f.note)} · <a href="/api/${f.file}">download ↓</a></small></h3>
@@ -119,7 +138,8 @@ export function samplesBand(all: EditorMeta[], data: SampleMeasurements = LATEST
   <p class="sec-copy">Every engine opening the two harder samples from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(data.environment ?? "")}.
   <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for two seconds (work in a worker or on the GPU is not seen).
   <b>JS heap</b>: JavaScript objects only. <b>Renderer memory</b>: resident memory of Chrome's renderer processes, which also counts WebAssembly memory, canvases and the DOM; in brackets, how much it grew when the sample was opened, run by run (a view-only engine already shows the rich sample, so its bracket is what replacing that one cost).
-  Microsoft's and Google's viewers render on their own servers, so only their frame's load is timed.</p>
+  Microsoft's and Google's viewers render on their own servers, so only their frame's load is timed.
+  A row marked <b>read with care</b> has a figure that was checked again${typeof caveats.checked === "string" ? ` on ${esc(caveats.checked)}` : ""} and found wrong, unreliable or about this machine rather than the engine: the <a href="https://github.com/arthrod/open-docs#figures-to-distrust">README</a> says what was seen.</p>
   ${tables}
 </div></section>`;
 }

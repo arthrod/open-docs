@@ -1,0 +1,733 @@
+{
+ "measuredAt": "2026-11-20",
+ "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+ "base": "https://editors.benchmarks.law",
+ "query": "",
+ "raw": [
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.193Z",
+    "performance": 81,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 3636,
+    "lcpMs": 3636,
+    "tbtMs": 33,
+    "cls": 0.018,
+    "speedIndexMs": 4245
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.169Z",
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 29,
+    "cls": 0,
+    "speedIndexMs": 1348
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.526Z",
+    "performance": 98,
+    "accessibility": 96,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 245,
+    "lcpMs": 245,
+    "tbtMs": 45,
+    "cls": 0.0,
+    "speedIndexMs": 1586
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.570Z",
+    "performance": 91,
+    "accessibility": 100,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 906,
+    "lcpMs": 906,
+    "tbtMs": 173,
+    "cls": 0.018,
+    "speedIndexMs": 7248
+   }
+  },
+  {
+   "page": "e/univer",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.801Z",
+    "performance": 88,
+    "accessibility": 89,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1658,
+    "lcpMs": 1658,
+    "tbtMs": 267,
+    "cls": 0.02,
+    "speedIndexMs": 5946
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.834Z",
+    "performance": 93,
+    "accessibility": 83,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 448,
+    "lcpMs": 448,
+    "tbtMs": 184,
+    "cls": 0.005,
+    "speedIndexMs": 1566
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:02:13.370Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 762,
+    "lcpMs": 762,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 1251
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:02:13.388Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 448
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.494Z",
+    "performance": 85,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 214,
+    "lcpMs": 214,
+    "tbtMs": 226,
+    "cls": 0.063,
+    "speedIndexMs": 2737
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:01:56.918Z",
+    "performance": 61,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 3026,
+    "lcpMs": 3026,
+    "tbtMs": 745,
+    "cls": 0.023,
+    "speedIndexMs": 12734
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:02:32.011Z",
+    "performance": 98,
+    "accessibility": 96,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 245,
+    "lcpMs": 245,
+    "tbtMs": 72,
+    "cls": 0.0,
+    "speedIndexMs": 1636
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:02:32.707Z",
+    "performance": 89,
+    "accessibility": 100,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 905,
+    "lcpMs": 905,
+    "tbtMs": 250,
+    "cls": 0.018,
+    "speedIndexMs": 6581
+   }
+  },
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:19.814Z",
+    "performance": 75,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 764,
+    "lcpMs": 5739,
+    "tbtMs": 85,
+    "cls": 0.018,
+    "speedIndexMs": 5149
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:20.238Z",
+    "performance": 95,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 227,
+    "lcpMs": 227,
+    "tbtMs": 155,
+    "cls": 0,
+    "speedIndexMs": 1589
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:19.834Z",
+    "performance": 86,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 214,
+    "lcpMs": 214,
+    "tbtMs": 200,
+    "cls": 0.063,
+    "speedIndexMs": 2995
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:20.107Z",
+    "performance": 70,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 3033,
+    "lcpMs": 3033,
+    "tbtMs": 374,
+    "cls": 0.023,
+    "speedIndexMs": 15185
+   }
+  },
+  {
+   "page": "e/univer",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:20.266Z",
+    "performance": 91,
+    "accessibility": 83,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 502,
+    "lcpMs": 502,
+    "tbtMs": 206,
+    "cls": 0.005,
+    "speedIndexMs": 1591
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:20.360Z",
+    "performance": 85,
+    "accessibility": 89,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1656,
+    "lcpMs": 1656,
+    "tbtMs": 290,
+    "cls": 0.018,
+    "speedIndexMs": 7744
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:51.629Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 217,
+    "lcpMs": 217,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 568
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:03:51.955Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 773,
+    "lcpMs": 773,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2354
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:04:08.901Z",
+    "performance": 86,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 762,
+    "lcpMs": 762,
+    "tbtMs": 232,
+    "cls": 0.032,
+    "speedIndexMs": 11275
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:04:09.184Z",
+    "performance": 75,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 399,
+    "cls": 0.064,
+    "speedIndexMs": 2815
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:04:08.847Z",
+    "performance": 99,
+    "accessibility": 96,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 245,
+    "lcpMs": 245,
+    "tbtMs": 12,
+    "cls": 0.0,
+    "speedIndexMs": 1355
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:04:09.308Z",
+    "performance": 94,
+    "accessibility": 100,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 906,
+    "lcpMs": 906,
+    "tbtMs": 77,
+    "cls": 0.018,
+    "speedIndexMs": 6239
+   }
+  },
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:13.655Z",
+    "performance": 96,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 769,
+    "lcpMs": 769,
+    "tbtMs": 52,
+    "cls": 0.018,
+    "speedIndexMs": 5272
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:13.938Z",
+    "performance": 98,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 213,
+    "lcpMs": 213,
+    "tbtMs": 61,
+    "cls": 0,
+    "speedIndexMs": 1637
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:34.937Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 779,
+    "lcpMs": 779,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 1606
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:35.221Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 229,
+    "lcpMs": 229,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 429
+   }
+  },
+  {
+   "page": "e/univer",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:22.664Z",
+    "performance": 98,
+    "accessibility": 83,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 445,
+    "lcpMs": 445,
+    "tbtMs": 85,
+    "cls": 0.005,
+    "speedIndexMs": 1451
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:23.069Z",
+    "performance": 35,
+    "accessibility": 89,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1655,
+    "lcpMs": 13144,
+    "tbtMs": 319,
+    "cls": 0.928,
+    "speedIndexMs": 7793
+   }
+  },
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:54.863Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 762,
+    "lcpMs": 762,
+    "tbtMs": 33,
+    "cls": 0.018,
+    "speedIndexMs": 2600
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:54.944Z",
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 32,
+    "cls": 0,
+    "speedIndexMs": 1276
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:54.322Z",
+    "performance": 96,
+    "accessibility": 100,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 905,
+    "lcpMs": 905,
+    "tbtMs": 41,
+    "cls": 0.018,
+    "speedIndexMs": 5016
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:54.746Z",
+    "performance": 96,
+    "accessibility": 96,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 245,
+    "lcpMs": 245,
+    "tbtMs": 122,
+    "cls": 0.0,
+    "speedIndexMs": 1560
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:54.687Z",
+    "performance": 79,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 214,
+    "lcpMs": 214,
+    "tbtMs": 307,
+    "cls": 0.064,
+    "speedIndexMs": 2833
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:05:54.805Z",
+    "performance": 76,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 763,
+    "lcpMs": 763,
+    "tbtMs": 572,
+    "cls": 0.044,
+    "speedIndexMs": 11122
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:02.427Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 757,
+    "lcpMs": 757,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2301
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:02.623Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 394
+   }
+  },
+  {
+   "page": "e/univer",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:06:47.153Z",
+    "performance": 93,
+    "accessibility": 83,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 445,
+    "lcpMs": 445,
+    "tbtMs": 163,
+    "cls": 0.013,
+    "speedIndexMs": 1749
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:06:47.639Z",
+    "performance": 83,
+    "accessibility": 89,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1656,
+    "lcpMs": 1656,
+    "tbtMs": 370,
+    "cls": 0.02,
+    "speedIndexMs": 7710
+   }
+  },
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:19.169Z",
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 763,
+    "lcpMs": 763,
+    "tbtMs": 53,
+    "cls": 0.018,
+    "speedIndexMs": 3606
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:18.927Z",
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 6,
+    "cls": 0,
+    "speedIndexMs": 1341
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:18.850Z",
+    "performance": 86,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 763,
+    "lcpMs": 763,
+    "tbtMs": 227,
+    "cls": 0.044,
+    "speedIndexMs": 11568
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:19.097Z",
+    "performance": 86,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 213,
+    "lcpMs": 213,
+    "tbtMs": 200,
+    "cls": 0.064,
+    "speedIndexMs": 2914
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:19.034Z",
+    "performance": 95,
+    "accessibility": 100,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 905,
+    "lcpMs": 905,
+    "tbtMs": 32,
+    "cls": 0.018,
+    "speedIndexMs": 5953
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:07:19.298Z",
+    "performance": 98,
+    "accessibility": 96,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 245,
+    "lcpMs": 245,
+    "tbtMs": 59,
+    "cls": 0.0,
+    "speedIndexMs": 1588
+   }
+  },
+  {
+   "page": "e/univer",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:24.084Z",
+    "performance": 88,
+    "accessibility": 89,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 2268,
+    "lcpMs": 2268,
+    "tbtMs": 60,
+    "cls": 0.018,
+    "speedIndexMs": 8249
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:24.379Z",
+    "performance": 94,
+    "accessibility": 83,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 434,
+    "lcpMs": 434,
+    "tbtMs": 168,
+    "cls": 0.005,
+    "speedIndexMs": 1597
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:35.263Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 772,
+    "lcpMs": 772,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2340
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:35.486Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 225,
+    "lcpMs": 225,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 410
+   }
+  }
+ ]
+}

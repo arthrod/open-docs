@@ -17,12 +17,18 @@ Per run:
   settledMs      Menu click → end of the last long main-thread task before two
                  quiet seconds: some loaders return before they draw, some keep
                  paginating after they return, so compare THIS on a long file
-  heapBytes      JSHeapUsedSize of the top page (Chrome DevTools Protocol), 2 s
-                 after the page reported the load (which it does after two quiet
-                 seconds, or after 180 s of a main thread that never went quiet):
-                 JavaScript objects only, no WebAssembly memory
+  heapBytes      JSHeapUsedSize of the top page (Chrome DevTools Protocol) after a forced
+                 garbage collection, once the page reported the load (which it does after
+                 two quiet seconds, or after 180 s of a main thread that never went quiet)
+                 and its page count stopped changing: JavaScript objects only, no
+                 WebAssembly memory. heapBytesBeforeGc is the reading just before the
+                 collection, which is what the files up to 2026-11-18 call heapBytes
+  pagesSettledMs Menu click → the page count last changed (read until it is the same for
+                 5 s): when an engine that paginates after "loaded" finished doing so.
+                 Absent when the count was already final at its first reading
   rendererRss    resident memory of every renderer process of this Chrome
-                 (`ps`), same moment: this one does include WebAssembly memory,
+                 (`ps`), two seconds after the page count settled and before the forced
+                 collection: this one does include WebAssembly memory,
                  canvases and the DOM, and cross-origin frames.
                  rendererRssReady is the same reading before the sample was
                  opened, one second after the editor was ready: an editor is
@@ -31,7 +37,8 @@ Per run:
                  sample, so for it the difference is what REPLACING that cost
   gpuRss         resident memory of Chrome's GPU process (WordCraft draws there)
   bytes/requests response bytes and finished requests, all frames, whole run
-  pages          how many pages the engine shows, where the DOM says (see PAGES)
+  pages          how many pages the engine shows, where the DOM says (see PAGES), once the
+                 count has stopped changing
   load1, cores   the machine's 1-minute load average when the run started, and its
                  core count: a timing taken on a busy machine is slower than the engine
 
@@ -48,6 +55,9 @@ from measure_lib import chrome_args, chrome_memory_of, chrome_note, close_contex
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
+# The page count is final when it has not changed for this long; the wait gives up after PAGES_WAIT_S.
+PAGES_QUIET_S = 5
+PAGES_WAIT_S = 180
 EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft", "react-docx", "univer", "opendoc", "betteroffice", "onlyoffice"]
 VIEWERS = ["word-online", "google-viewer", "apryse", "nutrient"]
 ALL = EDITORS + VIEWERS
@@ -152,6 +162,7 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
             await asyncio.sleep(1.0)
             out["rendererRssReady"] = chrome_memory(profile)["rendererRss"]
             # Viewers open the rich sample themselves; clicking loads it again, measured the same way.
+            clicked = time.monotonic()
             await page.evaluate("(s) => document.querySelector(s).click()", SAMPLES[sample])
             loaded = await until(
                 """() => {
@@ -171,16 +182,52 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
                 out["settledMs"] = loaded["settledMs"]
             if loaded.get("settleTimedOut"):
                 out["settleTimedOut"] = True  # still busy when the page stopped waiting: no settled time
+            # The page count, read until it has not changed for PAGES_QUIET_S: OnlyOffice reports the
+            # document ready and paginates on (52, 103 … 500 pages), and one reading two seconds
+            # after "loaded" published 409 pages for a 500-page file (2026-11-18).
+            pages, changes, same_since, gave_up = None, -1, time.monotonic(), time.monotonic() + PAGES_WAIT_S
+            while True:
+                try:
+                    now_pages = (await asyncio.wait_for(page.evaluate(PAGES), 60)).get(slug)
+                except Exception:
+                    # Busy (an engine laying out holds the main thread): asked again, until the wait
+                    # gives up. A first reading that fails is not "this engine has no pages".
+                    if time.monotonic() > gave_up:
+                        break
+                    await asyncio.sleep(0.5)
+                    continue
+                if now_pages != pages:
+                    pages, changes, same_since = now_pages, changes + 1, time.monotonic()
+                if not pages or time.monotonic() - same_since >= PAGES_QUIET_S:
+                    break
+                if time.monotonic() > gave_up:
+                    out["pagesStillChanging"] = True  # the count below is what it had reached, not the document's
+                    break
+                await asyncio.sleep(0.5)
+            if pages:
+                out["pages"] = pages
+                if changes > 0:
+                    # The count moved after the page said "loaded": click → its last change is when
+                    # the layout ended, which settledMs does not see when the work comes in slices
+                    # shorter than a long task. Absent when the first reading was already final.
+                    out["pagesSettledMs"] = round((same_since - clicked) * 1000)
             await asyncio.sleep(2.0)  # trailing requests (the page already waited for two quiet seconds)
             out.update(chrome_memory(profile))
             cdp = await ctx.new_cdp_session(page)
             await cdp.send("Performance.enable")
             m = {x["name"]: x["value"] for x in (await asyncio.wait_for(cdp.send("Performance.getMetrics"), 60))["metrics"]}
-            out["heapBytes"] = int(m.get("JSHeapUsedSize", 0))
             out["domNodes"] = int(m.get("Nodes", 0))
-            pages = (await asyncio.wait_for(page.evaluate(PAGES), 60)).get(slug)
-            if pages:
-                out["pages"] = pages
+            # The heap twice: as it is, and after a forced collection. An engine that has just
+            # converted a file holds garbage: canvas-editor read 1,281 MiB two seconds after it
+            # rendered 500 pages and 702 MiB once Chrome had collected (2026-11-20).
+            out["heapBytesBeforeGc"] = int(m.get("JSHeapUsedSize", 0))
+            try:
+                await asyncio.wait_for(cdp.send("HeapProfiler.collectGarbage"), 120)
+                m = {x["name"]: x["value"] for x in (await asyncio.wait_for(cdp.send("Performance.getMetrics"), 60))["metrics"]}
+                out["heapBytes"] = int(m.get("JSHeapUsedSize", 0))
+            except Exception as e:
+                out["heapBytes"] = out["heapBytesBeforeGc"]
+                out["heapNotCollected"] = f"{type(e).__name__}: {e}"[:160]  # the figure is then the uncollected one
         except StopIteration:
             pass
         except Exception as e:
