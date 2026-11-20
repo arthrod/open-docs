@@ -438,7 +438,7 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | react-docx (measured 2026-11-20) | 37 · 34 | 6.89 s · 42.0 s | 1.36 s · 1.89 s | 0.011 · 0.018 | 214 ms · 2.20 s | 3.93 s · 14.6 s | 96 | 100 | 90 | 85/37/37/36/fail · 30/39/36/32/fail |
 | Univer (measured 2026-11-20) | 61 · 60 | 448 ms · 1.66 s | 10.2 s · 10.4 s | 0.005 · 0.02 | 448 ms · 1.66 s | 3.77 s · 11.6 s | 83 | 100 | 90 | fail/62/fail/fail/61 · fail/60/fail/fail/fail |
 | OpenDoc (measured 2026-11-20) | 59 · 59 | 212 ms · 1.51 s | 8.46 s · 12.3 s | 0.076 · 0.044 | 212 ms · 1.51 s | 5.43 s · 28.7 s | 100 | 100 | 90 | 59/59/58/58/60 · 59/56/fail/60/60 |
-| BetterOffice (measured 2026-11-20) | n/a · 92 | n/a · 905 ms | n/a · 92 ms | n/a · 0.026 | n/a · 905 ms | n/a · 7.22 s | n/a | n/a | n/a | fail/fail/fail/fail/fail · 94/68/92/92/86 |
+| BetterOffice (measured 2026-11-20) | 95 · 91 | 246 ms · 906 ms | 59 ms · 138 ms | 0.001 · 0.026 | 246 ms · 906 ms | 2.41 s · 7.36 s | 96 | 100 | 90 | 95/88/97/94/97 · 92/91/88/91/93 |
 | OnlyOffice (CryptPad build) (measured 2026-11-20) | 100 · 100 | 214 ms · 773 ms | 0 ms · 0 ms | 0 · 0 | 214 ms · 773 ms | 436 ms · 2.38 s | 100 | 96 | 90 | 100/100/100/100/100 · 100/100/100/100/100 |
 <!-- lighthouse:end -->
 
@@ -466,9 +466,11 @@ Read these with care:
   inside the page, and Lighthouse's paint and blocking-time figures are the top page's: OnlyOffice scores 100
   with a blank document and with the 500 pages alike, while it downloads 18 MB and paginates for seconds. Read
   both rows as the frame page, like Microsoft's and Google's viewers.
-- **BetterOffice has no desktop score on the 500 pages**: in all five desktop analyses the sample failed to open
-  on Google's machine (the page's own error is in the row), while the five mobile analyses scored 68 to 94.
-  Not looked into.
+- **BetterOffice's row on the 500 pages was taken twice.** First, three of the five desktop analyses had no
+  score: the sample failed to open on Google's machine with "Document was replaced", which the engine raises
+  when a document's identity moves under a wait, with nobody replacing anything. The adapter now takes the
+  wait up again (`editors/betteroffice/main.ts`), and the row was analysed again the same day: five of five
+  on desktop (88 to 97) and on mobile (88 to 93).
 
 ## The assistant
 

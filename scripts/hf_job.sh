@@ -62,7 +62,16 @@ export DISPLAY=:99
 sleep 2
 # A step that fails or runs out of time does not stop the job (the next one may still measure),
 # but it is written down, and the job ends with a non-zero status.
-step() { local t=$1; shift; echo "== $(date -u +%T) $*"; timeout "$t" "$@"; local rc=$?; echo "== rc=$rc $(cat /proc/loadavg)"; [ $rc = 0 ] || echo "rc=$rc $*" >> /tmp/failed; return 0; }
+# The machine is a slice of a shared host, and the host can be busy with other people's work: on
+# 2026-11-20 its load average was 100 to 300 on 64 cores (5 to 15 on the earlier passes), a page
+# took twice to five times as long, and a step ran out of time after 9 of 51 runs. Nothing is
+# measured on such a host: a step waits up to ten minutes for the 1-minute load to come under
+# MAX_LOAD, and is skipped and written down as failed when it does not.
+quiet() { local i; for i in $(seq 60); do awk -v m="${MAX_LOAD:-20}" '{ exit !($1 <= m) }' /proc/loadavg && return 0; sleep 10; done; return 1; }
+step() { local t=$1; shift; quiet || { echo "== $(date -u +%T) SKIPPED, the host is busy ($(cat /proc/loadavg)): $*"; echo "busy host: $*" >> /tmp/failed; return 0; }; echo "== $(date -u +%T) $*"; timeout "$t" "$@"; local rc=$?; echo "== rc=$rc $(cat /proc/loadavg)"; [ $rc = 0 ] || echo "rc=$rc $*" >> /tmp/failed; return 0; }
+# A host that is busy before anything is measured ends the job at once (status 3): start another,
+# which lands on another host or at another time.
+quiet || { echo "BUSY HOST: load $(cat /proc/loadavg) on $(nproc) cores, nothing measured"; exit 3; }
 PW="uv run -q --with playwright python -I"
 smoke() {
   mkdir -p /tmp/out
