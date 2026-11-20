@@ -43,13 +43,17 @@ const FONTS = packagedFonts();
  * A time measured through this includes those QUIET_MS.
  */
 const QUIET_MS = 300;
-async function laidOut(timeoutMs = 180_000): Promise<void> {
+async function laidOut(replaced?: string, timeoutMs = 180_000): Promise<void> {
   const start = performance.now();
+  // After a load(), the snapshot is the OLD document's until the editor takes the new one up:
+  // nothing counts as done before the document handle has changed (or a second has passed, for
+  // a build whose handle does not).
+  const isNew = () => replaced === undefined || handleKey() !== replaced || performance.now() - start > 1000;
   let clearSince: number | null = null;
   for (;;) {
     const snap = ref?.snapshot?.() as { isLoading?: boolean; isOpening?: boolean; parseError?: string | null; page?: { total?: number } } | undefined;
     if (snap?.parseError) throw new Error(`docx-editor.dev could not open the document: ${snap.parseError}`);
-    const clear = !!snap && !snap.isLoading && !snap.isOpening && (snap.page?.total ?? 0) > 0 &&
+    const clear = isNew() && !!snap && !snap.isLoading && !snap.isOpening && (snap.page?.total ?? 0) > 0 &&
       !document.querySelector(".docx-editor__loading-spinner");
     const now = performance.now();
     if (!clear) clearSince = null;
@@ -59,6 +63,14 @@ async function laidOut(timeoutMs = 180_000): Promise<void> {
     await new Promise((res) => setTimeout(res, 50));
   }
 }
+
+const handleKey = (): string => {
+  try {
+    return JSON.stringify(ref?.getDocumentHandle?.() ?? null);
+  } catch {
+    return "";
+  }
+};
 
 function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "blank"; view: boolean }) {
   const r = useRef<EditorRef | null>(null);
@@ -117,10 +129,9 @@ window.od.register({
 
   async load(bytes: Uint8Array) {
     if (!ref) throw new Error("docx-editor.dev not mounted");
+    const before = handleKey();
     ref.load(bytes.slice(0));
-    // One frame, so the snapshot is the new document's and not the one being replaced.
-    await new Promise((res) => requestAnimationFrame(() => res(null)));
-    await laidOut();
+    await laidOut(before);
   },
 
   async getMarkdown() {

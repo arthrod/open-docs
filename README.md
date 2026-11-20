@@ -467,7 +467,7 @@ Read these with care:
   with a blank document and with the 500 pages alike, while it downloads 18 MB and paginates for seconds. Read
   both rows as the frame page, like Microsoft's and Google's viewers.
 - **BetterOffice's row on the 500 pages was taken twice.** First, three of the five desktop analyses had no
-  score: the sample failed to open on Google's machine with "Document was replaced", which the engine raises
+  score (the other two scored 89 and 96, and the row showed none: a row with a failed analysis shows its error): the sample failed to open on Google's machine with "Document was replaced", which the engine raises
   when a document's identity moves under a wait, with nobody replacing anything. The adapter now takes the
   wait up again (`editors/betteroffice/main.ts`), and the row was analysed again the same day: five of five
   on desktop (88 to 97) and on mobile (88 to 93).
@@ -604,7 +604,7 @@ Run on the live site on 2026-11-20, in Chrome on a Mac, once per engine:
 | docen | 10 of 10 | all | all (after the reader fix below; the run before it failed the code block) |
 | Docxodus | 10 of 10 | all | all but two: its Markdown parser reads ` ``a`b`` ` wrongly, and its table builder takes plain text, so a link in a cell is lost |
 | folio | 10 of 10 | all | all but two: its `fromMarkdown` writes a code block as a Courier paragraph (as it writes inline code), and it adds a `/` to a bare-host link |
-| Plate | 9 of 10: its own Export writes inline code as a grey highlight in the body face, not a monospace one | all | all |
+| Plate | 9 of 10: its own Export button writes inline code as a grey highlight in the body face, not a monospace one (that is Plate's exporter as shipped; the preparation below is applied to the assistant's Markdown for other engines, not to Plate's Export) | all | all |
 | WordCraft | 10 of 10 | all but the quote: its paste makes a quote an indented Normal paragraph, which nothing tells from an indented paragraph | all but the quote; and the first paragraph kept the Heading 1 of the document it replaced (the mapping probe ran before it on the same page): **not looked into** |
 | canvas-editor | 2 of 10 (the two headings): its `plugin-docx` writes no bold, italic, code, link, list or quote this probe recognises | headings and lists only | table only |
 | Univer | not applicable: no .docx export | not applicable | fails seven of eight: it is handed text, so code, quotes, tables and links do not exist in it |
@@ -618,7 +618,7 @@ face, a quote as a bordered indent with no style, a code block as one paragraph
 with its lines run together, and a line break in a table cell as three
 paragraphs. The reader knew none of that, so **every assistant turn stripped
 code and quotes from the document** on docx-editor.dev, Docxodus and the five
-engines added on 2026-11-18. Found by running the probes on the new five. Fixed
+engines added on 2026-11-18 (WordCraft's lost quote is its own paste, and stays). Found by running the probes on the new five. Fixed
 on both sides, without going back to a hand-written writer:
 
 - [`lib/plate-for-word.ts`](lib/plate-for-word.ts) prepares Plate's nodes before

@@ -196,9 +196,11 @@ Deno.test("docx: a style the document names and does not define is read by its i
     `<w:p><w:pPr><w:pStyle w:val="Quote"/></w:pPr>${run("Same words")}</w:p>` +
       `<w:p>${run("use ")}${run("a`b", `<w:rStyle w:val="Code"/>`)}</w:p>` +
       `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run("block code")}</w:p>` +
-      `<w:p><w:pPr><w:pStyle w:val="Mystery"/></w:pPr>${run("plain")}</w:p>`,
+      `<w:p><w:pPr><w:pStyle w:val="Mystery"/></w:pPr>${run("plain")}</w:p>` +
+      `<w:p><w:pPr><w:pStyle w:val="QuotesContinue"/></w:pPr>${run("not a quote")}</w:p>` +
+      `<w:p>${run("label", `<w:rStyle w:val="Barcode"/>`)}</w:p>`,
   ));
-  assertEquals(md.trim(), "> Same words\n\nuse ``a`b``\n\n```\nblock code\n```\n\nplain");
+  assertEquals(md.trim(), "> Same words\n\nuse ``a`b``\n\n```\nblock code\n```\n\nplain\n\nnot a quote\n\nlabel");
 });
 
 Deno.test("docx: blank code paragraphs at the ends of a block are padding; one inside is a line", () => {
@@ -209,4 +211,20 @@ Deno.test("docx: blank code paragraphs at the ends of a block are padding; one i
     "word/styles.xml": strToU8(styles),
   });
   assertEquals(docxToMarkdown(bytes).trim(), "```\na = 1\n\nb = 2\n```\n\nafter");
+});
+
+Deno.test("docx: review of the quote and code rules: shading switched off, a bordered code style, a spacer between blocks", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string, extra = "") => `<w:p><w:pPr><w:pStyle w:val="Code"/>${extra}</w:pPr>${run(t)}</w:p>`;
+  const body =
+    // Shading that says "none" is not shading.
+    `<w:p>${run("FILE", `<w:shd w:val="nil" w:fill="EEEEEE"/><w:rFonts w:ascii="Courier New"/>`)}</w:p>` +
+    // A code style that also draws a left rule is code, not a quote.
+    code("a = 1", `<w:ind w:left="284"/><w:pBdr><w:left w:val="single" w:sz="18"/></w:pBdr>`) +
+    // An empty paragraph between two code blocks keeps them two.
+    `<w:p/>` + code("b = 2") +
+    // Numbering switched off on a bordered, indented paragraph: not a quote.
+    `<w:p><w:pPr><w:numPr><w:numId w:val="0"/></w:numPr><w:ind w:left="284"/><w:pBdr><w:left w:val="single"/></w:pBdr></w:pPr>${run("list-shaped")}</w:p>`;
+  const bytes = zipSync({ "word/document.xml": strToU8(`<w:document ${W}><w:body>${body}</w:body></w:document>`), "word/styles.xml": strToU8(styles) });
+  assertEquals(docxToMarkdown(bytes).trim(), "`FILE`\n\n```\na = 1\n```\n\n```\nb = 2\n```\n\nlist-shaped");
 });

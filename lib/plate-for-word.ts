@@ -31,7 +31,8 @@ export function forWord(nodes: any[], inCell = false): any[] {
       }
       return lines.map((children) => ({ ...n, children: children.length ? children : [{ text: "" }] }));
     }
-    if (n?.type === "code_block" && Array.isArray(n.children) && n.children.length > 1) {
+    // deno-lint-ignore no-explicit-any
+    if (n?.type === "code_block" && Array.isArray(n.children) && n.children.length > 1 && n.children.every((l: any) => l?.type === "code_line")) {
       // deno-lint-ignore no-explicit-any
       return n.children.map((line: any) => ({
         ...n,

@@ -75,7 +75,9 @@ function chain(styles: Map<string, StyleInfo>, id: string | null | undefined): S
       // A style the document names and does not define: its id stands for its name. Docxodus's
       // Markdown parser writes pStyle "Quote" and rStyle "Code" into a document that defines
       // neither (seen 2026-11-20), and the id is all that says what the paragraph is.
-      if (n === 0) out.push({ name: cur } as StyleInfo);
+      // Only Word's own ids for a quote and for code: any other undefined id says nothing
+      // ("Barcode" is not code).
+      if (n === 0 && /^(Quote|IntenseQuote|Code|SourceCode|HTMLPreformatted|HTMLCode|VerbatimChar)$/.test(cur)) out.push({ name: cur } as StyleInfo);
       break;
     }
     out.push(s);
@@ -243,7 +245,8 @@ function paragraphRuns(p: Element, ctx: Ctx): Run[] {
   return merged;
 }
 
-const filled = (shd: Element | undefined) => !!shd && !/^(auto|ffffff)?$/i.test(wAttr(shd, "fill") ?? "");
+const filled = (shd: Element | undefined) =>
+  !!shd && !/^(nil|none)$/i.test(wAttr(shd, "val") ?? "") && !/^(auto|ffffff)?$/i.test(wAttr(shd, "fill") ?? "");
 
 /** Every run that has text is in a monospace face, on a shaded background (its own or the paragraph's). */
 function shadedMono(p: Element, pPr: Element | undefined): boolean {
@@ -317,20 +320,22 @@ function paragraphBlockOf(p: Element, ctx: Ctx): Block {
     const allItalic = runs.every((r) => !r.text.trim() || r.italic);
     return { kind: "quote", runs: allItalic ? runs.map((r) => ({ ...r, italic: false })) : runs };
   }
-  // A quote with no style: a left border and a left indent, which is how an HTML blockquote
-  // arrives (Plate's exporter writes exactly that, and it is what the assistant's own
-  // Markdown becomes). Either alone is an indented or a bordered paragraph.
-  const left = kid(kid(pPr, "pBdr"), "left");
-  const ind = kid(pPr, "ind");
-  if (
-    left && !/^(none|nil)$/.test(wAttr(left, "val") ?? "none") && Number(wAttr(ind, "left") ?? wAttr(ind, "start") ?? 0) > 0 && text.trim()
-  ) return { kind: "quote", runs };
   // Code blocks come from a paragraph style, or from a paragraph whose every run is monospace
   // on a shaded background (a <pre> through Plate's exporter). A paragraph that is one inline
   // code span (monospace runs, not shaded) stays a paragraph.
   if (names.some((n) => /^(code|html preformatted|source code|verbatim)/.test(n)) || shadedMono(p, pPr)) {
     return { kind: "code", runs: runs.map((r) => ({ ...r, code: false })) };
   }
+  // A quote with no style: a left border and a left indent, which is how an HTML blockquote
+  // arrives (Plate's exporter writes exactly that, and it is what the assistant's own
+  // Markdown becomes). Either alone is an indented or a bordered paragraph; a paragraph in a
+  // code style or with any numbering (even switched off) is what that says first.
+  const left = kid(kid(pPr, "pBdr"), "left");
+  const ind = kid(pPr, "ind");
+  if (
+    !numPr && left && !/^(none|nil)$/.test(wAttr(left, "val") ?? "none") &&
+    Number(wAttr(ind, "left") ?? wAttr(ind, "start") ?? 0) > 0 && text.trim()
+  ) return { kind: "quote", runs };
   return { kind: "p", align: align as Block["align"], runs };
 }
 
@@ -379,12 +384,9 @@ export function docxToMarkdown(bytes: Uint8Array): string {
   const flush = () => {
     // Empty paragraphs are spacing, not content; an empty numbered item still
     // takes its number.
-    // (A blank code line is content: it is a line of the block.)
-    const kept = pending.filter((b, i) =>
-      b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()) ||
-      (b.kind === "code" && pending[i - 1]?.kind === "code" && pending[i + 1]?.kind === "code")
-    );
-    const blocks = joinCode(kept);
+    // Code lines are joined first, while an empty paragraph between two blocks still keeps
+    // them apart (and a blank code line is still a line of its block).
+    const blocks = joinCode(pending).filter((b) => b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()));
     const md = blocks.length ? blocksToMarkdown(blocks, lists) : "";
     if (md) parts.push(md);
     pending = [];

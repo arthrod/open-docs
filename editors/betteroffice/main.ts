@@ -58,7 +58,8 @@ async function layoutDone(timeoutMs = 60_000): Promise<void> {
       return;
     } catch (err) {
       if (attempt >= 4 || !/Document was replaced/.test(String((err as Error)?.message ?? err))) throw err;
-      await new Promise((res) => requestAnimationFrame(() => res(null)));
+      // A frame, or 100 ms where frames do not come (a tab in the background).
+      await new Promise((res) => { requestAnimationFrame(() => res(null)); setTimeout(res, 100); });
     }
   }
 }

@@ -204,12 +204,24 @@ async function paginated(gone: () => boolean, timeoutMs = 180_000): Promise<void
   };
   if (pending() === undefined) return;
   const start = performance.now();
+  const count = (): number => {
+    try {
+      return (api() as unknown as { getCountPages?: () => number }).getCountPages?.() ?? 0;
+    } catch {
+      return 0;
+    }
+  };
   let idle = 0;
+  let pages = count();
   while (!gone()) {
     const busy = pending();
     if (busy === undefined) return;
-    idle = busy ? 0 : idle + 1;
-    if (idle >= 2) return;
+    const now = count();
+    // Four readings (200 ms) with no timer and the same page count: a slow host can put two
+    // readings into the gap between two slices.
+    idle = busy || now !== pages ? 0 : idle + 1;
+    pages = now;
+    if (idle >= 4) return;
     if (performance.now() - start > timeoutMs) throw new Error(`OnlyOffice was still paginating after ${Math.round(timeoutMs / 1000)} s`);
     await new Promise((res) => setTimeout(res, 50));
   }
