@@ -67,17 +67,17 @@ window.od.register({
   },
 
   // Text only, through this site's reader: Univer's open-source packages have no .docx reader.
-  // deno-lint-ignore require-await
+  // deno-lint-ignore require-await -- the Editor contract is async; nothing here waits
   async load(bytes: Uint8Array) {
     show(docxToMarkdown(bytes));
   },
 
-  // deno-lint-ignore require-await
+  // deno-lint-ignore require-await -- the Editor contract is async; nothing here waits
   async getMarkdown() {
     return univerBodyToMarkdown(doc().getBody(), HEADINGS);
   },
 
-  // deno-lint-ignore require-await
+  // deno-lint-ignore require-await -- the Editor contract is async; nothing here waits
   async applyMarkdown(markdown: string) {
     show(markdown);
   },
