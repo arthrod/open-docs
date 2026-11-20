@@ -14,13 +14,15 @@ A browser tab does its work on one main thread. While that thread is busy, the p
 
 > On a short file, look at Loaded. On the 500-page file, look at Settled.
 
-Its blind spot: we only see work in chunks of 50 milliseconds or more, and only on the main thread. An editor that works in very small slices, in a background worker or on the graphics card can look settled while it is still drawing. That is why the page count is part of the test: pages that keep arriving give it away.
+Its blind spot: we only see work in chunks of 50 milliseconds or more, and only on the main thread. An editor that works in very small slices, on a second thread in the background (a "worker") or on the graphics card can look settled while it is still drawing. That is why the page count is part of the test: pages that keep arriving give it away.
 
 ## Pages shown: "does it break pages where Word does?"
 
 Word counts 500 pages in our long file. An editor that shows 500 breaks pages the way Word does, or close to it. An editor that shows 661 is laying the text out differently, and every page reference in that document is now off.
 
 The file is built so that small font differences do not change the count: each chapter starts on a new page and fills nine and a half pages. To land on another total, an editor has to be off by a lot.
+
+One editor keeps only the pages near the one you are looking at, so its number is a count of what is on screen. The notes under the table say so.
 
 Some editors do not show pages at all. They show one long scroll, like a web page. The table says "n/a" for those. That is a design choice, not a failure, but it matters if your work cites pages.
 
@@ -46,7 +48,9 @@ Every figure is the middle value (the median) of three runs. Each run starts a f
 
 ## Download size: "how much does a visitor fetch?"
 
-How many megabytes of code, fonts and data the browser downloads before the editor works. On office Wi-Fi, 20 MB is a short wait. On a phone connection it can be half a minute before anything appears.
+A warning about names first: in the first table on the home page, the column for this is also called "Loaded". There it is a size in megabytes. In the sample tables, Loaded is a time.
+
+It is how many megabytes of code, fonts and data the browser downloads before the editor works. On office Wi-Fi, 20 MB is a short wait. On a phone connection it can be half a minute before anything appears.
 
 ## The PageSpeed scores: "what would Google say?"
 
@@ -55,7 +59,7 @@ These come from Google's public PageSpeed test, which loads the page on Google's
 ## Three things to remember
 
 1. **The seconds belong to our machine.** We test on a rented machine with no graphics card. Your laptop will be faster. What carries over is the order: an editor that is five times slower here will be slower on your machine too.
-2. **A missing number is not a zero.** "n/a" means we could not take that reading, and the table says why.
+2. **A missing number is not a zero.** "n/a" means we could not take that reading. The notes with each table say why.
 3. **One number never tells the story.** An editor can be the fastest to load and the worst at tracked changes. Look at the row, not the cell.
 
 Next: [run the test yourself](/blog/test-an-editor-yourself).

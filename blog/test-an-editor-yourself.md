@@ -14,7 +14,7 @@ Open each file in Microsoft Word first. Note the page count, and look at the red
 
 ## Step 2: start clean
 
-Open a new Incognito window in Chrome (`Ctrl+Shift+N`, or `Cmd+Shift+N` on a Mac). An Incognito window starts with an empty cache, like a first-time visitor.
+Open a new Incognito window in Chrome (`Ctrl+Shift+N`, or `Cmd+Shift+N` on a Mac). An Incognito window starts with an empty cache. The cache is where a browser keeps files it has already downloaded, so an empty one means you see what a first-time visitor sees.
 
 Open the developer tools (`F12`, or `Cmd+Option+I`) and click the **Network** tab. Now load the editor you want to test.
 
@@ -55,7 +55,7 @@ Also note the page count the editor shows. Word says 500.
 
 ## Step 5: read the memory
 
-With the 500-page file still open, click the **Memory** tab. Click the bin icon ("Collect garbage") first, so you do not count memory the browser was about to free. Then read the size shown for the page.
+With the 500-page file still open, click the **Memory** tab. Click the bin icon ("Collect garbage") first, so you do not count memory the browser was about to free. Under "Select JavaScript VM instance" the page is listed with a size beside it. That is the memory its code is holding.
 
 A few hundred megabytes is normal for a document this size. More than a gigabyte will be a problem on a phone or a busy laptop.
 
@@ -77,7 +77,7 @@ And **close your other tabs and programs first**. A busy machine makes every edi
 
 ## Let the script do it
 
-Everything above is what our script does, without the human. You need [Google Chrome](https://www.google.com/chrome/) and [uv](https://docs.astral.sh/uv/).
+Everything above is what our script does, without the human. This part is for people who are at ease with a terminal (the window where you type commands). You need [Google Chrome](https://www.google.com/chrome/) and [uv](https://docs.astral.sh/uv/), a free tool that runs Python programs.
 
 ```sh
 git clone https://github.com/arthrod/open-docs
@@ -86,7 +86,7 @@ uv run --with playwright python -I scripts/measure_samples.py all showcase,redli
   --out .scratch/samples/today.json --latest .scratch/samples/latest.json --shots .scratch/shots
 ```
 
-The three arguments are: which editors (`all`, or a list such as `superdoc,plate`), which samples, and how many runs. The script starts a fresh Chrome for every run, clicks the same menu button a visitor would, and writes every reading to the file you named, with a screenshot of each result.
+The three arguments are: which editors (`all`, or a list such as `superdoc,plate`), which samples, and how many runs. The script starts a fresh Chrome for every run, clicks the same menu button a visitor would, and writes every reading to the file you named, with a screenshot of the first run of each.
 
 The figures you get are your machine's. They will not match ours, and they should not: compare the editors with each other, on one machine.
 

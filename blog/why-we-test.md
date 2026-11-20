@@ -9,9 +9,9 @@ A Word file is not a picture of a page. It is a set of instructions: this style,
 Here is what that looks like in practice:
 
 - **Tracked changes disappear or get accepted.** You open a redline, and the deleted clause is simply gone, or the inserted one looks like it was always there. Nobody told you.
-- **Pages move.** A brief that is 500 pages in Word is 409 pages, or 661, in the browser. Every "see page 212" now points at the wrong page.
+- **Pages move.** A file that is 500 pages in Word is 661 pages in the browser. Every "see page 212" now points at the wrong page.
 - **The long file freezes the tab.** A three-page letter opens in a blink. The 500-page agreement takes twenty seconds, or the page stops answering.
-- **The file comes back damaged.** You edit, export, and Word offers to "repair" the result.
+- **The file comes back changed.** You edit one word and export. The file you get back has lost the names and dates on its tracked changes, or some of its formatting.
 - **The page is heavy.** Some editors download 2 MB before they show anything. Some download more than 20 MB. On a phone, that is the difference between working and not.
 
 None of these shows up in a product demo, because the demo uses a file the editor is good at.
@@ -32,9 +32,11 @@ Then a script opens each file in each editor, in a real copy of Google Chrome, t
 
 ## Three rules we hold ourselves to
 
-**The same test for everyone.** Same files, same machine, same browser, same script. An editor is never given an easier file or a warmer cache.
+**The same test for everyone.** Same files, same kind of machine, same browser, same script. Every run starts in a fresh browser that has never seen the page, so no editor gets a head start.
 
-**Everything is public.** The files, the scripts and every single run are in the repository. You do not have to believe our tables: you can run the test yourself, and [this post shows how](/blog/test-an-editor-yourself).
+There are two exceptions, and both are marked on the site. Two editors cannot read tracked changes at all, so we rewrite the redline for them as underlined and struck-through text: otherwise the changed words would simply vanish. And one editor has no Word reader of its own, so it is given the text of each file, not the file.
+
+**Everything is public.** The files, the scripts and every single run are published. You do not have to believe our tables: you can run the test yourself, and [this post shows how](/blog/test-an-editor-yourself).
 
 **We say what we cannot see.** Some numbers are easy to take and hard to trust. When a figure looks too good, or stands far from the others, we look at it again by hand. We have been wrong more than once, and [we wrote that down too](/blog/what-went-wrong).
 

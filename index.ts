@@ -83,6 +83,7 @@ app.get("/lib/*", (c) => serveFile(c.req.path));
 app.get("/", (c) => c.html(landingPage(editors)));
 
 app.get("/blog", (c) => c.html(blogIndex()));
+app.get("/blog/", () => new Response(null, { status: 302, headers: { Location: "/blog" } }));
 app.get("/blog/:slug", async (c) => {
   const html = await blogPost(c.req.param("slug"));
   return html ? c.html(html) : c.notFound();

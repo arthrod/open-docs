@@ -108,7 +108,7 @@ function page(title: string, description: string, path: string, body: string): s
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}">
-<meta property="og:type" content="article"><link rel="canonical" href="https://editors.benchmarks.law${path}">
+<meta property="og:type" content="${path === "/blog" ? "website" : "article"}"><link rel="canonical" href="https://editors.benchmarks.law${path}">
 <link rel="icon" href="${FAVICON}">
 <style>${CSS}</style></head>
 <body>
