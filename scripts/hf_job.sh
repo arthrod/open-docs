@@ -13,8 +13,9 @@
 # The machine is a slice of a shared host, and the host is often busy with other people's work.
 # Nothing is timed on a busy host: every run of every script waits until the host's 1-minute load
 # average is under MAX_LOAD (48 unless given; scripts/measure_lib.py quiet_host), for as long as
-# it takes within the step's allowance. Waiting costs almost nothing, so the timeout is long:
-# smoke and probe 30m, anything else 48h.
+# long as WAIT_MIN minutes (45 unless given; smoke and probe 3). When that runs out the job ends
+# with status 3, so that the next one can land on another host. Timeouts that fit: smoke and
+# probe 30m, anything else 12h.
 #
 # A pass can be made by several jobs. With TAG given, result files go to the private dataset
 # arthrod/open-docs-measurements under <date>-<TAG>/<site>/ after every step that finished, with
@@ -34,7 +35,7 @@ exec 3>&1
 # The load a run may start under, and how long a step may wait for it in all (minutes), on top
 # of the time its runs take. Read by the measuring scripts (measure_lib.quiet_host).
 export OD_MAX_LOAD=${MAX_LOAD:-48}
-case "$SITE" in smoke|probe) WAIT_MIN=${WAIT_MIN:-3} ;; *) WAIT_MIN=${WAIT_MIN:-720} ;; esac
+case "$SITE" in smoke|probe) WAIT_MIN=${WAIT_MIN:-3} ;; *) WAIT_MIN=${WAIT_MIN:-45} ;; esac
 export OD_LOAD_WAIT_S=$((WAIT_MIN * 60))
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq >/dev/null && apt-get install -y -qq git xvfb procps curl >/dev/null || { echo "apt failed"; exit 1; }
@@ -99,6 +100,10 @@ step() {
   timeout "$(((t + WAIT_MIN) * 60))" "$@"; local rc=$?
   echo "== rc=$rc $(cat /proc/loadavg)" >&3
   if [[ $rc = 0 ]]; then touch /tmp/ran /tmp/ran-any; [[ $name = - ]] || echo "$name" >> "$STATE"; else echo "rc=$rc $name: $*" >> /tmp/failed; fi
+  # Status 4: a run waited WAIT_MIN minutes and the host never went quiet. The job ends here
+  # (status 3) instead of waiting as long before every step that is left: the next job lands on
+  # another host, or at another time, and takes up from the steps that finished.
+  if [[ $rc = 4 && $name != - ]]; then echo "BUSY HOST: $(cat /proc/loadavg) on $(nproc) cores for $WAIT_MIN minutes; ending this job" >&3; exit 3; fi
   return 0
 }
 echo "starting under load $(cat /proc/loadavg); a run starts under $OD_MAX_LOAD, a step may wait $WAIT_MIN minutes in all"
