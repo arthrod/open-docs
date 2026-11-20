@@ -15,7 +15,7 @@ import statistics
 import subprocess
 import time
 
-SAMPLE_KEYS = ("startupMs", "loadMs", "settledMs", "heapBytes", "rendererRssReady", "rendererRss", "gpuRss", "domNodes", "pages", "bytes", "requests")
+SAMPLE_KEYS = ("startupMs", "loadMs", "settledMs", "heapBytes", "heapBytesBeforeGc", "rendererRssReady", "rendererRss", "gpuRss", "domNodes", "pages", "pagesSettledMs", "bytes", "requests")
 LH_CATS = {"performance": "performance", "accessibility": "accessibility", "best-practices": "bestPractices", "seo": "seo"}
 LH_AUDITS = {"first-contentful-paint": "fcpMs", "largest-contentful-paint": "lcpMs", "total-blocking-time": "tbtMs", "cumulative-layout-shift": "cls", "speed-index": "speedIndexMs"}
 LH_KEYS = [*LH_CATS.values(), *LH_AUDITS.values()]
@@ -107,6 +107,10 @@ def sample_row(xs: list[dict]) -> dict:
         **{k: median(ok, k) for k in SAMPLE_KEYS},
         "rendererGrowth": int(statistics.median(growth)) if growth else None,
         "settleTimedOut": sum(1 for x in ok if x.get("settleTimedOut")),
+        # Runs whose page count was still moving when the wait gave up, and runs whose heap could
+        # not be collected first: the row's pages and heap are then not what they are called.
+        "pagesStillChanging": sum(1 for x in ok if x.get("pagesStillChanging")),
+        "heapNotCollected": sum(1 for x in ok if x.get("heapNotCollected")),
         "runs": [x.get("loadMs") for x in xs],
         "failed": next((x.get("error") or x.get("blocked") for x in xs if "loadMs" not in x), None),
         "incomplete": next((x["error"] for x in ok if x.get("error")), None),
@@ -155,6 +159,8 @@ ENGINE_FAILED = "the engine failed on Google's machine, so there is no score"
 def summarize(l: dict) -> dict:
     """One Lighthouse report. A report Lighthouse or we rejected keeps its reason and none of its numbers."""
     out: dict = {"version": l.get("lighthouseVersion")}
+    if l.get("fetchTime"):
+        out["fetchTime"] = l["fetchTime"]  # when Google made this analysis: the same time twice is one analysis (repeated_analysis)
     # A report of an unexpected shape is read as far as it goes: thrown, it was swallowed by the
     # caller and the analysis then counted as "no result within 240 s".
     audits = l.get("audits") if isinstance(l.get("audits"), dict) else {}
@@ -184,6 +190,41 @@ def summarize(l: dict) -> dict:
         v = part(audits, k).get("numericValue")
         if isinstance(v, (int, float)):
             out[name] = round(v, 3) if name == "cls" else round(v)
+    return out
+
+
+PSI_REPEAT = "PageSpeed answered with an analysis it had already made (its cache): not counted again"
+
+
+def repeated_analysis(x: dict, seen: dict) -> list[str]:
+    """The form factors of analysis `x` that PageSpeed served from its cache, and remember the fresh ones.
+
+    PageSpeed keeps an analysis for a short while and answers a second request for the same
+    address with it. Five requests in three minutes came back as two or three analyses
+    (2026-11-20, five pages per round: 18 of 50 were copies), and a median of copies is not a
+    median of five. Every Lighthouse report carries the time it was made: one seen before, for
+    the same page and form factor, is a copy. `seen` maps (page, form factor) to those times.
+    """
+    again = []
+    for f in ("desktop", "mobile"):
+        at = (x.get(f) or {}).get("fetchTime")
+        if not at:
+            continue
+        times = seen.setdefault((x.get("page"), f), set())
+        if at in times:
+            again.append(f)
+        else:
+            times.add(at)
+    return again
+
+
+def without_repeats(x: dict, again: list[str]) -> dict:
+    """`x` without the form factors that were copies: each is left out, with the reason, not counted twice."""
+    if not again:
+        return x
+    out = {k: v for k, v in x.items() if k not in again}
+    out.setdefault("error", PSI_REPEAT)
+    out["repeated"] = again
     return out
 
 

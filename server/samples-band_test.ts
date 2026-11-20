@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1.0.13";
+import { assert, assertEquals } from "jsr:@std/assert@1.0.13";
 import { editors } from "./registry.ts";
 import { type SampleMeasurements, samplesBand } from "./samples-band.ts";
 import { REVISION_NOTES } from "../lib/revision-notes.ts";
@@ -111,4 +111,16 @@ Deno.test("a row whose median stands on some of the runs says how many loaded an
   assertEquals(html.includes("3 of 5 runs loaded: not ready within 300s"), true);
   assertEquals(html.includes(" at y"), false);
   assertEquals((html.match(/runs loaded/g) ?? []).length, 1); // a full set says nothing extra
+});
+
+Deno.test("samples band: a figure found wrong says so under the engine's name, and only where it was told", () => {
+  const row = { startupMs: 1, loadMs: 3404, settledMs: 3562, heapBytes: 1, rendererRssReady: 1, rendererRss: 2, gpuRss: 1, pages: 409, runs: [3404], failed: null };
+  const data = { measuredAt: "2026-11-18", environment: "test", samples: { "lorem-500": { onlyoffice: row, folio: row } } };
+  const all = [{ slug: "onlyoffice", name: "OnlyOffice" }, { slug: "folio", name: "folio" }] as never;
+  const plain = samplesBand(all, data);
+  assert(!plain.includes("read with care:"), "a data set with no caveats of its own shows none");
+  const told = samplesBand(all, data, { checked: "2026-11-20", "lorem-500": { onlyoffice: "pages are <wrong>" } });
+  assertEquals(told.split("read with care:").length - 1, 1);
+  assert(told.includes("read with care: pages are &lt;wrong&gt;</small>"));
+  assert(told.includes("checked again on 2026-11-20"));
 });
