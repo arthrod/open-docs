@@ -51,7 +51,7 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, settle_by_pages, stable_count, stopped_path, where_note
+from measure_lib import quiet_host, chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, settle_by_pages, stable_count, stopped_path, where_note
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
@@ -236,6 +236,9 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
     return out
 
 
+STOPPED: list[str] = []  # why the run loop ended early, when it did
+
+
 async def main():
     engines = {"all": ALL, "editors": EDITORS, "viewers": VIEWERS}.get(sys.argv[1]) or sys.argv[1].split(",")
     samples = sys.argv[2].split(",")
@@ -247,6 +250,10 @@ async def main():
         for r in range(runs):
             for s in samples:
                 for e in engines:
+                    busy = await quiet_host()
+                    if busy:
+                        stopped = busy
+                        break
                     try:
                         x = await one(pw, e, s, opt("--shots") if r == 0 else None)
                     except Exception as ex:
@@ -264,6 +271,7 @@ async def main():
                 # A Chrome that would not end is still using the machine: what was measured so far is
                 # written, and nothing more is measured beside it.
                 print(f"stopping: {stopped}", file=sys.stderr, flush=True)
+                STOPPED.append(stopped)
                 break
     summary: dict = {}
     for s in samples:
@@ -299,3 +307,5 @@ async def main():
 
 
 asyncio.run(main())
+if STOPPED:
+    sys.exit(4)  # stopped before the end: what was measured is written, and the caller is told

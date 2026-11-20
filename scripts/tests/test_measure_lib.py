@@ -512,3 +512,27 @@ def test_sample_row_says_how_settled_was_reached_and_leaves_an_uncollected_heap_
     assert row["settledByPages"] == 1 and row["heapNotCollected"] == 1 and row["heapBytes"] == 200
     # Every run uncollected: the figure is shown, with its flag, not withheld.
     assert lib.sample_row([{"loadMs": 1, "heapBytes": 900, "heapNotCollected": "x"}])["heapBytes"] == 900
+
+
+def _quiet(loads, env):
+    """quiet_host over a scripted list of load readings (the last one repeats), on a fake clock."""
+    t, it = [0.0], iter(loads)
+    last = [loads[-1]]
+
+    def load():
+        last[0] = next(it, last[0])
+        return last[0]
+
+    async def sleep(s):
+        t[0] += s
+
+    return lib.asyncio.run(lib.quiet_host(env, load=load, sleep=sleep, now=lambda: t[0])), t[0]
+
+
+def test_a_run_waits_for_a_quiet_host_and_gives_up_with_the_reason():
+    assert _quiet([200], {}) == (None, 0.0)  # no limit given: one's own machine, no wait
+    assert _quiet([30], {"OD_MAX_LOAD": "48"}) == (None, 0.0)
+    why, waited = _quiet([90, 90, 70, 40], {"OD_MAX_LOAD": "48"})
+    assert why is None and waited == 30.0
+    why, waited = _quiet([90], {"OD_MAX_LOAD": "48", "OD_LOAD_WAIT_S": "60"})
+    assert "busy" in why and "48" in why and waited == 60.0
