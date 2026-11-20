@@ -270,13 +270,15 @@ function shadedMono(p: Element, pPr: Element | undefined): boolean {
  */
 function joinCode(blocks: Block[]): Block[] {
   const text = (b: Block) => b.runs.map((r) => r.text).join("");
+  // A paragraph of nothing but white space is as many empty lines as it has line breaks.
+  const blank = (t: string) => t.trim() ? t : t.replace(/[^\n]/g, "");
   const out: Block[] = [];
   for (const b of blocks) {
     const last = out[out.length - 1];
     // A paragraph that carries a list's counter event (an unmarked level) stays a block of its
     // own: merged into the block before, its event was lost and the items after it miscounted.
     if (b.kind === "code" && last?.kind === "code" && !b.counts) {
-      out[out.length - 1] = { ...last, runs: [{ ...last.runs[0], text: `${text(last)}\n${text(b).replace(/^\s+$/, "")}` }] };
+      out[out.length - 1] = { ...last, runs: [{ ...last.runs[0], text: `${text(last)}\n${blank(text(b))}` }] };
     } else out.push(b);
   }
   // Blank lines at either end of a block are an engine's padding (docen closes a code block

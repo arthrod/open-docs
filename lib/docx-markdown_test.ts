@@ -273,3 +273,11 @@ Deno.test("docx: numbering that comes from the style keeps a bordered, indented 
   });
   assertEquals(docxToMarkdown(bytes).trim(), "in a list\n\nnumbering off\n\n> a quote");
 });
+
+Deno.test("docx: a code paragraph that is only line breaks keeps them as empty lines", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (inner: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${inner}</w:p>`;
+  const body = code(run("a")) + code(`<w:r><w:t xml:space="preserve"> </w:t><w:br/><w:br/></w:r>`) + code(run("b"));
+  const bytes = zipSync({ "word/document.xml": strToU8(`<w:document ${W}><w:body>${body}</w:body></w:document>`), "word/styles.xml": strToU8(styles) });
+  assertEquals(docxToMarkdown(bytes).trim(), "```\na\n\n\n\nb\n```");
+});

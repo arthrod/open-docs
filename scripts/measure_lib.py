@@ -106,7 +106,7 @@ def sample_row(xs: list[dict]) -> dict:
     growth = [x["rendererRss"] - x["rendererRssReady"] for x in ok if x.get("rendererRss") is not None and x.get("rendererRssReady") is not None]
     # A heap that could not be collected first is the uncollected figure under the collected
     # one's name: left out of the median while any run was collected, and counted either way.
-    collected = [x for x in ok if not x.get("heapNotCollected")]
+    collected = [x for x in ok if x.get("heapBytes") is not None and not x.get("heapNotCollected")]
     return {
         **{k: median(ok, k) for k in SAMPLE_KEYS},
         "heapBytes": median(collected or ok, "heapBytes"),
@@ -203,14 +203,17 @@ def summarize(l: dict) -> dict:
 PSI_REPEAT = "PageSpeed answered with an analysis it had already made (its cache): not counted again"
 
 
-def repeated_analysis(x: dict, seen: dict) -> list[str]:
-    """The form factors of analysis `x` that PageSpeed served from its cache, and remember the fresh ones.
+def repeated_analysis(x: dict, seen: dict, remember: bool = True) -> list[str]:
+    """The form factors of analysis `x` that PageSpeed served from its cache.
 
     PageSpeed keeps an analysis for a short while and answers a second request for the same
     address with it. Five requests in three minutes came back as two or three analyses
     (2026-11-20, five pages per round: 18 of 50 were copies), and a median of copies is not a
     median of five. Every Lighthouse report carries the time it was made: one seen before, for
     the same page and form factor, is a copy. `seen` maps (page, form factor) to those times.
+    With `remember`, the fresh ones are added to it; a caller that asks again before it
+    publishes (scripts/measure_pagespeed.py) passes False and calls remember_analyses on what
+    it publishes, so that an analysis it then threw away is not held against a later request.
     """
     again = []
     for f in ("desktop", "mobile"):
@@ -220,9 +223,17 @@ def repeated_analysis(x: dict, seen: dict) -> list[str]:
         times = seen.setdefault((x.get("page"), f), set())
         if at in times:
             again.append(f)
-        else:
+        elif remember:
             times.add(at)
     return again
+
+
+def remember_analyses(x: dict, seen: dict) -> None:
+    """Count the analyses in `x` as published: the same one again is a copy from now on."""
+    for f in ("desktop", "mobile"):
+        at = (x.get(f) or {}).get("fetchTime")
+        if at:
+            seen.setdefault((x.get("page"), f), set()).add(at)
 
 
 def without_repeats(x: dict, again: list[str]) -> dict:
@@ -235,18 +246,18 @@ def without_repeats(x: dict, again: list[str]) -> dict:
     return out
 
 
-def still_repeated(kept: dict, x: dict, again: list[str]) -> list[str]:
+def still_repeated(kept: dict, x: dict, again: list[str], owed: list[str] | None = None) -> list[str]:
     """Keep the fresh form factors of attempt `x` in `kept`; the ones still without a fresh analysis.
 
-    An attempt can bring one form factor fresh and the other as a copy. The fresh one's time is
-    in `seen` from then on, so in the next attempt it reads as a copy of itself: without `kept`
-    it was thrown away with the attempt and then left out as a repeat, though no published
-    analysis held it (review of 2026-11-20).
+    An attempt can bring one form factor fresh and the other as a copy: the fresh one is kept,
+    and only the other is owed. `owed` is what the attempt before left owed: an attempt that
+    fails brings nothing, and without it the form factor stopped being asked for and lost its
+    "repeated" mark. A kept report that carries an error gives way to a later one that does not.
     """
     for f in ("desktop", "mobile"):
-        if f in x and f not in again and f not in kept and x[f].get("fetchTime"):
+        if f in x and f not in again and (f not in kept or ("error" in kept[f] and "error" not in x[f])):
             kept[f] = x[f]
-    return [f for f in again if f not in kept]
+    return [f for f in ("desktop", "mobile") if (f in again or f in (owed or [])) and f not in kept]
 
 
 def with_kept(x: dict, kept: dict, missing: list[str]) -> dict:
@@ -260,7 +271,7 @@ async def stable_count(read, quiet_s: float, wait_s: float, pause: float = 0.5, 
     `read` returns the count, or None where the engine has no counter (nothing to wait for).
     A reading that fails (an engine laying out holds the main thread) is asked again until
     `wait_s` is over. "Still changing" is true when the wait ended first: with the count still
-    moving, or with a count in hand and the reads failing, which is not a count seen to stop.
+    moving, or with a count in hand (0 included) and the reads failing, which is not a count seen to stop.
     A count of 0 is waited on like any other: pages that have not been drawn yet are not "no pages".
     """
     count, changes, same_since, gave_up = None, -1, now(), now() + wait_s
@@ -269,7 +280,7 @@ async def stable_count(read, quiet_s: float, wait_s: float, pause: float = 0.5, 
             got = await read()
         except Exception:
             if now() > gave_up:
-                return count, changes, same_since, bool(count)
+                return count, changes, same_since, count is not None
             await sleep(pause)
             continue
         if got != count:

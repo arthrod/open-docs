@@ -536,3 +536,62 @@ def test_a_run_waits_for_a_quiet_host_and_gives_up_with_the_reason():
     assert why is None and waited == 30.0
     why, waited = _quiet([90], {"OD_MAX_LOAD": "48", "OD_LOAD_WAIT_S": "60"})
     assert "busy" in why and "48" in why and waited == 60.0
+
+
+# --- second review round (CodeRabbit, CodeAnt, Gitar; 2026-11-20) ---
+
+
+def test_a_retry_that_fails_keeps_the_form_factor_owed_and_says_it_was_a_copy():
+    seen: dict = {}
+    lib.remember_analyses(_psi("e/plate", "D0", "M0"), seen)
+    kept: dict = {}
+    first = _psi("e/plate", "D0", "M1")
+    missing = lib.still_repeated(kept, first, lib.repeated_analysis(first, seen, remember=False))
+    failed = {"page": "e/plate", "error": "PageSpeed gave no result within 240 s"}
+    missing = lib.still_repeated(kept, failed, lib.repeated_analysis(failed, seen, remember=False), missing)
+    assert missing == ["desktop"]  # still owed: the loop asks again
+    out = lib.with_kept(failed, kept, missing)
+    assert out["repeated"] == ["desktop"] and out["mobile"]["fetchTime"] == "M1"
+
+
+def test_only_published_analyses_are_remembered():
+    """D0/M0 are counted. A job gets D1 with M0 (a copy), then D2 with M1: D1 and M1 are published.
+    D2 was never published, so the next job may count it; D1 may not be counted twice."""
+    seen: dict = {}
+    lib.remember_analyses(_psi("e/plate", "D0", "M0"), seen)
+    kept: dict = {}
+    a = _psi("e/plate", "D1", "M0")
+    missing = lib.still_repeated(kept, a, lib.repeated_analysis(a, seen, remember=False))
+    b = _psi("e/plate", "D2", "M1")
+    missing = lib.still_repeated(kept, b, lib.repeated_analysis(b, seen, remember=False), missing)
+    out = lib.with_kept(b, kept, missing)
+    lib.remember_analyses(out, seen)
+    assert (out["desktop"]["fetchTime"], out["mobile"]["fetchTime"]) == ("D1", "M1")
+    assert lib.repeated_analysis(_psi("e/plate", "D2"), seen, remember=False) == []
+    assert lib.repeated_analysis(_psi("e/plate", "D1", "M1"), seen, remember=False) == ["desktop", "mobile"]
+
+
+def test_a_retry_that_succeeds_replaces_a_kept_error_and_a_report_without_a_time_is_kept():
+    kept: dict = {}
+    bad = {"page": "e/plate", "desktop": {"fetchTime": "D1", "error": "the engine failed to start"}}
+    assert lib.still_repeated(kept, bad, ["mobile"]) == ["mobile"]
+    good = _psi("e/plate", "D2", "M1")
+    assert lib.still_repeated(kept, good, [], ["mobile"]) == []
+    assert kept["desktop"]["fetchTime"] == "D2" and "error" not in kept["desktop"]
+    # A report that carries no time cannot be a copy: it is kept like any fresh one.
+    kept = {}
+    lib.still_repeated(kept, {"page": "e/plate", "desktop": {"performance": 90}}, ["mobile"])
+    assert kept == {"desktop": {"performance": 90}}
+
+
+def test_a_run_without_a_heap_reading_does_not_hide_the_uncollected_one():
+    row = lib.sample_row([{"loadMs": 1}, {"loadMs": 1, "heapBytes": 900, "heapNotCollected": "x"}])
+    assert row["heapBytes"] == 900 and row["heapNotCollected"] == 1
+    row = lib.sample_row([{"loadMs": 1}, {"loadMs": 1, "heapBytes": 900, "heapNotCollected": "x"}, {"loadMs": 1, "heapBytes": 100}])
+    assert row["heapBytes"] == 100
+
+
+def test_a_count_of_zero_followed_by_failed_reads_is_flagged_too():
+    pages, _, _, still = _count([0, TimeoutError()])
+    assert pages == 0 and still is True
+    assert _count([TimeoutError()])[3] is False  # nothing was ever read: no counter to doubt
