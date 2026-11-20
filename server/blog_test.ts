@@ -22,5 +22,5 @@ Deno.test("links between posts point at posts that exist", async () => {
 
 Deno.test("posts are listed newest first", () => {
   const dates = POSTS.map((p) => p.date);
-  assertEquals(dates, [...dates].sort().reverse());
+  assertEquals(dates, [...dates].sort((a, b) => b.localeCompare(a)));
 });
