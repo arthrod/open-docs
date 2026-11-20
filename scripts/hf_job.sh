@@ -6,10 +6,10 @@
 #
 # Run as the job's command, in the python:3.12 image, as root, on the flavor the published figures
 # name, and with a timeout: Hugging Face stops a job after 30 minutes unless told otherwise.
-#   hf jobs run --flavor cpu-upgrade --timeout 6h --secrets HF_TOKEN -e SITE=both -e RUNS=3 python:3.12 \
+#   hf jobs run --flavor cpu-upgrade --timeout 10h --secrets HF_TOKEN -e SITE=both -e RUNS=3 python:3.12 \
 #     bash -c 'curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/<commit>/scripts/hf_job.sh -o /tmp/job.sh && bash /tmp/job.sh'
 # (download, then run: piped into bash, a download that fails still ends the job as a success).
-# Timeouts that fit: smoke and probe 15m, viewer 3h, editors 4h, both 6h, retake 90m.
+# Timeouts that fit: smoke and probe 15m, viewer 5h, editors 6h, both 10h, retake 90m (a step may wait 30 minutes for the host).
 # Result files are uploaded after every measuring step to the private dataset
 # arthrod/open-docs-measurements, under <date>/<site>/, so a step that runs out of time loses only
 # itself. Every upload is a commit there, so a later job on the same day does not destroy an
@@ -21,10 +21,22 @@ case "${SITE:-}" in
   editors|viewer|both|retake) [[ "${RUNS:-}" =~ ^[1-9][0-9]*$ ]] || { echo "RUNS must be a positive number for SITE=$SITE"; exit 2; } ;;
   *) echo "unknown SITE=${SITE:-}"; exit 2 ;;
 esac
+# Step headers go to the job log even where a step's own output is sent to a file.
+exec 3>&1
+# The machine is a slice of a shared host. MAX_LOAD is the host's 1-minute load average a pass may
+# start under, STEP_LOAD the one a step may start under (a third more: once a pass has begun, a
+# hole in it costs more than a slower step). A host far over the limit ends the job before
+# anything is installed (status 3), so that the next try, on another host, costs a few seconds.
+MAX_LOAD=${MAX_LOAD:-48}
+STEP_LOAD=${STEP_LOAD:-$(awk -v m="$MAX_LOAD" 'BEGIN { printf "%d", m * 4 / 3 }')}
+awk -v m="$MAX_LOAD" '{ exit !($1 + 0 <= 2 * m) }' /proc/loadavg || { echo "BUSY HOST: load $(cat /proc/loadavg) on $(nproc) cores at the start, nothing measured"; exit 3; }
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq >/dev/null && apt-get install -y -qq git xvfb procps curl >/dev/null || { echo "apt failed"; exit 1; }
 pip install -q uv || exit 1
 D=$(date +%F)
+# Where the files go in the dataset: the date, and TAG when given, so that one try's files are
+# never mistaken for another's (a skipped step uploads nothing, and an older file would stand in).
+P="$D${TAG:+-$TAG}"
 export OD_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage"
 export OD_TIMEOUT_S=600
 # What the job was given, as far as the container can see it (cgroup v2). A quota other than the
@@ -50,7 +62,7 @@ up() {
   for try in 1 2 3; do uv run -q --with huggingface_hub python /tmp/up.py "$1" "$2" && return 0; sleep $((try * 10)); done
   echo "UPLOAD FAILED $1"; echo "upload $1" >> /tmp/failed; return 1
 }
-mkdir -p /tmp/probe && echo "started $(date -u +%FT%TZ) $SITE" > /tmp/probe/started.txt && uv run -q --with huggingface_hub python /tmp/up.py /tmp/probe "$D/$SITE/probe" || { echo "cannot upload: stopping before measuring"; exit 1; }
+mkdir -p /tmp/probe && echo "started $(date -u +%FT%TZ) $SITE" > /tmp/probe/started.txt && uv run -q --with huggingface_hub python /tmp/up.py /tmp/probe "$P/$SITE/probe" || { echo "cannot upload: stopping before measuring"; exit 1; }
 REF=${REF:-main}
 get() { git clone -q --depth 1 -b "$REF" "https://github.com/arthrod/$1.git" "/w/$2" && echo "$2 $(git -C "/w/$2" rev-parse HEAD)" || exit 1; }
 case "$SITE" in viewer) ;; *) get open-docs editors ;; esac
@@ -65,22 +77,25 @@ sleep 2
 # The machine is a slice of a shared host, and the host can be busy with other people's work: on
 # 2026-11-20 its load average was 100 to 300 on 64 cores (5 to 15 on the earlier passes), a page
 # took twice to five times as long, and a step ran out of time after 9 of 51 runs. Nothing is
-# measured on such a host: a step waits up to ten minutes for the 1-minute load to come under
-# MAX_LOAD, and is skipped and written down as failed when it does not.
-quiet() { local i; for i in $(seq 60); do awk -v m="${MAX_LOAD:-20}" '{ exit !($1 + 0 <= m + 0) }' /proc/loadavg && return 0; sleep 10; done; return 1; }
-step() { local t=$1; shift; quiet || { echo "== $(date -u +%T) SKIPPED, the host is busy ($(cat /proc/loadavg)): $*"; echo "busy host: $*" >> /tmp/failed; return 0; }; echo "== $(date -u +%T) $*"; timeout "$t" "$@"; local rc=$?; echo "== rc=$rc $(cat /proc/loadavg)"; [ $rc = 0 ] || echo "rc=$rc $*" >> /tmp/failed; return 0; }
-# A host that is busy before anything is measured ends the job at once (status 3): start another,
-# which lands on another host or at another time.
-quiet || { echo "BUSY HOST: load $(cat /proc/loadavg) on $(nproc) cores, nothing measured"; exit 3; }
+# measured on such a host. At a load of about 44 a page took 20 to 40 % longer than at 5 to 15,
+# which is accepted: every row of a pass is taken under the same conditions and carries the load
+# it was taken at. A step waits up to 30 minutes for the load to come under STEP_LOAD, and is
+# skipped and written down as failed when it does not.
+quiet() { local m=$1 n=$2 i; for i in $(seq "$n"); do awk -v m="$m" '{ exit !($1 + 0 <= m + 0) }' /proc/loadavg && return 0; sleep 10; done; return 1; }
+step() { local t=$1; shift; quiet "$STEP_LOAD" 180 || { echo "== $(date -u +%T) SKIPPED, the host is busy ($(cat /proc/loadavg)): $*" >&3; echo "busy host: $*" >> /tmp/failed; return 0; }; echo "== $(date -u +%T) load $(cut -d' ' -f1 /proc/loadavg): $*" >&3; timeout "$t" "$@"; local rc=$?; echo "== rc=$rc $(cat /proc/loadavg)" >&3; [ $rc = 0 ] || echo "rc=$rc $*" >> /tmp/failed; return 0; }
+# A host that stays busy for ten minutes before anything is measured ends the job (status 3):
+# start another, which lands on another host or at another time.
+quiet "$MAX_LOAD" 60 || { echo "BUSY HOST: load $(cat /proc/loadavg) on $(nproc) cores, nothing measured"; exit 3; }
+echo "starting under load $(cat /proc/loadavg), limits $MAX_LOAD to start and $STEP_LOAD for a step"
 PW="uv run -q --with playwright python -I"
 smoke() {
   mkdir -p /tmp/out
   cd /w/editors; export MEASURE_WHERE="$HW"
   step 6m $PW scripts/measure_samples.py docxodus,onlyoffice redline 1 --out /tmp/out/editors.json --latest /tmp/out/editors-latest.json --shots /tmp/out/shots 2>&1 | tail -4 | cut -c1-900
-  up /tmp/out "$D/smoke"
+  up /tmp/out "$P/smoke"
   cd /w/viewer; export MEASURE_WHERE="from $HW"
   step 6m $PW scripts/measure.py docxodus,betteroffice 1 --doc redline --samples /tmp/out/viewer-samples.json --raw /tmp/out/viewer-raw.json 2>&1 | tail -6 | cut -c1-900
-  ls -la /tmp/out; up /tmp/out "$D/smoke"
+  ls -la /tmp/out; up /tmp/out "$P/smoke"
 }
 editors() {
   cd /w/editors; export MEASURE_WHERE="$HW"
@@ -88,22 +103,22 @@ editors() {
     T=55m; [ "$S" = lorem-500 ] && T=90m
     step $T $PW scripts/measure_samples.py all $S "$RUNS" --out "docs/samples/$D-$S.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S.log
     grep -c '"engine"' /tmp/$S.log; grep -o '"error": "[^"]*' /tmp/$S.log | sort | uniq -c | head -20
-    cp /tmp/$S.log docs/samples/ 2>/dev/null; up docs/samples "$D/editors/samples"
+    cp /tmp/$S.log docs/samples/ 2>/dev/null; up docs/samples "$P/editors/samples"
   done
-  up shots "$D/editors/shots"
+  up shots "$P/editors/shots"
 }
 viewer() {
   cd /w/viewer; export MEASURE_WHERE="from $HW"
-  step 25m $PW scripts/measure.py all "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase.json" >/dev/null 2>/tmp/b1.log; tail -2 /tmp/b1.log | cut -c1-300; up results "$D/viewer/results"
-  step 25m $PW scripts/measure.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline.json" >/dev/null 2>/tmp/b2.log; tail -2 /tmp/b2.log | cut -c1-300; up results "$D/viewer/results"
-  step 35m $PW scripts/measure.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500.json" >/dev/null 2>/tmp/b3.log; tail -2 /tmp/b3.log | cut -c1-300; up results "$D/viewer/results"
+  step 25m $PW scripts/measure.py all "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase.json" >/dev/null 2>/tmp/b1.log; tail -2 /tmp/b1.log | cut -c1-300; up results "$P/viewer/results"
+  step 25m $PW scripts/measure.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline.json" >/dev/null 2>/tmp/b2.log; tail -2 /tmp/b2.log | cut -c1-300; up results "$P/viewer/results"
+  step 35m $PW scripts/measure.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500.json" >/dev/null 2>/tmp/b3.log; tail -2 /tmp/b3.log | cut -c1-300; up results "$P/viewer/results"
   export MEASURE_WHERE="from $HW_CURL"
-  step 5m python3 -I scripts/measure_server.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-server-redline.json" >/dev/null; up results "$D/viewer/results"
+  step 5m python3 -I scripts/measure_server.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-server-redline.json" >/dev/null; up results "$P/viewer/results"
   step 8m python3 -I scripts/measure_server.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-server-lorem-500.json" >/dev/null
-  up results "$D/viewer/results"
+  up results "$P/viewer/results"
   export MEASURE_WHERE="from $HW"
   step 40m $PW scripts/measure_server_client.py all showcase,redline,lorem-500 "$RUNS" --out results/server-client.json --raw "results/raw/$D-server-client.json" >/dev/null 2>/tmp/sc.log; tail -2 /tmp/sc.log | cut -c1-300
-  mkdir -p results/logs; cp /tmp/*.log results/logs/; up results "$D/viewer/results"
+  mkdir -p results/logs; cp /tmp/*.log results/logs/; up results "$P/viewer/results"
 }
 # Some engines again, on top of the files an earlier job uploaded the same day (RETAKE_FROM: its
 # date folder). Each script merges by engine, so the other engines' rows stay as they were.
@@ -120,7 +135,7 @@ PY
     step 12m $PW scripts/measure.py "$V_ENGINES" "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase-retake.json" >/dev/null 2>/tmp/r1.log; tail -3 /tmp/r1.log | cut -c1-400
     step 12m $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline-retake.json" >/dev/null 2>/tmp/r2.log; tail -3 /tmp/r2.log | cut -c1-400
     step 15m $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500-retake.json" >/dev/null 2>/tmp/r3.log; tail -3 /tmp/r3.log | cut -c1-400
-    mkdir -p results/logs; cp /tmp/r?.log results/logs/; up results "$D/viewer/results"
+    mkdir -p results/logs; cp /tmp/r?.log results/logs/; up results "$P/viewer/results"
   fi
   if [ -n "${E_ENGINES:-}" ]; then
     cd /w/editors; export MEASURE_WHERE="$HW"
@@ -129,7 +144,7 @@ PY
       step 15m $PW scripts/measure_samples.py "$E_ENGINES" $S "$RUNS" --out "docs/samples/$D-$S-retake.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S-retake.log
       grep -o '"error": "[^"]*' /tmp/$S-retake.log | cut -c1-200 | sort | uniq -c | head; cp /tmp/$S-retake.log docs/samples/
     done
-    up docs/samples "$D/editors/samples"; up shots "$D/editors/shots"
+    up docs/samples "$P/editors/samples"; up shots "$P/editors/shots"
   fi
 }
 # "both": one site after the other, never at once. Two Chromes, or two jobs asking the same
