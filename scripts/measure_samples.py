@@ -211,6 +211,11 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
                     # the layout ended, which settledMs does not see when the work comes in slices
                     # shorter than a long task. Absent when the first reading was already final.
                     out["pagesSettledMs"] = round((same_since - clicked) * 1000)
+                    # Settled is "nothing left to do": a page count that moved after the long tasks
+                    # went quiet says there was. The later of the two is published, and the run
+                    # says which it was (the page count is polled every 0.5 s).
+                    if out.get("settledMs") is not None and out["pagesSettledMs"] > out["settledMs"]:
+                        out["settledMsLongTasks"], out["settledMs"], out["settledBy"] = out["settledMs"], out["pagesSettledMs"], "pages"
             await asyncio.sleep(2.0)  # trailing requests (the page already waited for two quiet seconds)
             out.update(chrome_memory(profile))
             cdp = await ctx.new_cdp_session(page)

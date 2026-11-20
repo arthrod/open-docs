@@ -71,7 +71,13 @@ function chain(styles: Map<string, StyleInfo>, id: string | null | undefined): S
   const out: StyleInfo[] = [];
   for (let cur = id ?? undefined, n = 0; cur && n < 20; n++) {
     const s = styles.get(cur);
-    if (!s) break;
+    if (!s) {
+      // A style the document names and does not define: its id stands for its name. Docxodus's
+      // Markdown parser writes pStyle "Quote" and rStyle "Code" into a document that defines
+      // neither (seen 2026-11-20), and the id is all that says what the paragraph is.
+      if (n === 0) out.push({ name: cur } as StyleInfo);
+      break;
+    }
     out.push(s);
     cur = s.basedOn;
   }
@@ -237,6 +243,37 @@ function paragraphRuns(p: Element, ctx: Ctx): Run[] {
   return merged;
 }
 
+const filled = (shd: Element | undefined) => !!shd && !/^(auto|ffffff)?$/i.test(wAttr(shd, "fill") ?? "");
+
+/** Every run that has text is in a monospace face, on a shaded background (its own or the paragraph's). */
+function shadedMono(p: Element, pPr: Element | undefined): boolean {
+  const withText = [...p.getElementsByTagNameNS(W, "r")].filter((r) => kids(r, "t").some((t) => (t.textContent ?? "").length));
+  if (!withText.length) return false;
+  const paragraphShaded = filled(kid(pPr, "shd"));
+  return withText.every((r) => {
+    const rPr = kid(r, "rPr");
+    const fonts = kid(rPr, "rFonts");
+    return MONO.test(wAttr(fonts, "ascii") ?? wAttr(fonts, "hAnsi") ?? "") && (paragraphShaded || filled(kid(rPr, "shd")));
+  });
+}
+
+/**
+ * Code paragraphs that follow one another are one block, a line each: Word has no code block,
+ * only paragraphs in a code style, and a fence per line is not what was written.
+ */
+function joinCode(blocks: Block[]): Block[] {
+  const out: Block[] = [];
+  for (const b of blocks) {
+    const last = out[out.length - 1];
+    if (b.kind === "code" && last?.kind === "code") {
+      out[out.length - 1] = { ...last, runs: [{ ...last.runs[0], text: `${last.runs.map((r) => r.text).join("")}\n${b.runs.map((r) => r.text).join("").replace(/^\s+$/, "")}` }] };
+    } else out.push(b);
+  }
+  // Blank lines at either end of a block are an engine's padding (docen closes a code block
+  // with an empty code paragraph), not lines of code.
+  return out.map((b) => b.kind !== "code" ? b : { ...b, runs: [{ ...b.runs[0], text: b.runs.map((r) => r.text).join("").replace(/^(\s*\n)+|(\n\s*)+$/g, "") }] });
+}
+
 function paragraphBlock(p: Element, ctx: Ctx): Block {
   ctx.unmarked = undefined;
   const b = paragraphBlockOf(p, ctx);
@@ -280,9 +317,18 @@ function paragraphBlockOf(p: Element, ctx: Ctx): Block {
     const allItalic = runs.every((r) => !r.text.trim() || r.italic);
     return { kind: "quote", runs: allItalic ? runs.map((r) => ({ ...r, italic: false })) : runs };
   }
-  // Code blocks come from a paragraph style only: a paragraph that is one
-  // inline code span (monospace runs) stays a paragraph.
-  if (names.some((n) => /^(code|html preformatted|source code|verbatim)/.test(n))) {
+  // A quote with no style: a left border and a left indent, which is how an HTML blockquote
+  // arrives (Plate's exporter writes exactly that, and it is what the assistant's own
+  // Markdown becomes). Either alone is an indented or a bordered paragraph.
+  const left = kid(kid(pPr, "pBdr"), "left");
+  const ind = kid(pPr, "ind");
+  if (
+    left && !/^(none|nil)$/.test(wAttr(left, "val") ?? "none") && Number(wAttr(ind, "left") ?? wAttr(ind, "start") ?? 0) > 0 && text.trim()
+  ) return { kind: "quote", runs };
+  // Code blocks come from a paragraph style, or from a paragraph whose every run is monospace
+  // on a shaded background (a <pre> through Plate's exporter). A paragraph that is one inline
+  // code span (monospace runs, not shaded) stays a paragraph.
+  if (names.some((n) => /^(code|html preformatted|source code|verbatim)/.test(n)) || shadedMono(p, pPr)) {
     return { kind: "code", runs: runs.map((r) => ({ ...r, code: false })) };
   }
   return { kind: "p", align: align as Block["align"], runs };
@@ -333,7 +379,12 @@ export function docxToMarkdown(bytes: Uint8Array): string {
   const flush = () => {
     // Empty paragraphs are spacing, not content; an empty numbered item still
     // takes its number.
-    const blocks = pending.filter((b) => b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()));
+    // (A blank code line is content: it is a line of the block.)
+    const kept = pending.filter((b, i) =>
+      b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()) ||
+      (b.kind === "code" && pending[i - 1]?.kind === "code" && pending[i + 1]?.kind === "code")
+    );
+    const blocks = joinCode(kept);
     const md = blocks.length ? blocksToMarkdown(blocks, lists) : "";
     if (md) parts.push(md);
     pending = [];

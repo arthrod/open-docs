@@ -530,9 +530,8 @@ the assistant offers no Undo there:
 | OnlyOffice (CryptPad build) | the document is opened in a new editor | editor binary → x2t → .docx |
 | Univer | it has no .docx reader or writer (those are in its Server SDK) | its body, through `lib/univer-doc.ts` |
 
-The probes below were written for the first eight, and their results are dated
-2026-11-09: the five new engines have **not** been run through them, so nothing
-here says they pass.
+All thirteen were run through the probes below on 2026-11-20 (the table under
+"Measured with").
 
 ### Assessment (2026-11-09): harness or editor?
 
@@ -584,18 +583,58 @@ What is the vendors' (written down, worked around fairly, reportable upstream):
 
 Measured with [`lib/probes/md-mapping.js`](lib/probes/md-mapping.js): it applies
 a fixed markdown sample, exports the .docx, checks styles/marks/numbering/links
-in `document.xml`, and checks that the markdown read back keeps heading levels
-and marks. All eight editors pass all ten checks and the read-back check.
-[`lib/probes/md-edge.js`](lib/probes/md-edge.js) round-trips the hard cases
-(escaped `#`/`1.` text, inline code alone in a paragraph, a code block, backticks
-in code, a quote whose text also appears as a plain paragraph, a table with a
-cell line break and a link): all eight pass, except SuperDoc's cell line break.
+in `document.xml` (ten checks), and checks that the markdown read back keeps
+heading levels and marks. [`lib/probes/md-edge.js`](lib/probes/md-edge.js)
+round-trips the hard cases (escaped `#`/`1.` text, inline code alone in a
+paragraph, a code block, backticks in code, a quote whose text also appears as a
+plain paragraph, a table with a cell line break and a link).
+
+Run on the live site on 2026-11-20, in Chrome on a Mac, once per engine:
+
+| Engine | Mapping: in the .docx | Mapping: read back | Edge cases |
+| --- | --- | --- | --- |
+| docx-editor.dev | 10 of 10 | all | all |
+| react-docx | 10 of 10 | all | all |
+| OpenDoc | 10 of 10 | all | all |
+| BetterOffice | 10 of 10 | all | all |
+| OnlyOffice (CryptPad build) | 10 of 10 | all | all |
+| SuperDoc | 10 of 10 | all | all but the table cell (its importers drop a line break inside a cell) |
+| docen | 10 of 10 | all | all (after the reader fix below; the run before it failed the code block) |
+| Docxodus | 10 of 10 | all | all but two: its Markdown parser reads ` ``a`b`` ` wrongly, and its table builder takes plain text, so a link in a cell is lost |
+| folio | 10 of 10 | all | all but two: its `fromMarkdown` writes a code block as a Courier paragraph (as it writes inline code), and it adds a `/` to a bare-host link |
+| Plate | 9 of 10: its own Export writes inline code as a grey highlight in the body face, not a monospace one | all | all |
+| WordCraft | 10 of 10 | all but the quote: its paste makes a quote an indented Normal paragraph, which nothing tells from an indented paragraph | all but the quote; and the first paragraph kept the Heading 1 of the document it replaced (the mapping probe ran before it on the same page): **not looked into** |
+| canvas-editor | 2 of 10 (the two headings): its `plugin-docx` writes no bold, italic, code, link, list or quote this probe recognises | headings and lists only | table only |
+| Univer | not applicable: no .docx export | not applicable | fails seven of eight: it is handed text, so code, quotes, tables and links do not exist in it |
+
+**The run of 2026-11-09 said all eight editors passed everything, and on
+2026-11-20 that was no longer true of any engine that takes the assistant's
+Markdown as a .docx.** The same day the probes were last run, the hand-written
+.docx writer was replaced by Plate's exporter (`9f3a4bb`), and nobody ran them
+again. Plate's exporter writes inline code as a grey highlight with no monospace
+face, a quote as a bordered indent with no style, a code block as one paragraph
+with its lines run together, and a line break in a table cell as three
+paragraphs. The reader knew none of that, so **every assistant turn stripped
+code and quotes from the document** on docx-editor.dev, Docxodus and the five
+engines added on 2026-11-18. Found by running the probes on the new five. Fixed
+on both sides, without going back to a hand-written writer:
+
+- [`lib/plate-for-word.ts`](lib/plate-for-word.ts) prepares Plate's nodes before
+  its exporter runs: inline code also carries Plate's font-family mark (Courier
+  New), a code block becomes one block per line, and a line break in a table
+  cell becomes a paragraph break.
+- [`lib/docx-markdown.ts`](lib/docx-markdown.ts) reads a left border with an
+  indent as a quote, a paragraph of shaded monospace runs as code, joins
+  consecutive code paragraphs into one block, and reads a style the document
+  names but does not define by its id (Docxodus writes `Quote` and `Code` into
+  documents that define neither).
+
 [`lib/probes/ai-export.js`](lib/probes/ai-export.js) is the end-to-end check:
 it loads the rich sample, sends the assistant a prompt through the real chat
 box, waits for the edit to apply, reads the document back, then clicks
-**Export** and looks for the edit inside the exported `word/document.xml`. All
-eight editors pass (2026-11-09, gpt-5.6-luna): edit applied, read back, present
-in the export, table kept.
+**Export** and looks for the edit inside the exported `word/document.xml`. It
+passed on the first eight on 2026-11-09 (gpt-5.6-luna) and was **not** run again
+on 2026-11-20, on any engine.
 
 Run any of them in an editor page's console (ai-export runs in the background
 and leaves its result in `window.__ai`):

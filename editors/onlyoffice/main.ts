@@ -179,6 +179,40 @@ async function open(bytes: Uint8Array) {
       },
     });
   });
+  if (turn === opened) await paginated(() => turn !== opened);
+}
+
+/**
+ * Resolves when OnlyOffice has laid out the document to its last page.
+ *
+ * `onDocumentReady` comes with the first page: the editor then paginates on a timer, in slices
+ * too short to count as a long task (52, 103 … 500 pages). Seen 2026-11-20 on the 500 pages:
+ * ready at 1.5 s, last page at 16.9 s, and a page count read in between was published as the
+ * document's (409). The timer's id is on its logic document (`FullRecalc.Id`) and is null when
+ * there is nothing left to lay out. Read twice, a frame apart: between two slices it is set
+ * again at once. A build without that field is not waited for (as before).
+ */
+async function paginated(gone: () => boolean, timeoutMs = 180_000): Promise<void> {
+  const pending = (): boolean | undefined => {
+    try {
+      const recalc = (api() as unknown as { WordControl?: { m_oLogicDocument?: { FullRecalc?: { Id: unknown } } } })
+        .WordControl?.m_oLogicDocument?.FullRecalc;
+      return recalc ? recalc.Id != null : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  if (pending() === undefined) return;
+  const start = performance.now();
+  let idle = 0;
+  while (!gone()) {
+    const busy = pending();
+    if (busy === undefined) return;
+    idle = busy ? 0 : idle + 1;
+    if (idle >= 2) return;
+    if (performance.now() - start > timeoutMs) throw new Error(`OnlyOffice was still paginating after ${Math.round(timeoutMs / 1000)} s`);
+    await new Promise((res) => setTimeout(res, 50));
+  }
 }
 
 async function saved(): Promise<Uint8Array> {

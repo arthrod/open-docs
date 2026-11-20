@@ -31,6 +31,35 @@ let ref: EditorRef | null = null;
 (window as any).__eigenpal = () => ref;
 const FONTS = packagedFonts();
 
+/**
+ * Resolves when the document handed over is laid out to its last page.
+ *
+ * `ref.load()` returns at once and the editor reports nothing when it is done: it paints the
+ * first pages (`snapshot().isOpening` turns false), then lays out the rest in the background
+ * under its own spinner (`.docx-editor__loading-spinner`). Seen 2026-11-20 on the 500 pages:
+ * load() returned in 6 ms, first pages at 2.1 s, spinner gone and 500 pages at 6.5 s. So "done"
+ * is read from what it shows a person: not opening, pages present, no spinner, for QUIET_MS
+ * (the spinner mounts a commit after the first pages, so one clear reading is not enough).
+ * A time measured through this includes those QUIET_MS.
+ */
+const QUIET_MS = 300;
+async function laidOut(timeoutMs = 180_000): Promise<void> {
+  const start = performance.now();
+  let clearSince: number | null = null;
+  for (;;) {
+    const snap = ref?.snapshot?.() as { isLoading?: boolean; isOpening?: boolean; parseError?: string | null; page?: { total?: number } } | undefined;
+    if (snap?.parseError) throw new Error(`docx-editor.dev could not open the document: ${snap.parseError}`);
+    const clear = !!snap && !snap.isLoading && !snap.isOpening && (snap.page?.total ?? 0) > 0 &&
+      !document.querySelector(".docx-editor__loading-spinner");
+    const now = performance.now();
+    if (!clear) clearSince = null;
+    else if (clearSince == null) clearSince = now;
+    else if (now - clearSince >= QUIET_MS) return;
+    if (now - start > timeoutMs) throw new Error(`docx-editor.dev was still laying out after ${Math.round(timeoutMs / 1000)} s`);
+    await new Promise((res) => setTimeout(res, 50));
+  }
+}
+
 function App({ onReady, doc, view }: { onReady: () => void; doc: Uint8Array | "blank"; view: boolean }) {
   const r = useRef<EditorRef | null>(null);
   useEffect(() => {
@@ -82,11 +111,16 @@ window.od.register({
       const timer = setTimeout(() => reject(new Error("docx-editor.dev did not start within 45s")), 45_000);
       createRoot(root).render(<App doc={doc} view={!!v} onReady={() => { clearTimeout(timer); resolve(); }} />);
     });
+    // A view-only page is "ready" when its document is on the page, not when the editor exists.
+    if (v) await laidOut();
   },
 
   async load(bytes: Uint8Array) {
     if (!ref) throw new Error("docx-editor.dev not mounted");
     ref.load(bytes.slice(0));
+    // One frame, so the snapshot is the new document's and not the one being replaced.
+    await new Promise((res) => requestAnimationFrame(() => res(null)));
+    await laidOut();
   },
 
   async getMarkdown() {

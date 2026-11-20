@@ -149,3 +149,64 @@ Deno.test("reader: text moved by a tracked move is read at its destination, once
   ));
   assertEquals(md.trim(), "Start.\n\nMoved text. End.");
 });
+
+/* ------------------------------------------------------------------------ *
+ * What Plate's exporter writes for the assistant's Markdown (seen 2026-11-20):
+ * no Quote or Code style, only direct formatting. The reader has to know it,
+ * or every assistant turn strips quotes and code from the document.
+ * ------------------------------------------------------------------------ */
+const run = (text: string, rPr = "") => `<w:r><w:rPr>${rPr}</w:rPr><w:t xml:space="preserve">${text}</w:t></w:r>`;
+const MONO_SHADED = `<w:shd w:val="clear" w:fill="f5f5f5"/><w:rFonts w:ascii="Courier" w:hAnsi="Courier"/>`;
+const INLINE_CODE = `<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/><w:highlight w:val="lightGray"/>`;
+const QUOTE_PPR = `<w:pPr><w:ind w:left="284"/><w:pBdr><w:left w:val="single" w:sz="18" w:space="4" w:color="CCCCCC"/></w:pBdr></w:pPr>`;
+
+Deno.test("docx: a paragraph with a left border and an indent is a quote; either alone is not", () => {
+  const md = docxToMarkdown(docx(
+    `<w:p>${run("Same words")}</w:p><w:p>${QUOTE_PPR}${run("Same words")}</w:p>` +
+      `<w:p><w:pPr><w:ind w:left="284"/></w:pPr>${run("indented only")}</w:p>` +
+      `<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="18"/></w:pBdr></w:pPr>${run("bordered only")}</w:p>` +
+      `<w:p><w:pPr><w:ind w:left="284"/><w:pBdr><w:left w:val="none"/></w:pBdr></w:pPr>${run("no border")}</w:p>`,
+  ));
+  assertEquals(md.trim(), "Same words\n\n> Same words\n\nindented only\n\nbordered only\n\nno border");
+});
+
+Deno.test("docx: shaded monospace paragraphs are one code block, a line each; inline code alone stays a paragraph", () => {
+  const md = docxToMarkdown(docx(
+    `<w:p>${run("before")}</w:p>` +
+      `<w:p>${run("block code", MONO_SHADED)}</w:p><w:p>${run("line `two`", MONO_SHADED)}</w:p>` +
+      `<w:p>${run("onlycode", INLINE_CODE)}</w:p>` +
+      `<w:p>${run("use ")}${run("a`b", INLINE_CODE)}${run(" here")}</w:p>` +
+      `<w:p>${run("mono", MONO_SHADED)}${run(" and plain")}</w:p>`,
+  ));
+  assertEquals(md.trim(), "before\n\n```\nblock code\nline `two`\n```\n\n`onlycode`\n\nuse ``a`b`` here\n\n`mono` and plain");
+});
+
+Deno.test("docx: code paragraphs by style are joined too, and a paragraph between two blocks keeps them apart", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run(t)}</w:p>`;
+  const bytes = zipSync({
+    "word/document.xml": strToU8(`<w:document ${W}><w:body>${code("a = 1")}${code("b = 2")}<w:p>${run("then")}</w:p>${code("c = 3")}</w:body></w:document>`),
+    "word/styles.xml": strToU8(styles),
+  });
+  assertEquals(docxToMarkdown(bytes).trim(), "```\na = 1\nb = 2\n```\n\nthen\n\n```\nc = 3\n```");
+});
+
+Deno.test("docx: a style the document names and does not define is read by its id", () => {
+  const md = docxToMarkdown(docx(
+    `<w:p><w:pPr><w:pStyle w:val="Quote"/></w:pPr>${run("Same words")}</w:p>` +
+      `<w:p>${run("use ")}${run("a`b", `<w:rStyle w:val="Code"/>`)}</w:p>` +
+      `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run("block code")}</w:p>` +
+      `<w:p><w:pPr><w:pStyle w:val="Mystery"/></w:pPr>${run("plain")}</w:p>`,
+  ));
+  assertEquals(md.trim(), "> Same words\n\nuse ``a`b``\n\n```\nblock code\n```\n\nplain");
+});
+
+Deno.test("docx: blank code paragraphs at the ends of a block are padding; one inside is a line", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run(t)}</w:p>`;
+  const bytes = zipSync({
+    "word/document.xml": strToU8(`<w:document ${W}><w:body>${code("a = 1")}${code(" ")}${code("b = 2")}${code(" ")}<w:p>${run("after")}</w:p></w:body></w:document>`),
+    "word/styles.xml": strToU8(styles),
+  });
+  assertEquals(docxToMarkdown(bytes).trim(), "```\na = 1\n\nb = 2\n```\n\nafter");
+});
