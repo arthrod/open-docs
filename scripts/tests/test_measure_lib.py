@@ -596,3 +596,7 @@ def test_a_count_of_zero_followed_by_failed_reads_is_flagged_too():
     pages, _, _, still = _count([0, TimeoutError()])
     assert pages == 0 and still is True
     assert _count([TimeoutError()])[3] is False  # nothing was ever read: no counter to doubt
+
+
+def test_a_page_named_twice_is_analysed_once_per_round():
+    assert lib.page_list("e/plate,e/folio,e/plate, ,e/folio") == ["e/plate", "e/folio"]
