@@ -10,6 +10,7 @@ import { parseVal, serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors } from "./server/registry.ts";
 import { mountShared, registerEditor } from "./server/router.ts";
 import { landingPage } from "./server/landing.ts";
+import { blogIndex, blogPost } from "./server/blog.ts";
 import { editorMounts } from "./editors/index.ts";
 import { fixtureMarkerFreeDocx, fixtureBriefDocx, fixtureSourcesText } from "./editors/cite-check/fixture.ts";
 import { ICONS_VERSION } from "./editors/docen/assets.ts";
@@ -80,6 +81,12 @@ app.get("/editors/*", (c) => serveFile(c.req.path));
 app.get("/lib/*", (c) => serveFile(c.req.path));
 
 app.get("/", (c) => c.html(landingPage(editors)));
+
+app.get("/blog", (c) => c.html(blogIndex()));
+app.get("/blog/:slug", async (c) => {
+  const html = await blogPost(c.req.param("slug"));
+  return html ? c.html(html) : c.notFound();
+});
 
 app.get("/source", () =>
   new Response(null, { status: 302, headers: { Location: parseVal().links.self.val } }));

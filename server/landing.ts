@@ -316,6 +316,7 @@ html { scroll-behavior: smooth; }
     <a href="#metrics">Measurements</a>
     <a href="#samples">Samples</a>
     <a href="https://arena.benchmarks.law" target="_blank" rel="noopener">Arena →</a>
+    <a href="/blog">Blog</a>
     <a href="/source" target="_blank" rel="noopener">Source →</a>
     <a href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
   </nav>
