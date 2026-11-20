@@ -103,10 +103,16 @@ def sample_row(xs: list[dict]) -> dict:
     """
     ok = [x for x in xs if "loadMs" in x]
     growth = [x["rendererRss"] - x["rendererRssReady"] for x in ok if x.get("rendererRss") is not None and x.get("rendererRssReady") is not None]
+    # A heap that could not be collected first is the uncollected figure under the collected
+    # one's name: left out of the median while any run was collected, and counted either way.
+    collected = [x for x in ok if not x.get("heapNotCollected")]
     return {
         **{k: median(ok, k) for k in SAMPLE_KEYS},
+        "heapBytes": median(collected or ok, "heapBytes"),
         "rendererGrowth": int(statistics.median(growth)) if growth else None,
         "settleTimedOut": sum(1 for x in ok if x.get("settleTimedOut")),
+        # Runs whose Settled is when the page count stopped, later than the last long task.
+        "settledByPages": sum(1 for x in ok if x.get("settledBy") == "pages"),
         # Runs whose page count was still moving when the wait gave up, and runs whose heap could
         # not be collected first: the row's pages and heap are then not what they are called.
         "pagesStillChanging": sum(1 for x in ok if x.get("pagesStillChanging")),
@@ -226,6 +232,72 @@ def without_repeats(x: dict, again: list[str]) -> dict:
     out.setdefault("error", PSI_REPEAT)
     out["repeated"] = again
     return out
+
+
+def still_repeated(kept: dict, x: dict, again: list[str]) -> list[str]:
+    """Keep the fresh form factors of attempt `x` in `kept`; the ones still without a fresh analysis.
+
+    An attempt can bring one form factor fresh and the other as a copy. The fresh one's time is
+    in `seen` from then on, so in the next attempt it reads as a copy of itself: without `kept`
+    it was thrown away with the attempt and then left out as a repeat, though no published
+    analysis held it (review of 2026-11-20).
+    """
+    for f in ("desktop", "mobile"):
+        if f in x and f not in again and f not in kept and x[f].get("fetchTime"):
+            kept[f] = x[f]
+    return [f for f in again if f not in kept]
+
+
+def with_kept(x: dict, kept: dict, missing: list[str]) -> dict:
+    """The last attempt with the fresh form factors of the earlier ones, less those that stayed copies."""
+    return without_repeats({**x, **kept}, missing)
+
+
+async def stable_count(read, quiet_s: float, wait_s: float, pause: float = 0.5, now=time.monotonic, sleep=asyncio.sleep):
+    """Read a count until it has not changed for `quiet_s`: (count, changes after the first reading, when it last changed, still changing).
+
+    `read` returns the count, or None where the engine has no counter (nothing to wait for).
+    A reading that fails (an engine laying out holds the main thread) is asked again until
+    `wait_s` is over. "Still changing" is true when the wait ended first: with the count still
+    moving, or with a count in hand and the reads failing, which is not a count seen to stop.
+    A count of 0 is waited on like any other: pages that have not been drawn yet are not "no pages".
+    """
+    count, changes, same_since, gave_up = None, -1, now(), now() + wait_s
+    while True:
+        try:
+            got = await read()
+        except Exception:
+            if now() > gave_up:
+                return count, changes, same_since, bool(count)
+            await sleep(pause)
+            continue
+        if got != count:
+            count, changes, same_since = got, changes + 1, now()
+        if count is None or now() - same_since >= quiet_s:
+            return count, changes, same_since, False
+        if now() > gave_up:
+            return count, changes, same_since, True
+        await sleep(pause)
+
+
+def settle_by_pages(out: dict, pages_settled_ms: int, still_changing: bool) -> None:
+    """Put the page count's last change into a run's Settled.
+
+    Settled is "nothing left to do": a page count that moved after the long tasks went quiet
+    says there was, so the later of the two is the run's Settled and `settledBy` says which.
+    A count still moving when the wait gave up has no last change: the run then has no Settled
+    at all (the time in hand is a lower bound, and was published as the figure before the
+    review of 2026-11-20); what the long tasks said is kept as `settledMsLongTasks`.
+    """
+    if still_changing:
+        out["pagesStillChanging"] = True
+        if out.get("settledMs") is not None:
+            out["settledMsLongTasks"] = out.pop("settledMs")
+        out["settleTimedOut"] = True
+        return
+    out["pagesSettledMs"] = pages_settled_ms
+    if out.get("settledMs") is not None and pages_settled_ms > out["settledMs"]:
+        out["settledMsLongTasks"], out["settledMs"], out["settledBy"] = out["settledMs"], pages_settled_ms, "pages"
 
 
 def page_entry(xs: list[dict], limit_s: int) -> dict:

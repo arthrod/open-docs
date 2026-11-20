@@ -9,10 +9,12 @@
 #   hf jobs run --flavor cpu-upgrade --timeout 10h --secrets HF_TOKEN -e SITE=both -e RUNS=3 python:3.12 \
 #     bash -c 'curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/<commit>/scripts/hf_job.sh -o /tmp/job.sh && bash /tmp/job.sh'
 # (download, then run: piped into bash, a download that fails still ends the job as a success).
-# Timeouts that fit: smoke and probe 15m, viewer 5h, editors 6h, both 10h, retake 90m (a step may wait 30 minutes for the host).
+# Timeouts that fit: smoke and probe 25m, viewer 5h, editors 6h, both 10h, retake 90m. The waits for a
+# quiet host are inside these: a step may wait 30 minutes (smoke and probe: one minute, and one
+# minute at the start instead of ten, so that the waits cannot outlast the job).
 # Result files are uploaded after every measuring step to the private dataset
-# arthrod/open-docs-measurements, under <date>/<site>/, so a step that runs out of time loses only
-# itself. Every upload is a commit there, so a later job on the same day does not destroy an
+# arthrod/open-docs-measurements, under <date>[-<TAG>]/<site>/, so a step that runs out of time loses only
+# itself. A step that was skipped uploads nothing: the folder would hold the repository's older files. Every upload is a commit there, so a later job on the same day does not destroy an
 # earlier one's files (retake builds on them on purpose). Probe mode only prints to the log.
 # The job ends with a non-zero status when a step timed out or failed, or an upload did not arrive.
 set -uo pipefail
@@ -81,44 +83,51 @@ sleep 2
 # which is accepted: every row of a pass is taken under the same conditions and carries the load
 # it was taken at. A step waits up to 30 minutes for the load to come under STEP_LOAD, and is
 # skipped and written down as failed when it does not.
+# How many times the load is looked at, ten seconds apart: at the start, and before a step.
+case "$SITE" in smoke|probe) START_TRIES=6; STEP_TRIES=6 ;; *) START_TRIES=60; STEP_TRIES=180 ;; esac
+# /tmp/ran: the last step measured (it was not skipped). /tmp/ran-any: some step of this job did.
+# Files, not variables: a step whose output is piped runs in a subshell.
+ran() { [[ -e /tmp/ran ]]; }
 quiet() { local m=$1 n=$2 i; for i in $(seq "$n"); do awk -v m="$m" '{ exit !($1 + 0 <= m + 0) }' /proc/loadavg && return 0; sleep 10; done; return 1; }
-step() { local t=$1; shift; quiet "$STEP_LOAD" 180 || { echo "== $(date -u +%T) SKIPPED, the host is busy ($(cat /proc/loadavg)): $*" >&3; echo "busy host: $*" >> /tmp/failed; return 0; }; echo "== $(date -u +%T) load $(cut -d' ' -f1 /proc/loadavg): $*" >&3; timeout "$t" "$@"; local rc=$?; echo "== rc=$rc $(cat /proc/loadavg)" >&3; [ $rc = 0 ] || echo "rc=$rc $*" >> /tmp/failed; return 0; }
-# A host that stays busy for ten minutes before anything is measured ends the job (status 3):
+step() { local t=$1; shift; rm -f /tmp/ran; quiet "$STEP_LOAD" "$STEP_TRIES" || { echo "== $(date -u +%T) SKIPPED, the host is busy ($(cat /proc/loadavg)): $*" >&3; echo "busy host: $*" >> /tmp/failed; return 0; }; touch /tmp/ran /tmp/ran-any; echo "== $(date -u +%T) load $(cut -d' ' -f1 /proc/loadavg): $*" >&3; timeout "$t" "$@"; local rc=$?; echo "== rc=$rc $(cat /proc/loadavg)" >&3; [[ $rc = 0 ]] || echo "rc=$rc $*" >> /tmp/failed; return 0; }
+# A host that stays busy for ten minutes (smoke and probe: one) before anything is measured ends the job (status 3):
 # start another, which lands on another host or at another time.
-quiet "$MAX_LOAD" 60 || { echo "BUSY HOST: load $(cat /proc/loadavg) on $(nproc) cores, nothing measured"; exit 3; }
+quiet "$MAX_LOAD" "$START_TRIES" || { echo "BUSY HOST: load $(cat /proc/loadavg) on $(nproc) cores, nothing measured"; exit 3; }
 echo "starting under load $(cat /proc/loadavg), limits $MAX_LOAD to start and $STEP_LOAD for a step"
 PW="uv run -q --with playwright python -I"
 smoke() {
   mkdir -p /tmp/out
   cd /w/editors; export MEASURE_WHERE="$HW"
   step 6m $PW scripts/measure_samples.py docxodus,onlyoffice redline 1 --out /tmp/out/editors.json --latest /tmp/out/editors-latest.json --shots /tmp/out/shots 2>&1 | tail -4 | cut -c1-900
-  up /tmp/out "$P/smoke"
+  ran && up /tmp/out "$P/smoke"
   cd /w/viewer; export MEASURE_WHERE="from $HW"
   step 6m $PW scripts/measure.py docxodus,betteroffice 1 --doc redline --samples /tmp/out/viewer-samples.json --raw /tmp/out/viewer-raw.json 2>&1 | tail -6 | cut -c1-900
-  ls -la /tmp/out; up /tmp/out "$P/smoke"
+  ls -la /tmp/out; ran && up /tmp/out "$P/smoke"
 }
 editors() {
   cd /w/editors; export MEASURE_WHERE="$HW"
+  # The clone's dated files are earlier passes: left in the folder, they were uploaded under today's date.
+  rm -f docs/samples/20[0-9][0-9]-*.json
   for S in showcase redline lorem-500; do
     T=55m; [ "$S" = lorem-500 ] && T=90m
     step $T $PW scripts/measure_samples.py all $S "$RUNS" --out "docs/samples/$D-$S.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S.log
     grep -c '"engine"' /tmp/$S.log; grep -o '"error": "[^"]*' /tmp/$S.log | sort | uniq -c | head -20
-    cp /tmp/$S.log docs/samples/ 2>/dev/null; up docs/samples "$P/editors/samples"
+    ran && { cp /tmp/$S.log docs/samples/ 2>/dev/null; up docs/samples "$P/editors/samples"; }
   done
-  up shots "$P/editors/shots"
+  [[ -d shots ]] && up shots "$P/editors/shots"
 }
 viewer() {
   cd /w/viewer; export MEASURE_WHERE="from $HW"
-  step 25m $PW scripts/measure.py all "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase.json" >/dev/null 2>/tmp/b1.log; tail -2 /tmp/b1.log | cut -c1-300; up results "$P/viewer/results"
-  step 25m $PW scripts/measure.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline.json" >/dev/null 2>/tmp/b2.log; tail -2 /tmp/b2.log | cut -c1-300; up results "$P/viewer/results"
-  step 35m $PW scripts/measure.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500.json" >/dev/null 2>/tmp/b3.log; tail -2 /tmp/b3.log | cut -c1-300; up results "$P/viewer/results"
+  step 25m $PW scripts/measure.py all "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase.json" >/dev/null 2>/tmp/b1.log; tail -2 /tmp/b1.log | cut -c1-300; ran && up results "$P/viewer/results"
+  step 25m $PW scripts/measure.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline.json" >/dev/null 2>/tmp/b2.log; tail -2 /tmp/b2.log | cut -c1-300; ran && up results "$P/viewer/results"
+  step 35m $PW scripts/measure.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500.json" >/dev/null 2>/tmp/b3.log; tail -2 /tmp/b3.log | cut -c1-300; ran && up results "$P/viewer/results"
   export MEASURE_WHERE="from $HW_CURL"
-  step 5m python3 -I scripts/measure_server.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-server-redline.json" >/dev/null; up results "$P/viewer/results"
+  step 5m python3 -I scripts/measure_server.py all "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-server-redline.json" >/dev/null; ran && up results "$P/viewer/results"
   step 8m python3 -I scripts/measure_server.py all "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-server-lorem-500.json" >/dev/null
-  up results "$P/viewer/results"
+  ran && up results "$P/viewer/results"
   export MEASURE_WHERE="from $HW"
   step 40m $PW scripts/measure_server_client.py all showcase,redline,lorem-500 "$RUNS" --out results/server-client.json --raw "results/raw/$D-server-client.json" >/dev/null 2>/tmp/sc.log; tail -2 /tmp/sc.log | cut -c1-300
-  mkdir -p results/logs; cp /tmp/*.log results/logs/; up results "$P/viewer/results"
+  mkdir -p results/logs; cp /tmp/*.log results/logs/; [[ -e /tmp/ran-any ]] && up results "$P/viewer/results"
 }
 # Some engines again, on top of the files an earlier job uploaded the same day (RETAKE_FROM: its
 # date folder). Each script merges by engine, so the other engines' rows stay as they were.

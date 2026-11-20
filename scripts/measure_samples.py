@@ -51,7 +51,7 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, stopped_path, where_note
+from measure_lib import chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, settle_by_pages, stable_count, stopped_path, where_note
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
@@ -185,37 +185,19 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
             # The page count, read until it has not changed for PAGES_QUIET_S: OnlyOffice reports the
             # document ready and paginates on (52, 103 … 500 pages), and one reading two seconds
             # after "loaded" published 409 pages for a 500-page file (2026-11-18).
-            pages, changes, same_since, gave_up = None, -1, time.monotonic(), time.monotonic() + PAGES_WAIT_S
-            while True:
-                try:
-                    now_pages = (await asyncio.wait_for(page.evaluate(PAGES), 60)).get(slug)
-                except Exception:
-                    # Busy (an engine laying out holds the main thread): asked again, until the wait
-                    # gives up. A first reading that fails is not "this engine has no pages".
-                    if time.monotonic() > gave_up:
-                        break
-                    await asyncio.sleep(0.5)
-                    continue
-                if now_pages != pages:
-                    pages, changes, same_since = now_pages, changes + 1, time.monotonic()
-                if not pages or time.monotonic() - same_since >= PAGES_QUIET_S:
-                    break
-                if time.monotonic() > gave_up:
-                    out["pagesStillChanging"] = True  # the count below is what it had reached, not the document's
-                    break
-                await asyncio.sleep(0.5)
+            async def read_pages():
+                return (await asyncio.wait_for(page.evaluate(PAGES), 60)).get(slug)
+
+            pages, changes, same_since, still = await stable_count(read_pages, PAGES_QUIET_S, PAGES_WAIT_S)
             if pages:
-                out["pages"] = pages
-                if changes > 0:
-                    # The count moved after the page said "loaded": click → its last change is when
-                    # the layout ended, which settledMs does not see when the work comes in slices
-                    # shorter than a long task. Absent when the first reading was already final.
-                    out["pagesSettledMs"] = round((same_since - clicked) * 1000)
-                    # Settled is "nothing left to do": a page count that moved after the long tasks
-                    # went quiet says there was. The later of the two is published, and the run
-                    # says which it was (the page count is polled every 0.5 s).
-                    if out.get("settledMs") is not None and out["pagesSettledMs"] > out["settledMs"]:
-                        out["settledMsLongTasks"], out["settledMs"], out["settledBy"] = out["settledMs"], out["pagesSettledMs"], "pages"
+                out["pages"] = pages  # with pagesStillChanging: what the count had reached, not the document's
+            if still:
+                settle_by_pages(out, 0, True)
+            elif pages and changes > 0:
+                # The count moved after the page said "loaded": click → its last change is when
+                # the layout ended, which settledMs does not see when the work comes in slices
+                # shorter than a long task. Absent when the first reading was already final.
+                settle_by_pages(out, round((same_since - clicked) * 1000), False)
             await asyncio.sleep(2.0)  # trailing requests (the page already waited for two quiet seconds)
             out.update(chrome_memory(profile))
             cdp = await ctx.new_cdp_session(page)
