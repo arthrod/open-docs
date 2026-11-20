@@ -46,14 +46,21 @@ D=${DAY:-$(date +%F)}
 P="$D${TAG:+-$TAG}"
 export OD_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage"
 export OD_TIMEOUT_S=600
-# What the job was given, as far as the container can see it (cgroup v2). A quota other than the
-# 8 vCPU the description below names stops the job: the figures would be published under a wrong label.
+# What the job was given, as far as the container can see it (cgroup v2). FLAVOR names the machine
+# type the job was started with; a quota other than that type's vCPU stops the job: the figures
+# would be published under a wrong label.
+FLAVOR=${FLAVOR:-cpu-upgrade}
+case "$FLAVOR" in
+  cpu-upgrade) VCPU=8; RAM=32 ;;
+  cpu-xl) VCPU=16; RAM=124 ;;
+  *) echo "FLAVOR $FLAVOR is not one this script can describe (cpu-upgrade, cpu-xl)"; exit 2 ;;
+esac
 CPUS=$(awk '$1 != "max" { printf "%g", $1 / $2 }' /sys/fs/cgroup/cpu.max 2>/dev/null)
 echo "cpu quota: ${CPUS:-not readable}; memory limit: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo not readable)"
-[ -z "$CPUS" ] || [ "$CPUS" = 8 ] || [ -n "${ANY_FLAVOR:-}" ] || { echo "this is not cpu-upgrade (8 vCPU): start the job with --flavor cpu-upgrade"; exit 2; }
-HW="a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage"
+[[ -z "$CPUS" || "$CPUS" == "$VCPU" ]] || { echo "this is not $FLAVOR ($VCPU vCPU): start the job with --flavor $FLAVOR and -e FLAVOR=$FLAVOR"; exit 2; }
+HW="a Hugging Face Jobs $FLAVOR machine ($VCPU vCPU, $RAM GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage"
 # The curl timings start no Chrome: their description names the machine only.
-HW_CURL="a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64; the load average and core count recorded with each run are the shared host's)"
+HW_CURL="a Hugging Face Jobs $FLAVOR machine ($VCPU vCPU, $RAM GB, Linux x86-64; the load average and core count recorded with each run are the shared host's)"
 cat > /tmp/up.py <<'PY'
 import sys
 from huggingface_hub import HfApi
