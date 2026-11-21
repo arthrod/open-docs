@@ -41,9 +41,10 @@ its own, and the other tables leave it out for that reason.
 - [ ] 1.9 What to know when reading them (notes under the tables)
 - [ ] 1.10 Figures to distrust (table)
 - [ ] 1.11 Lighthouse, PageSpeed table (17 engines and cite-check × 3 samples)
-- [~] 1.12 Lighthouse on our computer (every page, blank and 500 pages): script, page band and README block in; the pass is running
+- [x] 1.12 Lighthouse on our computer: all 18 pages, blank and 500 pages, live 2026-11-21 (seen in Chrome). An analysis whose page could not be reached (Chrome could not resolve the name, on this computer) is made again after a wait
   - [x] WordCraft: Lighthouse measures it directly on a machine with a graphics card (checked by hand, the page draws)
-  - [ ] docen on the 500 pages: `PAGE_HUNG`, re-check
+  - [x] docen on the 500 pages: no score on this computer either (Lighthouse stopped while waiting for the page, 3 of 3, both form factors); the table says so
+  - [!] README.md is over Val Town's file size limit (81 KB): the copy inside the val is stale; GitHub's is current. The site does not read it
 - [ ] 1.13 The assistant: what it does, per engine
 - [ ] 1.14 How fairness to each vendor is decided (table)
 - [ ] 1.15 Assessment: harness or editor? (per-engine table, 10-of-10 table)
@@ -93,3 +94,4 @@ pages, and the figures band matches the README row.
 | 2026-11-21 | 1.8, 1.10 | docen opens the 500 pages: row, notes and blog corrected |
 | 2026-11-21 | 1.16 | What a dash in JS heap means |
 | 2026-11-21 | 4.3 | Each engine links to its vendor note |
+| 2026-11-21 | 1.12 | Lighthouse on our computer published for every page |
