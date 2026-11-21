@@ -74,3 +74,16 @@ def test_a_lighthouse_row_analysed_on_another_address_says_so():
                     "e/plate": {"desktop": page, "mobile": page, "measuredAt": "2026-11-16", "environment": "PSI", "base": "https://a.example"}}}
     out = rt.lighthouse_block(lh)
     assert "| folio (measured 2026-11-16 on https://b.example) |" in out and "| Plate |" in out
+
+
+def test_rows_of_one_pass_differing_only_in_host_load_carry_no_note_and_each_table_says_its_load():
+    row = {"loadMs": 600, "settledMs": 700, "heapBytes": 5 << 20, "rendererRss": 700 << 20, "runs": [600]}
+    m = "Chrome, a cpu-xl machine"
+    data = {"measuredAt": "2026-11-21", "environment": f"{m}; machine load (1-minute average) median 56.6, highest 75.7, on 64 cores", "samples": {
+        "redline": {"folio": {**row, "measuredAt": "2026-11-21", "environment": f"{m}; machine load (1-minute average) median 25.0, highest 32.0, on 64 cores"}},
+        "lorem-500": {"folio": {**row, "measuredAt": "2026-11-21", "environment": f"{m}; machine load (1-minute average) median 56.6, highest 75.7, on 64 cores"}}}}
+    out = rt.samples_block(data)
+    assert out.count("| folio |") == 2 and "(measured" not in out
+    assert out.splitlines()[0] == f"Measured 2026-11-21: {m}."
+    assert "Host load during these runs (1-minute average): median 25.0, highest 32.0, on 64 cores." in out
+    assert "Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores." in out

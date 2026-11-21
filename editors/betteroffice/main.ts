@@ -42,9 +42,36 @@ async function saved(): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
+/**
+ * Waits for the layout of the document now in the editor.
+ *
+ * BetterOffice rejects a wait with "Document was replaced" when the document's identity moves
+ * while it waits, and that also happens with nobody replacing anything: on PageSpeed's desktop
+ * machine three of five loads of the 500 pages ended that way (2026-11-20), none on its mobile
+ * one. The document the page asked for is still the one loading, so the wait is taken up again
+ * on the new identity; any other failure, or a fourth "replaced", is the page's error.
+ */
+async function layoutDone(timeoutMs = 60_000): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await editor().whenLayoutComplete({ timeoutMs });
+      return;
+    } catch (err) {
+      if (attempt >= 4 || !/Document was replaced/.test(String((err as Error)?.message ?? err))) throw err;
+      // A frame, or 100 ms where frames do not come (a tab in the background).
+      await new Promise((res) => { requestAnimationFrame(() => res(null)); setTimeout(res, 100); });
+    }
+  }
+}
+
 async function open(bytes: Uint8Array) {
-  await editor().loadDocumentBuffer(bytes.slice());
-  await editor().whenLayoutComplete({ timeoutMs: 60_000 });
+  try {
+    await editor().loadDocumentBuffer(bytes.slice());
+  } catch (err) {
+    // The same rejection from the load's own wait: the bytes were handed over, so wait for them.
+    if (!/Document was replaced/.test(String((err as Error)?.message ?? err))) throw err;
+  }
+  await layoutDone();
 }
 
 window.od.register({
@@ -86,7 +113,7 @@ window.od.register({
       // The ref is attached when the editor chunk has loaded.
       const tick = () => {
         if (ref.current) {
-          ref.current.whenLayoutComplete({ timeoutMs: 60_000 }).then(() => {
+          layoutDone().then(() => {
             clearTimeout(timer);
             resolve();
           }, fail);

@@ -1470,40 +1470,40 @@
    },
    "e/betteroffice": {
     "desktop": {
-     "performance": null,
-     "accessibility": null,
-     "bestPractices": null,
-     "seo": null,
-     "fcpMs": null,
-     "lcpMs": null,
-     "tbtMs": null,
-     "cls": null,
-     "speedIndexMs": null,
+     "performance": 95,
+     "accessibility": 96,
+     "bestPractices": 100,
+     "seo": 90,
+     "fcpMs": 246,
+     "lcpMs": 246,
+     "tbtMs": 59,
+     "cls": 0.001,
+     "speedIndexMs": 2406,
      "performanceRuns": [
-      null,
-      null,
-      null,
-      null,
-      null
+      95,
+      88,
+      97,
+      94,
+      97
      ],
-     "error": "the engine failed on Google's machine, so there is no score: [open-docs] Load the 500-page sample Error: Document was replaced at https://editors.benchmarks.law/vendor/npm/@betteroffice/docx-react@0.5.1/dist/chunk-4ZGDANB"
+     "error": null
     },
     "mobile": {
-     "performance": 92,
+     "performance": 91,
      "accessibility": 100,
      "bestPractices": 100,
      "seo": 91,
-     "fcpMs": 905,
-     "lcpMs": 905,
-     "tbtMs": 92,
+     "fcpMs": 906,
+     "lcpMs": 906,
+     "tbtMs": 138,
      "cls": 0.026,
-     "speedIndexMs": 7218,
+     "speedIndexMs": 7355,
      "performanceRuns": [
-      94,
-      68,
       92,
-      92,
-      86
+      91,
+      88,
+      91,
+      93
      ],
      "error": null
     },

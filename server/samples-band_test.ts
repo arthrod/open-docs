@@ -124,3 +124,20 @@ Deno.test("samples band: a figure found wrong says so under the engine's name, a
   assert(told.includes("read with care: pages are &lt;wrong&gt;</small>"));
   assert(told.includes("checked again on 2026-11-20"));
 });
+
+Deno.test("rows of one pass that differ only in host load carry no note; each table says its own load", () => {
+  const m = "Chrome, a cpu-xl machine";
+  const load = (a: string) => `${m}; machine load (1-minute average) ${a}, on 64 cores`;
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21", environment: load("median 56.6, highest 75.7"),
+    samples: {
+      redline: { folio: row({ measuredAt: "2026-11-21", environment: load("median 25.0, highest 32.0") }) },
+      "lorem-500": { folio: row({ measuredAt: "2026-11-21", environment: load("median 56.6, highest 75.7") }) },
+    },
+  };
+  const html = samplesBand(editors, data);
+  assertEquals(html.includes('class="prov">measured'), false);
+  assertEquals(html.includes(`measured 2026-11-21: ${m}.`), true);
+  assertEquals(html.includes("Host load during these runs (1-minute average): median 25.0, highest 32.0, on 64 cores."), true);
+  assertEquals(html.includes("Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores."), true);
+});

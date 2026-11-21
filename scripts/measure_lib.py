@@ -13,6 +13,7 @@ import shlex
 import re
 import statistics
 import subprocess
+import sys
 import time
 
 SAMPLE_KEYS = ("startupMs", "loadMs", "settledMs", "heapBytes", "heapBytesBeforeGc", "rendererRssReady", "rendererRss", "gpuRss", "domNodes", "pages", "pagesSettledMs", "bytes", "requests")
@@ -103,10 +104,16 @@ def sample_row(xs: list[dict]) -> dict:
     """
     ok = [x for x in xs if "loadMs" in x]
     growth = [x["rendererRss"] - x["rendererRssReady"] for x in ok if x.get("rendererRss") is not None and x.get("rendererRssReady") is not None]
+    # A heap that could not be collected first is the uncollected figure under the collected
+    # one's name: left out of the median while any run was collected, and counted either way.
+    collected = [x for x in ok if x.get("heapBytes") is not None and not x.get("heapNotCollected")]
     return {
         **{k: median(ok, k) for k in SAMPLE_KEYS},
+        "heapBytes": median(collected or ok, "heapBytes"),
         "rendererGrowth": int(statistics.median(growth)) if growth else None,
         "settleTimedOut": sum(1 for x in ok if x.get("settleTimedOut")),
+        # Runs whose Settled is when the page count stopped, later than the last long task.
+        "settledByPages": sum(1 for x in ok if x.get("settledBy") == "pages"),
         # Runs whose page count was still moving when the wait gave up, and runs whose heap could
         # not be collected first: the row's pages and heap are then not what they are called.
         "pagesStillChanging": sum(1 for x in ok if x.get("pagesStillChanging")),
@@ -196,14 +203,17 @@ def summarize(l: dict) -> dict:
 PSI_REPEAT = "PageSpeed answered with an analysis it had already made (its cache): not counted again"
 
 
-def repeated_analysis(x: dict, seen: dict) -> list[str]:
-    """The form factors of analysis `x` that PageSpeed served from its cache, and remember the fresh ones.
+def repeated_analysis(x: dict, seen: dict, remember: bool = True) -> list[str]:
+    """The form factors of analysis `x` that PageSpeed served from its cache.
 
     PageSpeed keeps an analysis for a short while and answers a second request for the same
     address with it. Five requests in three minutes came back as two or three analyses
     (2026-11-20, five pages per round: 18 of 50 were copies), and a median of copies is not a
     median of five. Every Lighthouse report carries the time it was made: one seen before, for
     the same page and form factor, is a copy. `seen` maps (page, form factor) to those times.
+    With `remember`, the fresh ones are added to it; a caller that asks again before it
+    publishes (scripts/measure_pagespeed.py) passes False and calls remember_analyses on what
+    it publishes, so that an analysis it then threw away is not held against a later request.
     """
     again = []
     for f in ("desktop", "mobile"):
@@ -213,9 +223,17 @@ def repeated_analysis(x: dict, seen: dict) -> list[str]:
         times = seen.setdefault((x.get("page"), f), set())
         if at in times:
             again.append(f)
-        else:
+        elif remember:
             times.add(at)
     return again
+
+
+def remember_analyses(x: dict, seen: dict) -> None:
+    """Count the analyses in `x` as published: the same one again is a copy from now on."""
+    for f in ("desktop", "mobile"):
+        at = (x.get(f) or {}).get("fetchTime")
+        if at:
+            seen.setdefault((x.get("page"), f), set()).add(at)
 
 
 def without_repeats(x: dict, again: list[str]) -> dict:
@@ -226,6 +244,74 @@ def without_repeats(x: dict, again: list[str]) -> dict:
     out.setdefault("error", PSI_REPEAT)
     out["repeated"] = again
     return out
+
+
+def still_repeated(kept: dict, x: dict, again: list[str], owed: list[str] | None = None) -> list[str]:
+    """Keep the fresh form factors of attempt `x` in `kept`; the ones still without a fresh analysis.
+
+    An attempt can bring one form factor fresh and the other as a copy: the fresh one is kept,
+    and only the other is owed. `owed` is what the attempt before left owed: an attempt that
+    fails brings nothing, and without it the form factor stopped being asked for and lost its
+    "repeated" mark. The first fresh report of a form factor is the one counted, whatever it
+    says: a report with an error (the engine failed to start) is a result, which page_entry
+    counts, and one that a later attempt replaced or asked for again would be a failure hidden.
+    """
+    for f in ("desktop", "mobile"):
+        if f in x and f not in again and f not in kept:
+            kept[f] = x[f]
+    return [f for f in ("desktop", "mobile") if (f in again or f in (owed or [])) and f not in kept]
+
+
+def with_kept(x: dict, kept: dict, missing: list[str]) -> dict:
+    """The last attempt with the fresh form factors of the earlier ones, less those that stayed copies."""
+    return without_repeats({**x, **kept}, missing)
+
+
+async def stable_count(read, quiet_s: float, wait_s: float, pause: float = 0.5, now=time.monotonic, sleep=asyncio.sleep):
+    """Read a count until it has not changed for `quiet_s`: (count, changes after the first reading, when it last changed, still changing).
+
+    `read` returns the count, or None where the engine has no counter (nothing to wait for).
+    A reading that fails (an engine laying out holds the main thread) is asked again until
+    `wait_s` is over. "Still changing" is true when the wait ended first: with the count still
+    moving, or with a count in hand (0 included) and the reads failing, which is not a count seen to stop.
+    A count of 0 is waited on like any other: pages that have not been drawn yet are not "no pages".
+    """
+    count, changes, same_since, gave_up = None, -1, now(), now() + wait_s
+    while True:
+        try:
+            got = await read()
+        except Exception:
+            if now() > gave_up:
+                return count, changes, same_since, count is not None
+            await sleep(pause)
+            continue
+        if got != count:
+            count, changes, same_since = got, changes + 1, now()
+        if count is None or now() - same_since >= quiet_s:
+            return count, changes, same_since, False
+        if now() > gave_up:
+            return count, changes, same_since, True
+        await sleep(pause)
+
+
+def settle_by_pages(out: dict, pages_settled_ms: int, still_changing: bool) -> None:
+    """Put the page count's last change into a run's Settled.
+
+    Settled is "nothing left to do": a page count that moved after the long tasks went quiet
+    says there was, so the later of the two is the run's Settled and `settledBy` says which.
+    A count still moving when the wait gave up has no last change: the run then has no Settled
+    at all (the time in hand is a lower bound, and was published as the figure before the
+    review of 2026-11-20); what the long tasks said is kept as `settledMsLongTasks`.
+    """
+    if still_changing:
+        out["pagesStillChanging"] = True
+        if out.get("settledMs") is not None:
+            out["settledMsLongTasks"] = out.pop("settledMs")
+        out["settleTimedOut"] = True
+        return
+    out["pagesSettledMs"] = pages_settled_ms
+    if out.get("settledMs") is not None and pages_settled_ms > out["settledMs"]:
+        out["settledMsLongTasks"], out["settledMs"], out["settledBy"] = out["settledMs"], pages_settled_ms, "pages"
 
 
 def page_entry(xs: list[dict], limit_s: int) -> dict:
@@ -356,6 +442,32 @@ def machine_load() -> dict:
     return {"load1": round(os.getloadavg()[0], 2), "cores": os.cpu_count() or 1}
 
 
+async def quiet_host(env: dict | None = None, load=None, sleep=asyncio.sleep, now=time.monotonic) -> str | None:
+    """Wait until the machine is quiet enough to time a page; the reason, when it never was.
+
+    On a shared host the load changes within minutes (2026-11-20: 38 when a step started, 98
+    when it ended), so it is looked at before every run, not once per step. OD_MAX_LOAD is the
+    1-minute load average a run may start under; without it nothing waits (one's own machine).
+    OD_LOAD_WAIT_S is how long one run waits (six hours unless given). A wait that runs out
+    stops the script like a Chrome that will not end: what was measured is written, the rest
+    is left as it was, and the script ends with a status that says it did not finish.
+    """
+    env = os.environ if env is None else env
+    if not env.get("OD_MAX_LOAD"):
+        return None
+    limit, wait = float(env["OD_MAX_LOAD"]), float(env.get("OD_LOAD_WAIT_S", 21600))
+    load = load or (lambda: os.getloadavg()[0])
+    end, said = now() + wait, False
+    while (at := load()) > limit:
+        if now() >= end:
+            return f"the host stayed busy for {wait:g} s (load {at:.1f}, a run starts under {limit:g})"
+        if not said:
+            print(f"waiting for the host: load {at:.1f}, a run starts under {limit:g}", file=sys.stderr, flush=True)
+            said = True
+        await sleep(10)
+    return None
+
+
 def load_note(runs: list[dict]) -> str:
     """One phrase for the environment line: the load the runs were taken under."""
     loads = sorted(r["load1"] for r in runs if isinstance(r.get("load1"), (int, float)))
@@ -375,6 +487,15 @@ def runs_note(asked: int, raw: list[dict], key: str = "engine") -> str:
     if not counts or counts == [asked]:
         return f"{asked} runs"
     return f"{counts[0]} to {counts[-1]} runs ({asked} asked; the measuring stopped early)" if len(counts) > 1 else f"{counts[0]} runs ({asked} asked; the measuring stopped early)"
+
+
+def page_list(pages: str) -> list[str]:
+    """The pages to analyse, each once, in the order given.
+
+    A page named twice ran as two jobs of one round: both could keep the same fresh analysis
+    while they waited for the other form factor, and both published it.
+    """
+    return list(dict.fromkeys(p.strip() for p in pages.split(",") if p.strip()))
 
 
 def pagespeed_args(argv: list[str]) -> argparse.Namespace:

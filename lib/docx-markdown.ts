@@ -71,7 +71,15 @@ function chain(styles: Map<string, StyleInfo>, id: string | null | undefined): S
   const out: StyleInfo[] = [];
   for (let cur = id ?? undefined, n = 0; cur && n < 20; n++) {
     const s = styles.get(cur);
-    if (!s) break;
+    if (!s) {
+      // A style the document names and does not define: its id stands for its name. Docxodus's
+      // Markdown parser writes pStyle "Quote" and rStyle "Code" into a document that defines
+      // neither (seen 2026-11-20), and the id is all that says what the paragraph is.
+      // Only Word's own ids for a quote and for code: any other undefined id says nothing
+      // ("Barcode" is not code).
+      if (n === 0 && /^(Quote|IntenseQuote|Code|SourceCode|HTMLPreformatted|HTMLCode|VerbatimChar)$/.test(cur)) out.push({ name: cur } as StyleInfo);
+      break;
+    }
     out.push(s);
     cur = s.basedOn;
   }
@@ -237,6 +245,55 @@ function paragraphRuns(p: Element, ctx: Ctx): Run[] {
   return merged;
 }
 
+const filled = (shd: Element | undefined) =>
+  !!shd && !/^(nil|none)$/i.test(wAttr(shd, "val") ?? "") && !/^(auto|ffffff)?$/i.test(wAttr(shd, "fill") ?? "");
+
+/** Every run that has text is in a monospace face, on a shaded background (its own or the paragraph's). */
+function shadedMono(p: Element, pPr: Element | undefined): boolean {
+  const all = [...p.getElementsByTagNameNS(W, "r")];
+  const withText = all.filter((r) => kids(r, "t").some((t) => (t.textContent ?? "").length));
+  // No text at all: an empty line of code when its (empty) runs are formatted as code. joinCode
+  // keeps it as a line inside a block and drops it anywhere else. A paragraph with no run is spacing.
+  const judged = withText.length ? withText : all;
+  if (!judged.length) return false;
+  const paragraphShaded = filled(kid(pPr, "shd"));
+  return judged.every((r) => {
+    const rPr = kid(r, "rPr");
+    const fonts = kid(rPr, "rFonts");
+    return MONO.test(wAttr(fonts, "ascii") ?? wAttr(fonts, "hAnsi") ?? "") && (paragraphShaded || filled(kid(rPr, "shd")));
+  });
+}
+
+/**
+ * Code paragraphs that follow one another are one block, a line each: Word has no code block,
+ * only paragraphs in a code style, and a fence per line is not what was written.
+ */
+function joinCode(blocks: Block[]): Block[] {
+  const text = (b: Block) => b.runs.map((r) => r.text).join("");
+  // A paragraph of nothing but white space is as many empty lines as it has line breaks.
+  const blank = (t: string) => t.trim() ? t : t.replace(/[^\n]/g, "");
+  const out: Block[] = [];
+  for (const b of blocks) {
+    const last = out[out.length - 1];
+    // A paragraph that carries a list's counter event (an unmarked level) stays a block of its
+    // own: merged into the block before, its event was lost and the items after it miscounted.
+    if (b.kind === "code" && last?.kind === "code" && !b.counts) {
+      out[out.length - 1] = { ...last, runs: [{ ...last.runs[0], text: `${text(last)}\n${blank(text(b))}` }] };
+    } else out.push(b);
+  }
+  // Blank lines at either end of a block are an engine's padding (docen closes a code block
+  // with an empty code paragraph), not lines of code. Line by line: one expression for "blank
+  // lines at the end" backtracks without end on a block with many blank lines inside.
+  return out.map((b) => {
+    if (b.kind !== "code") return b;
+    const lines = text(b).split("\n");
+    let from = 0, to = lines.length;
+    while (from < to && !lines[from].trim()) from++;
+    while (to > from && !lines[to - 1].trim()) to--;
+    return { ...b, runs: [{ ...b.runs[0], text: lines.slice(from, to).join("\n") }] };
+  });
+}
+
 function paragraphBlock(p: Element, ctx: Ctx): Block {
   ctx.unmarked = undefined;
   const b = paragraphBlockOf(p, ctx);
@@ -280,11 +337,22 @@ function paragraphBlockOf(p: Element, ctx: Ctx): Block {
     const allItalic = runs.every((r) => !r.text.trim() || r.italic);
     return { kind: "quote", runs: allItalic ? runs.map((r) => ({ ...r, italic: false })) : runs };
   }
-  // Code blocks come from a paragraph style only: a paragraph that is one
-  // inline code span (monospace runs) stays a paragraph.
-  if (names.some((n) => /^(code|html preformatted|source code|verbatim)/.test(n))) {
+  // Code blocks come from a paragraph style, or from a paragraph whose every run is monospace
+  // on a shaded background (a <pre> through Plate's exporter). A paragraph that is one inline
+  // code span (monospace runs, not shaded) stays a paragraph.
+  if (names.some((n) => /^(code|html preformatted|source code|verbatim)/.test(n)) || shadedMono(p, pPr)) {
     return { kind: "code", runs: runs.map((r) => ({ ...r, code: false })) };
   }
+  // A quote with no style: a left border and a left indent, which is how an HTML blockquote
+  // arrives (Plate's exporter writes exactly that, and it is what the assistant's own
+  // Markdown becomes). Either alone is an indented or a bordered paragraph; a paragraph in a
+  // code style or with any numbering (its own or its style's, even switched off) is what that says first.
+  const left = kid(kid(pPr, "pBdr"), "left");
+  const ind = kid(pPr, "ind");
+  if (
+    !numPr && numId === undefined && left && !/^(none|nil)$/.test(wAttr(left, "val") ?? "none") &&
+    Number(wAttr(ind, "left") ?? wAttr(ind, "start") ?? 0) > 0 && text.trim()
+  ) return { kind: "quote", runs };
   return { kind: "p", align: align as Block["align"], runs };
 }
 
@@ -333,7 +401,9 @@ export function docxToMarkdown(bytes: Uint8Array): string {
   const flush = () => {
     // Empty paragraphs are spacing, not content; an empty numbered item still
     // takes its number.
-    const blocks = pending.filter((b) => b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()));
+    // Code lines are joined first, while an empty paragraph between two blocks still keeps
+    // them apart (and a blank code line is still a line of its block).
+    const blocks = joinCode(pending).filter((b) => b.kind === "hr" || b.kind === "li" || b.runs.some((r) => r.text.trim()));
     const md = blocks.length ? blocksToMarkdown(blocks, lists) : "";
     if (md) parts.push(md);
     pending = [];
