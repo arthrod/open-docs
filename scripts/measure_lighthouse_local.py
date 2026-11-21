@@ -21,7 +21,7 @@ CHROME_PATH     the Chrome to drive (default: the installed Google Chrome on mac
 MEASURE_WHERE   how to name this computer in the table's heading
 OD_MAX_LOAD     a run starts only under this 1-minute load average (see measure_lib.quiet_host)
 """
-import asyncio, datetime, json, os, shlex, subprocess, sys, tempfile
+import asyncio, datetime, json, os, shlex, subprocess, sys, tempfile, time
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
@@ -38,7 +38,67 @@ CHROME = os.environ.get("CHROME_PATH") or next(
 )
 
 
+# Chrome's own error page instead of the site: the connection failed before any page came back.
+# That is this computer's network, not the page, so the analysis is made again (and says so).
+NOT_LOADED = ("CHROME_INTERSTITIAL_ERROR", "ERRORED_DOCUMENT_REQUEST", "FAILED_DOCUMENT_REQUEST", "DNS_FAILURE")
+LOAD_TRIES = 4
+# The failures come in runs of minutes: the next try waits, longer each time.
+LOAD_WAIT_S = 45
+
+
+# The page came back and one of its own downloads did not (the engine's module, the document):
+# also a fetch that failed from this computer. Made again like an unreached page; one that fails
+# on every spaced try is recorded as the failure it is.
+FETCH_FAILED = ("Failed to fetch dynamically imported module", "could not be fetched: 429", "Failed to load the editor code")
+
+
+def unreached(error: str) -> bool:
+    """Whether an analysis failed on a network fetch, not on what the page did with what it got."""
+    return error.startswith(NOT_LOADED) or any(x in error for x in FETCH_FAILED)
+
+
+def why_not_loaded(url: str, work: str) -> list[str]:
+    """Chrome's own network errors for `url`, right after an analysis could not reach it: a probe, not a measurement."""
+    if not CHROME:
+        return []
+    log = os.path.join(work, "netlog.json")
+    try:
+        subprocess.run([CHROME, "--headless=new", "--disable-gpu", f"--user-data-dir={os.path.join(work, 'probe-profile')}", f"--log-net-log={log}",
+                        "--dump-dom", url], capture_output=True, timeout=45)
+        text = open(log, errors="replace").read()
+        names = {v: k for k, v in json.loads(text[:text.index('"events"')].rstrip().rstrip(",") + "}")["constants"]["netError"].items()}
+        import re
+        return sorted({names.get(int(n), n) for n in re.findall(r'"net_error":(-\d+)', text)} - {"ERR_IO_PENDING", "ERR_ABORTED"})
+    except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as e:
+        return [f"probe failed: {type(e).__name__}"]
+
+
 def analyse(page: str, form: str, work: str) -> dict:
+    """One analysis, made again (up to LOAD_TRIES times) when the page could not be reached at all."""
+    seen: list[str] = []
+    for attempt in range(1, LOAD_TRIES + 1):
+        got = analyse_once(page, form, work)
+        if not unreached(str(got.get("error", ""))):
+            break
+        url = f"{BASE}/{page}" + (f"?{ARGS.query}" if ARGS.query else "")
+        seen += [e for e in why_not_loaded(url, work) if e not in seen]
+        if attempt < LOAD_TRIES:
+            time.sleep(LOAD_WAIT_S * attempt)
+    more = {"loadTries": attempt} if attempt > 1 else {}
+    return {**got, **more, **({"netErrors": seen} if seen else {})}
+
+
+def no_report(said: str) -> str:
+    """Why there is no report, from what Lighthouse printed, without this computer's folders in it."""
+    if "execution-context" in said or "wait-for-condition" in said:
+        # Its own evaluate or wait in the page never came back: the tab had stopped answering.
+        return "Lighthouse stopped while waiting for the page and wrote no report"
+    import re
+    text = re.sub(r"(?:file://)?/(?:Users|home|private|var|tmp)/\S+", "<path>", " ".join(said.split()))
+    return "Lighthouse wrote no report: " + text[-200:]
+
+
+def analyse_once(page: str, form: str, work: str) -> dict:
     """One analysis: Lighthouse's report summarised, or why there is none."""
     url = f"{BASE}/{page}" + (f"?{ARGS.query}" if ARGS.query else "")
     out = os.path.join(work, "report.json")
@@ -56,7 +116,7 @@ def analyse(page: str, form: str, work: str) -> dict:
     try:
         return summarize(json.load(open(out)), here=True)
     except (OSError, ValueError):
-        return {"error": "Lighthouse wrote no report: " + " ".join((done.stderr or done.stdout or "").split())[-200:]}
+        return {"error": no_report((done.stderr or done.stdout or ""))}
 
 
 async def main() -> int:

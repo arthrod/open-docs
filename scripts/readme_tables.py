@@ -82,10 +82,13 @@ def elsewhere(row: dict, head: dict) -> str:
     if machine(where) != machine(head.get("environment")):
         # "<browser and method>; <the machine>; <its load>": when only the machine differs, name the machine.
         mine, theirs = machine(where).split("; "), machine(head.get("environment")).split("; ")
-        told = "; ".join(mine[1:]) if len(mine) > 1 and mine[0] == theirs[0] else where
+        same = mine[0] == theirs[0]
+        told = "; ".join(mine[1:]) if same else where
         # Its load goes with it: the table's host-load line speaks only of the table's own machine.
-        if told != where and LOAD in (where or ""):
-            told += ", load " + where.split(LOAD)[1]
+        if same and LOAD in (where or ""):
+            told = ", ".join(x for x in (told, "load " + where.split(LOAD)[1]) if x)
+        if same and not told:
+            return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
         return f" (measured {when}{on}: {cell(told)})"
     return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
 

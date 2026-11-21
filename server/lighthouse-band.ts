@@ -67,6 +67,11 @@ const spread = (f: string, p: LighthousePage): string => {
   return hi - lo >= 10 ? `${f} analyses ranged ${lo} to ${hi}` : "";
 };
 
+/** A row's own environment beside its table's: when the method and machine are the same, only what varied (its load, its CPU index). */
+const variedPart = (env: string, head?: string | null) => {
+  const mine = env.split("; "), theirs = (head ?? "").split("; ");
+  return mine[0] === theirs[0] && mine.length > 1 ? mine.slice(1).join("; ") : env;
+};
 export function lighthouseBand(
   all: EditorMeta[],
   data: LighthouseResults = LATEST as LighthouseResults,
@@ -96,7 +101,7 @@ export function lighthouseBand(
       const tableBase = head.base ?? data.base; // the 500-page table has its own heading, and its own address
       const otherBase = !!r.base && !!tableBase && r.base !== tableBase;
       const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment) || otherBase
-        ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
+        ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(variedPart(r.environment ?? "", head.environment))}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
       if (num(d.performance) == null && num(m.performance) == null) return `<tr><td>${name}${elsewhere}</td><td colspan="${ours ? 7 : 8}"><b>no result</b>: ${esc(String(d.error ?? m.error ?? (ours ? "Lighthouse gave no score" : "PageSpeed gave no score")).slice(0, 160))}</td></tr>`;
       return `<tr><td>${name}${elsewhere}${partial ? ` <small class="lh-part">${partial}</small>` : ""}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>

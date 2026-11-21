@@ -1,0 +1,70 @@
+{
+ "measuredAt": "2026-11-21",
+ "environment": "Lighthouse 13.6.0 run on a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), Google Chrome 158.0.8127.36, headless, 3 analyses per page and form factor, median of those that gave a result; machine load (1-minute average) median 2.2, highest 2.5, on 12 cores",
+ "base": "https://editors.benchmarks.law",
+ "query": "open=lorem-500.docx",
+ "stopped": null,
+ "raw": [
+  {
+   "page": "e/docen",
+   "run": 0,
+   "load1": 1.8,
+   "cores": 12,
+   "desktop": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 1.6,
+    "cores": 12
+   },
+   "mobile": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "loadTries": 2,
+    "netErrors": [
+     "ERR_NAME_NOT_RESOLVED"
+    ],
+    "load1": 1.8,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/docen",
+   "run": 1,
+   "load1": 2.13,
+   "cores": 12,
+   "desktop": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 2.31,
+    "cores": 12
+   },
+   "mobile": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "loadTries": 2,
+    "netErrors": [
+     "ERR_DNS_NAME_HTTPS_ONLY",
+     "ERR_NETWORK_CHANGED"
+    ],
+    "load1": 2.13,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/docen",
+   "run": 2,
+   "load1": 2.52,
+   "cores": 12,
+   "desktop": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 2.24,
+    "cores": 12
+   },
+   "mobile": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "loadTries": 2,
+    "netErrors": [
+     "ERR_DNS_NAME_HTTPS_ONLY"
+    ],
+    "load1": 2.52,
+    "cores": 12
+   }
+  }
+ ]
+}
