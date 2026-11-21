@@ -137,3 +137,11 @@ Deno.test("local results are shown where PageSpeed has no rows, without PageSpee
   assertEquals(html.includes("PageSpeed Insights</a> on every engine's page"), false);
   assertEquals(lighthouseBand(editors, none, none), "");
 });
+Deno.test("a 500-page table is shown even when there is no blank-page table and no local result", () => {
+  const html = lighthouseBand(
+    editors,
+    { measuredAt: "2026-11-10", environment: "Lighthouse 13.5", pages: {}, docs: { "lorem-500": { "e/folio": { desktop: page(), mobile: page() } } } },
+    { measuredAt: "2026-11-10", environment: "x", pages: {} },
+  );
+  assertEquals(html.includes('id="lighthouse-lorem-500"'), true);
+});

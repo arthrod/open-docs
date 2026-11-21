@@ -77,7 +77,8 @@ def analyse(page: str, form: str, work: str) -> dict:
     """One analysis, made again (up to LOAD_TRIES times) when the page could not be reached at all."""
     seen: list[str] = []
     for attempt in range(1, LOAD_TRIES + 1):
-        got = analyse_once(page, form, work)
+        # The load this attempt started under: a wait between attempts can change it.
+        got = {**analyse_once(page, form, work), **machine_load()}
         if not unreached(str(got.get("error", ""))):
             break
         url = f"{BASE}/{page}" + (f"?{ARGS.query}" if ARGS.query else "")
@@ -120,6 +121,8 @@ def analyse_once(page: str, form: str, work: str) -> dict:
 
 
 async def main() -> int:
+    # Read before measuring: a malformed --out file stops the run here, not after a long pass.
+    result = read_results(ARGS.out)
     raw: list[dict] = []
     stopped = None
     with tempfile.TemporaryDirectory() as work:
@@ -131,8 +134,8 @@ async def main() -> int:
                         break
                     load = machine_load()
                     x.update(load)
-                    # The load each analysis started under: the two of a page can be minutes apart.
-                    x[form] = {**await asyncio.to_thread(analyse, page, form, work), **load}
+                    # Each analysis carries the load of the attempt that produced it (analyse).
+                    x[form] = await asyncio.to_thread(analyse, page, form, work)
                 # A page stopped between its two analyses keeps the one it has, in the raw file only.
                 if "desktop" in x or "mobile" in x:
                     raw.append(x)
@@ -141,7 +144,6 @@ async def main() -> int:
                     break
             if stopped:
                 break
-    result = read_results(ARGS.out)
     version = next((x[f]["version"] for x in raw for f in ("desktop", "mobile") if f in x and x[f].get("version")), LIGHTHOUSE_VERSION)
     chrome = subprocess.run([CHROME, "--version"], capture_output=True, text=True).stdout.strip() if CHROME else "Chrome"
     meta = {

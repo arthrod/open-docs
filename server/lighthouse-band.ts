@@ -129,7 +129,7 @@ export function lighthouseBand(
   const mineLong = table(local.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx", local.docsMeta?.["lorem-500"] ?? local, true);
   const longHead = local.docsMeta?.["lorem-500"];
   // The populations stand by themselves: local results are shown even where PageSpeed has no rows.
-  if (!blank && !mine && !mineLong) return "";
+  if (!blank && !long && !mine && !mineLong) return "";
   const localBlock = mine || mineLong
     ? `<h3 class="smp-h" id="lighthouse-local">Lighthouse on our computer <small>the same pages, the same Lighthouse release, on a machine with a graphics card</small></h3>
   <p class="sec-copy">On Google's machines two engines do not start (their files do not download there; why is not known), so they have no score above. This computer has a graphics card, which Google's machines do not.
