@@ -36,7 +36,7 @@ its own, and the other tables leave it out for that reason.
 - [x] 1.7 The samples, measured: redline table (17 rows, host-load line). Audited 2026-11-21: README and home page
 - [x] 1.8 The samples, measured: 500 pages table (17 rows, host-load line). Audited 2026-11-21: README and home page
   - [x] docen row: it opens the file (500 pages, Word's count); the pass gave up too early. Row re-measured on a Mac with a 30-minute deadline, notes, distrust table and blog corrected, live 2026-11-21
-  - [ ] docen at phone size: one emulated run showed an empty document after a 3.5-minute freeze; repeat before saying anything about it
+  - [x] docen at phone width: repeated 2026-11-21 in Chrome in a 500-pixel-wide window (the narrowest Chrome allows), not emulated. Read about fifteen minutes after opening: "Page 1 of 500", 500 page canvases. The earlier emulated run that showed an empty document was read too early or was the emulation; it is not a finding. This is a laptop's processor, not a phone's, and the time to open was not taken
   - [x] OnlyOffice (CryptPad build): the dash was in the live Measurements table, which had two visits and neither a fresh Chromium tab. The page now says what a dash means; a Chrome visit recorded 129 MB
 - [x] 1.9 What to know when reading them (notes under the tables) Audited 2026-11-21: the notes name every engine with an unusual row (docen, WordCraft, Univer, the viewers); corrected this week for docen and OnlyOffice
 - [x] 1.10 Figures to distrust (table) Audited 2026-11-21: each row read against the tables it cites
@@ -44,7 +44,7 @@ its own, and the other tables leave it out for that reason.
 - [x] 1.12 Lighthouse on our computer: all 18 pages, blank and 500 pages, live 2026-11-21 (seen in Chrome). An analysis whose page could not be reached (Chrome could not resolve the name, on this computer) is made again after a wait
   - [x] WordCraft: Lighthouse measures it directly on a machine with a graphics card (checked by hand, the page draws)
   - [x] docen on the 500 pages: no score on this computer either (Lighthouse stopped while waiting for the page, 3 of 3, both form factors); the table says so
-  - [!] README.md is over Val Town's file size limit (81 KB): the copy inside the val is stale; GitHub's is current. The site does not read it
+  - [x] README.md and two dated raw files are over Val Town's file size limit and the site reads none of them: they are no longer uploaded (`.vtignore`), and a deploy ends with no failure. GitHub has the current README
 - [x] 1.13 The assistant: what it does, per engine Audited 2026-11-21: all thirteen editors; the four renderers are view-only and have no assistant
 - [x] 1.14 How fairness to each vendor is decided (table) Audited 2026-11-21: thirteen rows
 - [x] 1.15 Assessment: harness or editor? (per-engine table, 10-of-10 table) Audited 2026-11-21: thirteen rows; dated 2026-11-09 and says so
