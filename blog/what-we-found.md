@@ -10,7 +10,7 @@ Our long file is 500 pages. This is where editors differ most. "Ready" below mea
 - **Ten to twenty seconds:** OnlyOffice, SuperDoc, folio, canvas-editor.
 - **Longer:** Univer (29 seconds, and it was given plain text, not the Word file: see below), Plate (65 seconds).
 - **Loaded in 4 seconds, then never finished drawing on our machine:** WordCraft. That one is about our machine, and we explain it below.
-- **Did not open it:** docen. In all three runs the page stopped answering.
+- **Opens it, then keeps you waiting:** docen. It shows the first page within seconds and counts 500 pages, as Word does. Then the tab stops responding for minutes. Our pass gave up after ten minutes and first reported that docen did not open the file. That was our mistake, not docen's: we checked by hand, measured again with a longer wait, and the table now says what we saw.
 
 The two short files are three pages each. On those, most editors are ready in under two seconds. So if your documents are ten pages, speed will not decide anything for you. If they are five hundred, it may decide everything.
 

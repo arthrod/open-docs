@@ -84,6 +84,9 @@ PAGES = """() => {
     'betteroffice': window.__betteroffice?.()?.getTotalPages?.() ?? null,
     'opendoc': last(document.querySelector('#opendoc-root iframe')?.contentDocument?.getElementById('statPages')?.textContent),
     'onlyoffice': document.querySelector('#oo-root iframe')?.contentWindow?.editor?.getCountPages?.() ?? null,
+    // docen paints every page on one canvas surface; its own status bar says "Page 1 of 500"
+    // (two shadow roots down: <docen-document> → <docen-status-bar> → span.pages).
+    'docen': last(document.querySelector('docen-document')?.shadowRoot?.querySelector('docen-status-bar')?.shadowRoot?.querySelector('.pages')?.textContent),
   };
 }"""
 
@@ -124,8 +127,10 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
 
         ctx.on("requestfinished", lambda r: asyncio.ensure_future(finished(r)))
         try:
-            await page.goto(f"{BASE}/e/{slug}", wait_until="commit", timeout=TIMEOUT_S * 1000)
+            # One budget for the run: navigation and the waits after it share TIMEOUT_S, so a slow
+            # commit followed by a page that never gets ready costs one deadline, not two.
             deadline = time.monotonic() + TIMEOUT_S
+            await page.goto(f"{BASE}/e/{slug}", wait_until="commit", timeout=TIMEOUT_S * 1000)
 
             async def until(js: str):
                 while time.monotonic() < deadline:
