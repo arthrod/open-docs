@@ -128,3 +128,12 @@ Deno.test("the local 500-page table is shown when the blank document was not mea
   assertEquals(html.includes("Measured 2026-11-21: our computer."), true);
   assertEquals(html.includes("Measured : "), false);
 });
+
+Deno.test("local results are shown where PageSpeed has no rows, without PageSpeed's paragraph", () => {
+  const none: LighthouseResults = { measuredAt: null, environment: "", pages: {} } as unknown as LighthouseResults;
+  const local: LighthouseResults = { measuredAt: "2026-11-21", environment: "our computer", pages: { "e/folio": { desktop: page(), mobile: page() } } } as unknown as LighthouseResults;
+  const html = lighthouseBand(editors, none, local);
+  assertEquals(html.includes('id="lighthouse-local"'), true);
+  assertEquals(html.includes("PageSpeed Insights</a> on every engine's page"), false);
+  assertEquals(lighthouseBand(editors, none, none), "");
+});

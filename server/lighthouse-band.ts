@@ -110,7 +110,6 @@ export function lighthouseBand(
   </tr></thead><tbody>${rows}</tbody></table></div>`;
   };
   const blank = table(data.pages ?? {}, "", data);
-  if (!blank) return "";
   const long = table(data.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx", data.docsMeta?.["lorem-500"] ?? data);
   const longBlock = long
     ? `<h3 class="smp-h" id="lighthouse-lorem-500">Opening the 500 pages sample <small>each page with <code>?open=lorem-500.docx</code>: an editor opens it from its Menu once it is ready, a view-only engine starts on it</small></h3>
@@ -124,6 +123,8 @@ export function lighthouseBand(
   const mine = table(local.pages ?? {}, "", local, true);
   const mineLong = table(local.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx", local.docsMeta?.["lorem-500"] ?? local, true);
   const longHead = local.docsMeta?.["lorem-500"];
+  // The populations stand by themselves: local results are shown even where PageSpeed has no rows.
+  if (!blank && !mine && !mineLong) return "";
   const localBlock = mine || mineLong
     ? `<h3 class="smp-h" id="lighthouse-local">Lighthouse on our computer <small>the same pages, the same Lighthouse release, on a machine with a graphics card</small></h3>
   <p class="sec-copy">On Google's machines two engines do not start (their files do not download there; why is not known), so they have no score above. This computer has a graphics card, which Google's machines do not.
@@ -143,11 +144,11 @@ export function lighthouseBand(
     : "";
   return `<section class="band" id="lighthouse"><div class="wrap">
   <h2 class="sec-label"><span class="sq" aria-hidden="true"></span> / Lighthouse</h2>
-  <p class="sec-copy">Google's <a href="https://pagespeed.web.dev">PageSpeed Insights</a> on every engine's page: Lighthouse run on Google's machines, so the figures do not depend on anyone's computer.
+  ${blank ? `  <p class="sec-copy">Google's <a href="https://pagespeed.web.dev">PageSpeed Insights</a> on every engine's page: Lighthouse run on Google's machines, so the figures do not depend on anyone's computer.
   Measured ${esc(data.measuredAt ?? "")}: ${esc(data.environment)}. Every cell reads <b>desktop · mobile</b>; mobile emulates a mid-range phone on slow 4G. Scores are 0 to 100.
   <b>LCP</b>: largest contentful paint. <b>TBT</b>: total blocking time, how long the main thread was too busy to answer input. <b>CLS</b>: layout shift. Accessibility, best practices and SEO are the desktop scores.
   It scores the page loading with its blank document, not editing and not how faithfully a file is drawn.
-  For Microsoft's and Google's viewers it sees this site's frame page, not their servers' work.</p>
+  For Microsoft's and Google's viewers it sees this site's frame page, not their servers' work.</p>` : ""}
   ${blank}
   ${longBlock}
   ${localBlock}
