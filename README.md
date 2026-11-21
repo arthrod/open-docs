@@ -3,12 +3,15 @@
 [![Live on Val Town](https://img.shields.io/badge/live-editors.benchmarks.law-2557d6)](https://editors.benchmarks.law)
 [![Val Town](https://img.shields.io/badge/runs%20on-Val%20Town-111)](https://www.val.town/x/arthrod/open-docs)
 [![Release](https://img.shields.io/github/v/tag/arthrod/open-docs?label=release)](https://github.com/arthrod/open-docs/tags)
-[![Editors](https://img.shields.io/badge/editors-8-informational)](#the-editors)
+[![Editors](https://img.shields.io/badge/editors-13-informational)](#the-editors)
 
-Eight open-source Word editors, running entirely in the browser with no build
-step. Each one opens on a **blank document**, imports and exports real
-**.docx** files, has an **AI assistant** that edits the open document, and is
-**measured on every visit**: startup time, JS memory and download size.
+Thirteen open-source Word editors, running entirely in the browser with no build
+step. Each one opens on a **blank document**, has an **AI assistant** that edits
+the open document, and is **measured on every visit**: startup time, JS memory
+and download size. Twelve import and export real **.docx** files; Univer's
+open-source packages have no .docx reader, so it is handed the text. Eight were
+here from the start; five were added on 2026-11-18 (react-docx, Univer, OpenDoc,
+BetterOffice, OnlyOffice).
 
 **Live:** <https://editors.benchmarks.law> · **Source:** <https://editors.benchmarks.law/source>
 
@@ -23,7 +26,7 @@ step. Each one opens on a **blank document**, imports and exports real
 | [docen](https://editors.benchmarks.law/e/docen) | `@docen/editor@0.7.0` | Canvas (Leafer) | native | marked HTML → its paste parser (`parseHTMLBody`) → `setContent` (undoable) | its .docx → `lib/docx-markdown.ts` |
 | [docx-editor.dev](https://editors.benchmarks.law/e/eigenpal) | `@docx-editor.dev/react@2.35.0` | React + layout | native | markdown → Plate → docx-io .docx → its own DOCX clipboard-fragment paste (undoable) | its .docx → `lib/docx-markdown.ts` |
 | [folio](https://editors.benchmarks.law/e/folio) | `@stll/folio-vue@0.28.0` | ProseMirror + pagination | native | its `fromMarkdown` → `mergeDocumentContent` → `toProseDoc`, one transaction (undoable) | its .docx (`save()`) → `lib/docx-markdown.ts` |
-| [WordCraft](https://editors.benchmarks.law/e/wordcraft) | `wordcraft-web` 0.18.1 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | html-paste | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
+| [WordCraft](https://editors.benchmarks.law/e/wordcraft) | `wordcraft-web` 0.18.1 (GitHub release) | Rust → WASM, egui on WebGPU/WebGL2 | native (export is its Save As, in host mode) | `window.wordcraft`: select.all + edit.paste (HTML), one undo step | its .docx → `lib/docx-markdown.ts` |
 | [react-docx](https://editors.benchmarks.law/e/react-docx) | `@extend-ai/react-docx@0.15.0` (`/vanilla`, served from this origin) | Rust → WASM parser, DOM layout (Preact) | native | markdown → Plate → docx-io .docx → opened as a new document (not undoable) | its .docx (`getDocxBytes()`) → `lib/docx-markdown.ts` |
 | [Univer](https://editors.benchmarks.law/e/univer) | `@univerjs/presets@1.5.2` + `preset-docs-core` | Canvas | none: text only, read by `lib/docx-markdown.ts` (its .docx import and export are in its Server SDK); no .docx export | markdown → `lib/univer-doc.ts` → a new document (not undoable) | its body → `lib/univer-doc.ts` |
 | [OpenDoc](https://editors.benchmarks.law/e/opendoc) | its editor application, snapshot of 2026-11-05 (commit `5ac261c`), in a same-origin frame | Rust → WASM engine, canvas | native (through its own file input) | markdown → Plate → docx-io .docx → opened as a new document (not undoable) | its .docx export (caught before the download) → `lib/docx-markdown.ts` |
@@ -37,7 +40,10 @@ full toolbar over the library's command API where it ships none
 spacing, tables, images, links, rules, page breaks, find, zoom, print; Plate:
 styles H1–H6, fonts, sizes, colours, line height, marks, sub/superscript,
 highlight, lists with indent, quote, code block, rule, alignment, links, and
-tables through `@platejs/table`).
+tables through `@platejs/table`). The five added on 2026-11-18 (react-docx,
+Univer, OpenDoc, BetterOffice, OnlyOffice) each show the vendor's own interface
+and nothing of ours over it: OpenDoc and OnlyOffice are the vendor's whole
+application in a same-origin frame.
 
 ## Proprietary viewers (view-only, for comparison)
 
@@ -117,6 +123,9 @@ resize: SuperDoc `zoom.mode: "fit-width"`, docx-editor.dev
 folio `setZoom`, docen `setZoom`, canvas-editor `executePageScale`; Plate's page
 is CSS. Docxodus already follows its container. WordCraft draws its own UI and
 has no zoom API in the released build, so on a phone its page scrolls sideways.
+react-docx, Univer, OpenDoc, BetterOffice and OnlyOffice are not fitted by this
+site: their adapters make no zoom call, so on a phone each does what its own
+layout does. Not checked on a phone.
 
 ## Samples
 
@@ -146,7 +155,8 @@ Microsoft's and Google's viewers are given.
 ### Tracked changes: what each engine draws
 
 Seen on `redline.docx` on 2026-11-15 (screenshots from
-`scripts/measure_samples.py --shots`). The list the site shows is
+`scripts/measure_samples.py --shots`); the five engines added on 2026-11-18 as
+their adapters recorded them that day. The list the site shows is
 [`lib/revision-notes.ts`](lib/revision-notes.ts).
 
 | Engine | What you see | What the bench does |
@@ -159,6 +169,11 @@ Seen on `redline.docx` on 2026-11-15 (screenshots from
 | docx-editor.dev | The accepted text with inserted words coloured; **deleted words are not shown** | Nothing. Its layout uses the `proposed` view unless a review module is registered, and that module is in the paid `@docx-editor.dev/pro`. Forcing `reviewDisplayMode="all-markup"` without it stops the editor from starting. |
 | canvas-editor | Inserted words underlined, deleted words struck, both red | **Rewrites the file first** ([`lib/revisions.ts`](lib/revisions.ts)). `plugin-docx@1.0.0` skips `w:ins` and `w:del` alike, so without this the inserted *and* the deleted words vanish: "rose 14.2 %" opened as "rose . %". |
 | Plate | Inserted words underlined, deleted words struck (no colour) | **Rewrites the file first**, same module. mammoth keeps inserted text and drops deleted text, so the redline read as already accepted. |
+| react-docx | Insertions underlined in the text; a margin card per deletion and per comment (author, date, Accept / Reject) | Turns its review marks and cards on: it ships with both hidden |
+| OpenDoc | Insertions and deletions in the text; a card per change and per comment (author, date, Accept / Reject) in its review pane | Nothing |
+| BetterOffice | Deletions struck and insertions underlined in the text; a card per change and per comment (author, date, accept / reject) in its review sidebar | Nothing |
+| OnlyOffice (CryptPad build) | Deletions struck and insertions underlined, in the author's colour; its own review and comment panels open from its side bar | Nothing |
+| Univer | **Not drawn.** The text, with inserted and moved-in words kept and deleted words left out | It has no .docx reader, so this site's reader hands it the text: what it shows is not its reading of the file |
 | Google Docs viewer | Insertions and deletions in the text | Nothing |
 | Apryse WebViewer | Insertions and deletions in the text | Nothing |
 | Microsoft Word viewer | The accepted text; no marks | Nothing (the embed viewer has no markup switch) |
@@ -268,9 +283,15 @@ Read these with care:
 - **docen on 500 pages** answers "loaded" after about 4 s and shows page 1, but in all three
   runs its main thread was still busy when the wait gave up at 180 s, so it has no Settled
   figure. The tab is not usable during that time.
-- **Page counts differ by engine** on the 500-page file: canvas-editor draws 661 and OnlyOffice
-  409, each from its own layout. canvas-editor also holds about 680 MB of JavaScript heap and
-  4 GB of renderer memory there.
+- **Page counts differ by engine** on the 500-page file. canvas-editor's 661 is its own layout:
+  it gave 637 on a Mac with Times as the fallback and 650 with a Calibri-metric font loaded
+  (2026-11-20), so the count is not a font accident. **OnlyOffice's 409 is wrong**: it is a count
+  read while OnlyOffice was still paginating (see "Figures to distrust" below). It reaches 500.
+- **canvas-editor's memory on the 500 pages** is about 680 MB of JavaScript heap (it keeps one
+  object per character: 1.6 million of them) and 4 GB of renderer memory. The 4 GB is this
+  machine's: with no GPU, Chrome keeps each of the 661 page canvases in the renderer's own
+  memory. On a Mac with a GPU the same page read 0.5 to 1.8 GB (the files of 2026-11-15 and
+  2026-11-17).
 - **Pages shown** counts what is in the DOM: SuperDoc keeps only the pages near
   the viewport (25), so its number is not a page count of the document.
 - **Renderer memory growth** can be negative: the "before" reading is taken one
@@ -284,6 +305,40 @@ Read these with care:
 - **Settled cannot see everything**: see the definition below. An engine that
   starts work more than two seconds after it last kept the thread busy would
   read as settled before that work.
+
+#### Figures to distrust
+
+Every figure that stood far from its neighbours, or that the method cannot really measure, was
+looked at again on 2026-11-20: by hand, in Chrome on a Mac, on the live site. What was found is
+below. None of the published figures was changed by it: they are that machine's runs, and a
+corrected figure needs a new pass on it.
+
+| Figure in the tables | Verdict | What was seen |
+| --- | --- | --- |
+| **OnlyOffice, 500 pages: 409 pages, Settled 3.56 s** | **Wrong** | OnlyOffice reports the document ready and goes on paginating in slices too short to count as long tasks, so Settled does not see them. Watched by hand: 52, 103, 154 … 409, 460 and **500 pages**. The three published runs read 409, 358 and 409: the same file, three counts. With the changed script on a Mac: Loaded 1.73 s, Settled 1.73 s, and the page count still moving until 4.32 s, where it stopped at 500. Its true figures on the 500 pages are 500 pages and a layout that ends well after its Settled. |
+| **docx-editor.dev, Loaded: 190 ms, 160 ms, 284 ms** | **Not a measurement** | Its adapter's `load()` hands the bytes to the engine and returns at once (`ref.load(bytes)`, nothing awaited): 58 ms on the 500 pages here. The column times the call, not the document. |
+| **docx-editor.dev, 500 pages: Settled 1.19 s** | **Not reliable** | Here its main thread was busy for 11.1 s after the click. The 11 runs on file range from 610 ms to 5.45 s. Its work comes in bursts with pauses, and Settled stops at the first pause of two seconds. |
+| **Settled, for every engine** | **Blind to sliced work** | It counts tasks of 50 ms or more (the Long Tasks API). An engine that works in shorter slices, in a Worker or on the GPU reads as settled while it is still working. Seen for OnlyOffice; possible for any engine whose Settled equals its Loaded on the 500 pages (Docxodus, SuperDoc, Plate, folio, Nutrient, react-docx, Univer; canvas-editor's also equals it, and its loader was seen to wait for its layout). |
+| **WordCraft, Settled: 18.3 s, 32.9 s, 20.6 s** | **This machine, not the engine** | Its Loaded is about 0.5 s. With no GPU its canvas is drawn in software on the main thread, and those repaints are the long tasks: one run of the 500 pages read 147 s, another 7.3 s. On the Mac runner of 2026-11-17 it settled on the 500 pages in 2.8 to 4.0 s. |
+| **Renderer memory, canvas engines** (canvas-editor 4,134 MB, docen 3,528 MB, Univer 2,395 MB) | **This machine, not the engine** | With no GPU every canvas is kept in the renderer's memory; with one, most of it is in the GPU process, which the tables do not show (`gpuRss` is in the dated file). Compare these only with each other. |
+| **Renderer memory, small documents** (454 to 901 MB; growth of −189 MB, −133 MB) | **Mostly Chrome** | Three or more renderer processes are resident before any document opens (about 400 to 1,000 MB over the runs). The growth is the engine's part, and for a small document it is smaller than the noise: it comes out negative for four rows, three of them on the two short samples. |
+| **Univer, 500 pages: 1,772 MB of heap** | **Real, and not a .docx figure** | Still 1,888 MiB a minute after loading here, so it is held, not garbage. But Univer never reads the file: it holds the text this site's reader gave it (`lib/univer-doc.ts`). The same goes for its Loaded (249 ms on the rich sample): text only, no tables, pictures or page set-up. |
+| **canvas-editor, every figure on the editors site** | **Confirmed** | 500 pages here: 17.7 s and 21.9 s to load, 637 and 650 pages, heap 700 to 730 MiB and steady for 20 s. The published 16.6 s, 661 pages and 680 MB are of the same order. What is misleading is its renderer memory (above) and, on the viewers site, its heap, read before garbage was collected: 1,256 there, about 700 after collection. |
+| **Apryse, Loaded 220 ms to 650 ms** | **Partly blind** | Its adapter waits for the SDK's `documentLoaded`, and the office engine runs in a Worker: neither Loaded nor Settled sees the pages being drawn. |
+| **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Fourteen rows of the two short samples stand on two runs. |
+| **Sizes** | **Mislabelled** | Every "MB" in these tables is a mebibyte (1,048,576 bytes): the 680 MB of canvas-editor's heap is 713 million bytes. |
+
+Two of these are faults of the measuring, and are fixed in
+[`scripts/measure_samples.py`](scripts/measure_samples.py) for the next pass: the page count is
+now read until it has not changed for five seconds (`pagesSettledMs` is when it last changed, for
+an engine whose count moved after "loaded"), and the heap is read after a forced garbage
+collection (`heapBytes`; the reading before it is kept as `heapBytesBeforeGc`, which is what the
+files up to 2026-11-18 call `heapBytes`). Tried on a Mac on 2026-11-20, one run each on the 500
+pages: OnlyOffice 500 pages, heap 185 MiB before the collection and 134 MiB after; docx-editor.dev
+148 MiB and 121 MiB; canvas-editor 699 MiB and 697 MiB (and on the viewers site, where the heap is
+read sooner, 1,273 MiB and 697 MiB). The others are limits of the method, said here. **The tables
+above still hold the readings of 2026-11-18**: correcting them takes a new pass on the Hugging
+Face machine.
 
 The published figures were made by this job (two passes on 2026-11-18; the dated file lists
 each pass's job, command and commits under `passes`):
@@ -357,6 +412,11 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | Google viewer | 98 · 96 | 212 ms · 1.22 s | 100 ms · 56 ms | 0.001 · 0 | 212 ms · 1.22 s | 1.37 s · 3.90 s | 100 | 54 | 90 | 99/100/88/98/89 · 99/100/61/89/96 |
 | Apryse WebViewer | 68 · 73 | 224 ms · 769 ms | 858 ms · 848 ms | 0 · 0.003 | 224 ms · 769 ms | 2.08 s · 6.50 s | 100 | 96 | 90 | 70/68/68/72/66 · 77/74/69/72/73 |
 | Nutrient | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.co | | | | | | | | | |
+| react-docx (measured 2026-11-20) | 99 · 96 | 212 ms · 769 ms | 32 ms · 52 ms | 0 · 0.018 | 212 ms · 764 ms | 1.35 s · 4.25 s | 100 | 100 | 90 | 99/95/98/99/99 · 81/75/96/100/99 |
+| Univer (measured 2026-11-20) | 93 · 85 | 445 ms · 1.66 s | 168 ms · 290 ms | 0.005 · 0.02 | 445 ms · 1.66 s | 1.59 s · 7.74 s | 83 | 100 | 90 | 93/91/98/93/94 · 88/85/35/83/88 |
+| OpenDoc (measured 2026-11-20) | 85 · 76 | 214 ms · 763 ms | 226 ms · 374 ms | 0.064 · 0.032 | 214 ms · 763 ms | 2.83 s · 11.6 s | 100 | 100 | 90 | 85/86/75/79/86 · 61/70/86/76/86 |
+| BetterOffice (measured 2026-11-20) | 98 · 94 | 245 ms · 905 ms | 59 ms · 77 ms | 0 · 0.018 | 245 ms · 905 ms | 1.59 s · 6.24 s | 96 | 88 | 90 | 98/98/99/96/98 · 91/89/94/96/95 |
+| OnlyOffice (CryptPad build) (measured 2026-11-20) | 100 · 100 | 217 ms · 772 ms | 0 ms · 0 ms | 0 · 0 | 217 ms · 772 ms | 429 ms · 2.30 s | 100 | 96 | 90 | 100/100/100/100/100 · 100/100/100/100/100 |
 
 **Opening the 500 pages sample (`?open=lorem-500.docx`)**
 
@@ -375,6 +435,11 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | Google viewer | 97 · 94 | 231 ms · 774 ms | 125 ms · 222 ms | 0.001 · 0.004 | 231 ms · 774 ms | 1.51 s · 4.05 s | 100 | 54 | 90 | 83/97/97/97/89 · 94/84/94/100/56 |
 | Apryse WebViewer | 68 · 67 | 222 ms · 790 ms | 848 ms · 1.41 s | 0 · 0 | 222 ms · 790 ms | 2.00 s · 7.16 s | 100 | 96 | 90 | 68/68/77/68/77 · 67/70/77/64/63 |
 | Nutrient | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.co | | | | | | | | | |
+| react-docx (measured 2026-11-20) | 37 · 34 | 6.89 s · 42.0 s | 1.36 s · 1.89 s | 0.011 · 0.018 | 214 ms · 2.20 s | 3.93 s · 14.6 s | 96 | 100 | 90 | 85/37/37/36/fail · 30/39/36/32/fail |
+| Univer (measured 2026-11-20) | 61 · 60 | 448 ms · 1.66 s | 10.2 s · 10.4 s | 0.005 · 0.02 | 448 ms · 1.66 s | 3.77 s · 11.6 s | 83 | 100 | 90 | fail/62/fail/fail/61 · fail/60/fail/fail/fail |
+| OpenDoc (measured 2026-11-20) | 59 · 59 | 212 ms · 1.51 s | 8.46 s · 12.3 s | 0.076 · 0.044 | 212 ms · 1.51 s | 5.43 s · 28.7 s | 100 | 100 | 90 | 59/59/58/58/60 · 59/56/fail/60/60 |
+| BetterOffice (measured 2026-11-20) | n/a · 92 | n/a · 905 ms | n/a · 92 ms | n/a · 0.026 | n/a · 905 ms | n/a · 7.22 s | n/a | n/a | n/a | fail/fail/fail/fail/fail · 94/68/92/92/86 |
+| OnlyOffice (CryptPad build) (measured 2026-11-20) | 100 · 100 | 214 ms · 773 ms | 0 ms · 0 ms | 0 · 0 | 214 ms · 773 ms | 436 ms · 2.38 s | 100 | 96 | 90 | 100/100/100/100/100 · 100/100/100/100/100 |
 <!-- lighthouse:end -->
 
 Read these with care:
@@ -392,6 +457,18 @@ Read these with care:
   costs shows in TBT and in the analyses that never finished (`fail`).
 - **`?open=<file>`**: an editor mounts on a blank document and then opens the file from its Menu; a view-only
   engine starts on the file. Before 2026-11-16 a view-only engine loaded the rich sample first and then the file.
+- **The five engines added on 2026-11-18 were analysed on 2026-11-20**, the others on 2026-11-16: their rows
+  say so. Their first attempt that day was thrown away: asked five times in three minutes, PageSpeed answered 18
+  of the 50 requests with an analysis it had already made, so "five analyses" were two or three. The script now
+  recognises such a copy by the time Lighthouse made it, asks again after a pause and never counts it twice.
+  The rows of 2026-11-16 have no copies (checked: no two analyses of a page share their figures).
+- **OnlyOffice's 100 · 100 is not the engine's score.** Its editor, and OpenDoc's application, run in a frame
+  inside the page, and Lighthouse's paint and blocking-time figures are the top page's: OnlyOffice scores 100
+  with a blank document and with the 500 pages alike, while it downloads 18 MB and paginates for seconds. Read
+  both rows as the frame page, like Microsoft's and Google's viewers.
+- **BetterOffice has no desktop score on the 500 pages**: in all five desktop analyses the sample failed to open
+  on Google's machine (the page's own error is in the row), while the five mobile analyses scored 68 to 94.
+  Not looked into.
 
 ## The assistant
 
@@ -439,6 +516,24 @@ importer/exporter, and the losses are listed under the vendors:
    (Plate, canvas-editor); otherwise the vendor's own .docx export is read by
    [`lib/docx-markdown.ts`](lib/docx-markdown.ts), the inverse of the writer.
 
+**The five engines added on 2026-11-18 do not meet rule 1.** None of them has a
+command that replaces a whole document and lands in its own history, so an
+assistant edit **opens a new document** built from the Markdown
+(`@platejs/markdown` → `@platejs/docx-io`; for Univer, this site's reader), and
+the assistant offers no Undo there:
+
+| Engine | Why the edit is a new document | Reads back |
+| --- | --- | --- |
+| react-docx | its controller has no command that replaces the document from HTML or Markdown | its .docx (`getDocxBytes()`) |
+| OpenDoc | its host contract (0.1.0-alpha) cannot be handed a document: the adapter puts a File on its own file input, as a user would | its .docx export, caught on the way to the download |
+| BetterOffice | its `applyEdits` takes plain-text steps and refuses a full replacement | its .docx (`save()`) |
+| OnlyOffice (CryptPad build) | the document is opened in a new editor | editor binary → x2t → .docx |
+| Univer | it has no .docx reader or writer (those are in its Server SDK) | its body, through `lib/univer-doc.ts` |
+
+The probes below were written for the first eight, and their results are dated
+2026-11-09: the five new engines have **not** been run through them, so nothing
+here says they pass.
+
 ### Assessment (2026-11-09): harness or editor?
 
 The finding "only folio maps every markdown element to Word" was **mostly the
@@ -481,6 +576,11 @@ What is the vendors' (written down, worked around fairly, reportable upstream):
 | docx-editor.dev | no markdown importer or exporter on the ref | .docx in, .docx read back |
 | folio | `@stll/folio-vue@0.28.0` `fromMarkdown` turns a fenced code block into unstyled Courier paragraphs (one per line); `toMarkdown` drops backticks from code in an opened .docx and escapes `<br>` in table cells | .docx in, .docx read back (every element survives) |
 | WordCraft | `window.wordcraft` (since v0.17.0) drives apply/undo/redo; its HTML paste turns a quote into an indented Normal paragraph (by design, `paste.rs`); Save writes the opened file's format | Save As (F12) → .docx in host mode |
+| react-docx | `@extend-ai/react-docx@0.15.0`: no whole-document replace from HTML or Markdown; ships with its review marks and cards hidden | a new .docx per assistant edit (no Undo); the page turns the review marks on |
+| Univer | `@univerjs/presets@1.5.2`: no .docx import or export in the open-source packages; no read-only switch in its documents preset | text and headings in through this site's reader (tables, pictures, fonts and page set-up do not carry over); **no .docx export** |
+| OpenDoc | snapshot of 2026-11-05: the application is published as a website, its npm package is only a frame mount, and it opens files only from its own file input and exports only by download | runs in a same-origin frame; the adapter drives the file input and catches the export. Both lean on the application's internals and can break with a new snapshot |
+| BetterOffice | `@betteroffice/docx-react@0.5.1`: `applyEdits` refuses a full replacement | a new .docx per assistant edit, which clears its history |
+| OnlyOffice (CryptPad build) | v9.3.2+3: one header icon (`icon-document-white.svg`) is not in the archive and answers 404 | a new editor per assistant edit (no Undo) |
 
 Measured with [`lib/probes/md-mapping.js`](lib/probes/md-mapping.js): it applies
 a fixed markdown sample, exports the .docx, checks styles/marks/numbering/links
@@ -527,6 +627,20 @@ fresh baseline (3 loads per editor, one per new tab, one at a time) is in
 [`docs/metrics-archive/2026-11-09-baseline.md`](docs/metrics-archive/2026-11-09-baseline.md).
 JS heap leaves out WebAssembly memory, so WordCraft and Docxodus read low.
 
+Three things to know before comparing rows of that table (looked at 2026-11-20):
+
+- **Mount is not comparable between engines.** It runs from the call of the adapter's `mount()`.
+  Adapters that import their library at the top of the module (canvas-editor, cite-check, Plate,
+  docx-editor.dev, react-docx, Univer, BetterOffice) have already downloaded and compiled it by
+  then; adapters that import it inside `mount()` (Docxodus, docen, folio, WordCraft) have not.
+  canvas-editor's 21 ms beside docen's 848 ms (the live medians of 2026-11-20) is that difference, not the engines'. Compare
+  **Startup**, which starts at navigation for all of them.
+- **OpenDoc and OnlyOffice load their files inside a frame**, where this page's Resource Timing
+  does not reach. The frame is same-origin, so their adapters read its own Resource Timing
+  entries and hand them over (`extraResources`): their Loaded and Files are counted that way.
+- **The five new engines have almost no visitor loads yet** (two or fewer each on 2026-11-20,
+  BetterOffice none), so their medians are one visit.
+
 ## How it fits together
 
 ```
@@ -545,6 +659,11 @@ lib/plate-docx-pin.ts     pinned URL + SRI of the docx-io browser bundle (tools/
 lib/docx-markdown.ts      .docx → markdown reader
 lib/revisions.ts          tracked changes as formatting, for the two engines with no revision model
 lib/revision-notes.ts     how each engine treats tracked changes (status line, landing table)
+lib/univer-doc.ts         Markdown blocks ⇄ Univer's document body (Univer has no .docx reader)
+server/npm-vendor.ts      pinned npm packages served from this origin (react-docx, BetterOffice: their Workers)
+server/site-mirror.ts     a dated snapshot of an engine's own site, served from this origin (OpenDoc)
+server/zip-mirror.ts      single files out of a release archive, by range request (OnlyOffice's 608 MB zip)
+server/onlyoffice.ts      the OnlyOffice editor and x2t converter, read out of CryptPad's release archives
 server/fixtures.ts        the redline and 500-page samples, fetched from Hugging Face at a pinned commit
 server/samples-band.ts    the landing page's samples table (docs/samples/latest.json)
 scripts/measure_samples.py   every engine opening every sample, in real Chrome
@@ -593,6 +712,24 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   streams them with `content-encoding: gzip` (22 MB on the wire for a 60 MB
   wasm) and immutable caching. See [`editors/wordcraft/assets.ts`](editors/wordcraft/assets.ts).
 
+- **react-docx, BetterOffice**: each starts a Worker with
+  `new Worker(new URL("./x.js", import.meta.url))`, which a browser refuses from another
+  origin, so their files cannot come from a CDN. [`server/npm-vendor.ts`](server/npm-vendor.ts)
+  passes jsDelivr's copy of the pinned versions through `/vendor/npm/…` on this origin.
+  BetterOffice's React package imports its core by 30 subpaths, each named in the import map.
+- **Univer**: its presets load from esm.sh and its stylesheet from jsDelivr as they are. What
+  it took was a reader: [`lib/univer-doc.ts`](lib/univer-doc.ts) turns this site's Markdown
+  blocks into Univer's document body and back, because it has no .docx reader.
+- **OpenDoc**: the application is a website, not a package. [`server/site-mirror.ts`](server/site-mirror.ts)
+  serves a dated snapshot (2026-11-05, commit `5ac261c`) from this origin: the page and the
+  built engine come from here, and the page's other files (about 350 modules, more requests
+  than this host allows one visitor at once) from jsDelivr's copy of the repository at that
+  commit.
+- **OnlyOffice (CryptPad build)**: distributed as one 608 MB archive. Nothing is unpacked:
+  [`server/zip-mirror.ts`](server/zip-mirror.ts) reads each file the editor asks for with one
+  HTTP range request, inflates it and keeps it in blob storage. See
+  [`editors/onlyoffice/README.md`](editors/onlyoffice/README.md).
+
 ## Not in the bench, and why
 
 - **office-open** (`office-open@0.15.1`): a document model and generator with no
@@ -610,9 +747,12 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
 ## Known limitations
 
 - **Fidelity varies by design.** Docxodus, SuperDoc, docx-editor.dev, folio,
-  docen and WordCraft keep the .docx model. canvas-editor and Plate round-trip
-  through their own models: headings, lists, marks, links, quotes, code and
-  simple tables survive; merged cells, fields, footnotes and comments do not.
+  docen, WordCraft, react-docx, OpenDoc, BetterOffice and OnlyOffice keep the
+  .docx model. canvas-editor and Plate round-trip through their own models:
+  headings, lists, marks, links, quotes, code and simple tables survive; merged
+  cells, fields, footnotes and comments do not. **Univer keeps only the text**:
+  paragraphs, headings, bold, italic and typed list markers, and it cannot
+  export a .docx.
 - **Assistant edits go through markdown**, so what markdown can't say is lost
   when the assistant rewrites a document: merged cells, colours, headers and
   footers (except in SuperDoc, which edits in place and keeps the header),
@@ -622,7 +762,10 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   not carried through markdown: every numbered list starts at 1.
 - **Assistant writes replace the whole document.** Undo works through the
   assistant card. SuperDoc and Plate also put the change in the editor's own
-  undo stack.
+  undo stack. In react-docx, Univer, OpenDoc, BetterOffice and OnlyOffice the
+  edit opens a new document and there is no Undo for it.
+- **OpenDoc is a snapshot of a pre-release application** (2026-11-05), driven
+  through its own file input and its download: a newer snapshot can break both.
 - **JS heap** is Chromium-only; other browsers show "n/a".
 - **WordCraft** needs WebGPU or WebGL2 and is a 22 MB (compressed) download;
   its UI follows the browser's language.
@@ -657,9 +800,12 @@ Append `?debug` to the SuperDoc page to log every worker message.
 
 ## Licenses
 
-Each editor keeps its own license: MIT for canvas-editor, Docxodus, Plate and
-docen; Apache-2.0 for folio and docx-editor.dev; Apache-2.0 / MIT for WordCraft;
-**AGPL-3.0 for SuperDoc**. AGPL is fine for this public val but is a real
-constraint for a closed product. The four viewers are proprietary. Microsoft's
+Each editor keeps its own license: MIT for canvas-editor, Docxodus, Plate,
+docen and react-docx; Apache-2.0 for folio, docx-editor.dev, Univer, OpenDoc and
+BetterOffice; Apache-2.0 / MIT for WordCraft; **AGPL-3.0 for SuperDoc and for
+OnlyOffice (CryptPad build)**. AGPL is fine for this public val but is a real
+constraint for a closed product. OnlyOffice's two parts are served unmodified
+out of CryptPad's release archives, and their source is those repositories at
+tag `v9.3.2+3` ([`editors/onlyoffice/README.md`](editors/onlyoffice/README.md)). The four viewers are proprietary. Microsoft's
 and Google's are free hosted services. Apryse and Nutrient run unlicensed in
 their evaluation modes (see above).
