@@ -85,7 +85,7 @@ has no figures of its own.
 
 - [ ] 4.1 Same engine names on the three sites and in the trial
 - [ ] 4.2 Same menu on every page of the three sites
-- [~] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes` (live 2026-11-21 for the engines whose section is published; the six new tools get their link when benchmarks.law has their sections: empty `VENDOR_NOTE_PENDING` in `server/registry.ts` then)
+- [x] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes`, the six new tools included since benchmarks.law published their sections (et-v0.10.6, 2026-11-21)
 - [ ] 4.4 The checklist files in the four repositories agree with each other
 
 ## Log
@@ -99,3 +99,4 @@ has no figures of its own.
 | 2026-11-21 | 4.3 | Each engine links to its vendor note |
 | 2026-11-21 | 1.12 | Lighthouse on our computer published for every page |
 | 2026-11-21 | 1.1, 1.2, 1.5 to 1.8, 1.11, 2 | Audited against the live site and the measuring pass; rich-sample table added to the home page |
+| 2026-11-21 | vendor notes | benchmarks.law has the six new sections; their links are on |

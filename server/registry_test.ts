@@ -25,8 +25,8 @@ Deno.test("every engine with a section in the trial's vendor notes links to it; 
   const without = editors.filter((e) => !vendorNote(e.slug)).map((e) => e.slug).sort();
   assertEquals(without, ["cite-check", "google-viewer", "word-online", ...VENDOR_NOTE_PENDING].filter((s) => editors.some((e) => e.slug === s)).sort());
   // The six whose sections are written and not yet published get no link, not one to the top of the page.
-  assertEquals([...VENDOR_NOTE_PENDING].sort(), ["betteroffice", "nutrient", "onlyoffice", "opendoc", "react-docx", "univer"]);
+  assertEquals([...VENDOR_NOTE_PENDING].sort(), []);
   assertEquals(vendorNote("plate"), "https://benchmarks.law/editors-trial/vendor-notes#platejs");
-  assertEquals(vendorNote("onlyoffice"), null);
+  assertEquals(vendorNote("onlyoffice"), "https://benchmarks.law/editors-trial/vendor-notes#onlyoffice-cryptpad-build");
   assertEquals(vendorNote("nope"), null);
 });

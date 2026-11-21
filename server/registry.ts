@@ -359,11 +359,11 @@ const VENDOR_NOTE_ANCHOR: Record<string, string> = {
   nutrient: "nutrient",
 };
 /**
- * Sections written in the trial's vendor notes and not yet on benchmarks.law (they arrive with its
- * next release and deploy). Until then these engines get no link: one would land at the top of the
- * page, not on a note. Empty this set when the page has the sections (CHECKLIST 4.3).
+ * Sections written in the trial's vendor notes and not yet on benchmarks.law: an engine named here
+ * gets no link, since one would land at the top of the page, not on a note. Empty since
+ * 2026-11-21 (et-v0.10.6 published the six that were held back).
  */
-export const VENDOR_NOTE_PENDING: ReadonlySet<string> = new Set(["react-docx", "univer", "opendoc", "betteroffice", "onlyoffice", "nutrient"]);
+export const VENDOR_NOTE_PENDING: ReadonlySet<string> = new Set([]);
 /** The vendor note of an engine, or null when benchmarks.law has no section for it. */
 export const vendorNote = (slug: string): string | null =>
   VENDOR_NOTE_ANCHOR[slug] && !VENDOR_NOTE_PENDING.has(slug) ? `${VENDOR_NOTES}#${VENDOR_NOTE_ANCHOR[slug]}` : null;
