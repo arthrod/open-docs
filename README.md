@@ -7,7 +7,7 @@
 
 Thirteen open-source Word editors, running entirely in the browser with no build
 step, and four more tools shown through the editors trial's demo builds of them
-(GenOffice, office-open, Fidus Writer, docs.plus: [what differs](#four-more-through-the-editors-trials-demo-builds-2026-11-21)). Each one opens on a **blank document**, has an **AI assistant** that edits
+(GenOffice, office-open, Fidus Writer, docs.plus: [what differs](#four-more-through-the-editors-trials-demo-builds-2026-11-21)). Each of the thirteen opens on a **blank document**, has an **AI assistant** that edits
 the open document, and is **measured on every visit**: startup time, JS memory
 and download size. Twelve import and export real **.docx** files; Univer's
 open-source packages have no .docx reader, so it is handed the text. Eight were

@@ -173,3 +173,18 @@ Deno.test("the band heads with the rich sample when the pass measured it, as the
   assertEquals(rich > 0 && rich < red, true);
   assertEquals(html.includes('href="/api/showcase.docx"'), true);
 });
+
+Deno.test("the home page does not promise an editor, an export or an assistant a page does not have", async () => {
+  const { landingPage } = await import("./landing.ts");
+  const { editors } = await import("./registry.ts");
+  const html = landingPage(editors);
+  const card = (slug: string) => {
+    const i = html.indexOf(`href="/e/${slug}"`);
+    if (i < 0) throw new Error(`no card for ${slug}`);
+    return html.slice(i, html.indexOf("</a>", i));
+  };
+  if (card("fidus-writer").includes("AI assistant")) throw new Error("Fidus Writer's card promises an assistant");
+  if (card("fidus-writer").includes(".docx in/out")) throw new Error("Fidus Writer's card promises an export");
+  if (!card("office-open").includes("Open page")) throw new Error("office-open's card calls it an editor");
+  if (!card("genoffice").includes("AI assistant")) throw new Error("GenOffice's card lost its assistant tag");
+});

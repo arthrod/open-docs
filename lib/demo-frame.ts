@@ -82,14 +82,22 @@ export function demoFrame(o: DemoFrame): EditorAdapter {
     };
     try {
       // The demo says on its page when its own export failed; the words before the press are not that.
-      const said = () => d.querySelector<HTMLElement>("#status[data-state='error']")?.textContent ?? "";
-      const before = said();
-      button.click();
-      await until(() => {
-        const now = said();
-        if (!blob && now && now !== before) throw new Error(`${o.name}: ${now}`);
-        return !!blob;
-      }, "hand over the exported file", 60_000);
+      // A failure with the same words as the last one still rewrites the line, so the rewrite is the signal.
+      const status = d.querySelector<HTMLElement>("#status");
+      let rewritten = false;
+      const watch = new w.MutationObserver(() => rewritten = true);
+      if (status) watch.observe(status, { attributes: true, childList: true, characterData: true, subtree: true });
+      try {
+        button.click();
+        await until(() => {
+          if (!blob && rewritten && status?.dataset.state === "error") throw new Error(`${o.name}: ${status.textContent}`);
+          return !!blob;
+        }, "hand over the exported file", 60_000);
+        // A demo may press its link a task after it made the address: that press is still swallowed.
+        await new Promise((r) => setTimeout(r, 250));
+      } finally {
+        watch.disconnect();
+      }
     } finally {
       w.URL.createObjectURL = make;
       w.HTMLAnchorElement.prototype.click = click;
