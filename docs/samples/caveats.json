@@ -2,6 +2,7 @@
   "checked": "2026-11-20",
   "lorem-500": {
     "wordcraft": "Settled is software drawing on a machine with no GPU: on a Mac it settled in 3 to 4 s",
+    "docen": "it does open this file. Opened by hand in Chrome on a Mac on 2026-11-21, its status bar read \"Page 1 of 500\", Word's count. After loading, the page does not answer for several minutes, so this pass could read neither Settled nor a page count",
     "canvas-editor": "renderer memory is this machine's: with no GPU its 661 page canvases are kept in the renderer (0.5 to 1.8 GB on a Mac)",
     "univer": "text only: Univer was handed this site's reading of the file, not the .docx",
     "apryse": "its office engine runs in a Worker, which neither Loaded nor Settled sees"
