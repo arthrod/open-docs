@@ -141,3 +141,14 @@ Deno.test("rows of one pass that differ only in host load carry no note; each ta
   assertEquals(html.includes("Host load during these runs (1-minute average): median 25.0, highest 32.0, on 64 cores."), true);
   assertEquals(html.includes("Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores."), true);
 });
+
+Deno.test("a row measured on another machine names that machine, not the whole environment line", () => {
+  const method = "Chrome 158 via Playwright, fresh profile per run (cold cache), 3 runs, median";
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21",
+    environment: `${method}; a rented machine (no GPU: Chrome draws in software; the load is the shared host's), under Xvfb; machine load (1-minute average) median 56.6`,
+    samples: { "lorem-500": { folio: row(), docen: row({ measuredAt: "2026-11-21", environment: `${method}; a MacBook Pro (with its graphics card); machine load (1-minute average) median 30.5` }) } },
+  };
+  const html = samplesBand(editors, data);
+  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro (with its graphics card)</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+});

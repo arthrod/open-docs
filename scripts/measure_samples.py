@@ -84,6 +84,9 @@ PAGES = """() => {
     'betteroffice': window.__betteroffice?.()?.getTotalPages?.() ?? null,
     'opendoc': last(document.querySelector('#opendoc-root iframe')?.contentDocument?.getElementById('statPages')?.textContent),
     'onlyoffice': document.querySelector('#oo-root iframe')?.contentWindow?.editor?.getCountPages?.() ?? null,
+    // docen paints every page on one canvas surface; its own status bar says "Page 1 of 500"
+    // (two shadow roots down: <docen-document> → <docen-status-bar> → span.pages).
+    'docen': last(document.querySelector('docen-document')?.shadowRoot?.querySelector('docen-status-bar')?.shadowRoot?.querySelector('.pages')?.textContent),
   };
 }"""
 

@@ -257,7 +257,7 @@ Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64
 | Docxodus | 5.17 s | 5.17 s | 9 MB | 749 MB (+205 MB) | n/a | 3 of 3 |
 | SuperDoc | 13.3 s | 13.3 s | 21 MB | 1071 MB (+515 MB) | 25 | 3 of 3 |
 | Plate | 64.8 s | 64.8 s | 64 MB | 628 MB (+222 MB) | n/a | 3 of 3 |
-| docen | **did not open it**: not loaded within 600s of navigation (the page stopped answering) | | | | | 0 of 3 |
+| docen (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card)) | 2.30 s | still busy after 180 s | 128 MB | 1781 MB (+1343 MB) | n/a | 3 of 3 |
 | docx-editor.dev | 5.20 s | 5.20 s | 121 MB | 702 MB (+243 MB) | n/a | 3 of 3 |
 | folio | 14.0 s | 14.0 s | 44 MB | 2389 MB (+1970 MB) | 500 | 3 of 3 |
 | WordCraft | 3.81 s | still busy after 180 s | 4 MB | 710 MB (−42 MB) | n/a | 3 of 3 |
@@ -285,9 +285,15 @@ What to know when reading them:
   How much of that slowed our Chrome cannot be told from inside the job.
 - **WordCraft is measured on release 0.18.1.** The Lighthouse tables were not taken again and
   still describe 0.17.0.
-- **docen did not open the 500 pages** in any of its three runs: the page stopped answering and
-  nothing was loaded within 600 s. On 2026-11-18 it answered "loaded" after about 4 s and then
-  kept its main thread busy past the 180 s wait. Either way the tab is not usable on that file.
+- **docen opens the 500 pages. The pass of 2026-11-20 did not wait long enough to see it**, and its
+  row read "did not open it": nothing was reported within the 600 s that pass allowed. Opened by hand in
+  Chrome on a Mac on 2026-11-21, its status bar read "Page 1 of 500" and 223,839 words, the page count
+  Word gives; its own load returned after 8 s, and the page then did not answer for about seven minutes
+  (the Mac was busy with other work). Measured again there with a 30-minute deadline, three runs on a
+  quieter Mac: Loaded 2.30 s, and the main thread still busy at the end of the 180 s wait in all three.
+  The row above is that measurement and says so: it is a Mac with a graphics card, not the rented
+  machine of the other rows, so do not compare its seconds with theirs. What docen does during those
+  minutes was not looked into. The deadline is now 30 minutes (`scripts/hf_job.sh`).
 - **Page counts differ by engine** on the 500-page file. canvas-editor's 661 is its own layout:
   it gave 637 on a Mac with Times as the fallback and 650 with a Calibri-metric font loaded
   (2026-11-20), so the count is not a font accident. OnlyOffice shows 500.
@@ -300,7 +306,7 @@ What to know when reading them:
   the viewport (25), so its number is not a page count of the document.
 - **Renderer memory growth** can be negative: the "before" reading is taken one
   second after startup, when the engine's start-up garbage is still resident.
-- 10 of the 153 runs did not load. docen three times on the 500 pages (above) and once on the
+- 10 of the 153 runs did not load. docen three times on the 500 pages (the deadline, above) and once on the
   redline, when a module of its package did not download; the Word Online viewer and Nutrient
   were once each not ready within 600 s on the rich sample; BetterOffice's page once did not
   start; and on the 500 pages the site once closed the connection (OnlyOffice) and twice
@@ -329,6 +335,7 @@ again. Each row says what was wrong and what the new pass shows.
 | **Univer, 500 pages: 1,772 MB of heap** (2026-11-18) | **Half of it was garbage; corrected. Not a .docx figure** | Read after a forced collection it is 880 MB in each of the three new runs (1,760 to 1,773 MB before it). It stayed at 1,888 MiB for a minute by hand, so Chrome does not collect it by itself soon. And Univer never reads the file: it holds the text this site's reader gave it (`lib/univer-doc.ts`), with no tables, pictures or page set-up. |
 | **canvas-editor, every figure on the editors site** | **Confirmed** | 500 pages by hand: 17.7 s and 21.9 s to load, 637 and 650 pages, heap 700 to 730 MiB and steady for 20 s. The new pass: 18.4 s, 661 pages and 678 MB, the heap the same before and after the collection. What is misleading is its renderer memory (above). |
 | **Apryse, Loaded 300 ms to 911 ms** | **Partly blind** | Its adapter waits for the SDK's `documentLoaded`, and the office engine runs in a Worker: neither Loaded nor Settled sees the pages being drawn. Its two runs on the 500 pages settled at 1.14 s and 13.1 s. |
+| **docen, 500 pages: "did not open it"** (2026-11-20) | **Wrong: the test gave up too early. Corrected** | It opens the file and counts 500 pages. The page then keeps its main thread busy for minutes, longer than the 600 s that pass allowed from navigation. Seen by hand on 2026-11-21 and measured again with a 30-minute deadline on a Mac; the row is that measurement. |
 | **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Seven rows stand on two runs: the Word Online viewer and Nutrient on the rich sample, docen and BetterOffice on the redline, Apryse, Nutrient and OnlyOffice on the 500 pages. |
 | **Sizes** | **Mislabelled** | Every "MB" in these tables is a mebibyte (1,048,576 bytes): the 680 MB of canvas-editor's heap is 713 million bytes. |
 

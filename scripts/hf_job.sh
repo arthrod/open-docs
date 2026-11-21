@@ -45,7 +45,9 @@ D=${DAY:-$(date +%F)}
 # never mistaken for another's (a skipped step uploads nothing, and an older file would stand in).
 P="$D${TAG:+-$TAG}"
 export OD_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage"
-export OD_TIMEOUT_S=600
+# 600 s was too little for docen on the 500 pages: it loads, then holds the main thread for
+# minutes, and nothing can be read from the page until it lets go (2026-11-21).
+export OD_TIMEOUT_S=1800
 # What the job was given, as far as the container can see it (cgroup v2). FLAVOR names the machine
 # type the job was started with; a quota other than that type's vCPU stops the job: the figures
 # would be published under a wrong label.

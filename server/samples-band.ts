@@ -80,9 +80,20 @@ const LOAD = "; machine load (1-minute average) ";
 /** The environment without the host load of the step that wrote it: steps of one pass differ in nothing else. */
 const machine = (env?: string | null) => (env ?? "").split(LOAD)[0];
 
+/**
+ * What to say of a row measured elsewhere than its table: an environment reads "<browser and
+ * method>; <the machine>; <its load>", and when only the machine differs, the machine is the news.
+ */
+function placeOf(mine?: string | null, table?: string | null): string {
+  const a = machine(mine).split("; "), b = machine(table).split("; ");
+  return a.length > 1 && a[0] === b[0] ? a.slice(1).join("; ") : mine ?? "";
+}
+
 /** One sentence with the host load of a table's runs, from its rows' environments. */
-function hostLoad(envs: (string | null | undefined)[]): string {
-  const said = [...new Set(envs.filter((e): e is string => !!e && e.includes(LOAD)).map((e) => e.split(LOAD)[1]))];
+function hostLoad(envs: (string | null | undefined)[], table?: string | null): string {
+  // Only the table's own machine: a row measured elsewhere says where beside its name.
+  const here = machine(table);
+  const said = [...new Set(envs.filter((e): e is string => !!e && e.includes(LOAD) && machine(e) === here).map((e) => e.split(LOAD)[1]))];
   return said.length ? ` Host load during these runs (1-minute average): ${esc(said.join("; "))}.` : "";
 }
 
@@ -104,7 +115,7 @@ export function samplesBand(
       // Said only where it differs from the heading: a row re-measured on another day or machine.
       const otherBase = !!r.base && !!data.base && r.base !== data.base;
       const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && machine(r.environment) !== machine(data.environment)) || otherBase
-        ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
+        ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(placeOf(r.environment, data.environment))}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
       const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(String(r.incomplete).split("\n")[0].slice(0, 120))}</small>` : "";
       // A median over fewer runs than were made says how many loaded, and why the others did not.
@@ -137,7 +148,7 @@ export function samplesBand(
     </tr>`;
     };
     return `<h3 class="smp-h" id="sample-${id}">The ${esc(f.label)} sample <small>${esc(f.file)} · ${esc(f.note)} · <a href="/api/${f.file}">download ↓</a></small></h3>
-  <p class="sec-copy">${INTRO[f.file] ?? ""}${hostLoad(Object.values(rows).map((r) => r.environment ?? data.environment))}</p>
+  <p class="sec-copy">${INTRO[f.file] ?? ""}${hostLoad(Object.values(rows).map((r) => r.environment ?? data.environment), data.environment)}</p>
   <div class="table-wrap"><table class="tbl"><thead><tr>
     <th>Engine</th><th class="n">Loaded</th><th class="n">Settled</th><th class="n">JS heap</th><th class="n">Renderer memory</th>
     ${redline ? `<th class="hide-sm">Tracked changes</th>` : `<th class="n hide-sm">Pages shown</th>`}

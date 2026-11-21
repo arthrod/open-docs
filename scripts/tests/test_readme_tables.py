@@ -104,3 +104,11 @@ def test_the_local_lighthouse_block_is_headed_by_its_own_machine_and_blames_ligh
     assert "| WordCraft | 60 · 44 |" in out
     assert "| docen | **no result**: Lighthouse gave no score |" in out
     assert "PageSpeed" not in out
+
+
+def test_a_row_measured_on_another_machine_names_the_machine_not_the_first_160_characters():
+    head = {"measuredAt": "2026-11-21", "environment": "Chrome 158 via Playwright, fresh profile per run (cold cache), 3 runs, median; a Hugging Face Jobs cpu-xl machine (16 vCPU, no GPU: Chrome draws in software; the load is the shared host's), Chrome under Xvfb; machine load (1-minute average) median 56.6"}
+    row = {"measuredAt": "2026-11-21", "environment": "Chrome 158 via Playwright, fresh profile per run (cold cache), 3 runs, median; a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card); machine load (1-minute average) median 30.5"}
+    assert rt.elsewhere(row, head) == " (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card))"
+    # An environment of another shape is shown as it is.
+    assert rt.elsewhere({"measuredAt": "2026-11-16", "environment": "PSI, 2 analyses"}, head) == " (measured 2026-11-16: PSI, 2 analyses)"

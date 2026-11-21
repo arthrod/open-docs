@@ -66,8 +66,11 @@ def machine(env: str | None) -> str:
 
 
 def host_load(rows: dict, head: dict) -> str:
-    """One line with the host load of a table's runs, from its rows (or the heading when they carry none)."""
-    said = list(dict.fromkeys(e.split(LOAD)[1] for e in [r.get("environment") or head.get("environment") or "" for r in rows.values()] if LOAD in e))
+    """One line with the host load of a table's runs on its own machine, from its rows (or the heading when they carry none)."""
+    # Only the table's own machine: a row measured elsewhere says where beside its name, and its load is in its file.
+    here = machine(head.get("environment"))
+    envs = [r.get("environment") or head.get("environment") or "" for r in rows.values()]
+    said = list(dict.fromkeys(e.split(LOAD)[1] for e in envs if LOAD in e and machine(e) == here))
     return f"Host load during these runs (1-minute average): {'; '.join(said)}." if said else ""
 
 
@@ -77,7 +80,10 @@ def elsewhere(row: dict, head: dict) -> str:
     # Another address than its table's (the site under another name) is another measurement too.
     on = f" on {row['base']}" if row.get("base") and head.get("base") and row["base"] != head["base"] else ""
     if machine(where) != machine(head.get("environment")):
-        return f" (measured {when}{on}: {cell(where)})"
+        # "<browser and method>; <the machine>; <its load>": when only the machine differs, name the machine.
+        mine, theirs = machine(where).split("; "), machine(head.get("environment")).split("; ")
+        told = "; ".join(mine[1:]) if len(mine) > 1 and mine[0] == theirs[0] else where
+        return f" (measured {when}{on}: {cell(told)})"
     return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
 
 
