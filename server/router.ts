@@ -15,7 +15,7 @@
  */
 import type { Hono } from "npm:hono@4";
 import { bodyLimit } from "npm:hono@4/body-limit";
-import { serveFile } from "https://esm.town/v/std/utils/index.ts";
+import { serveFile } from "https://esm.town/v/std/utils/serve-file.ts";
 import { editors, type Maker } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
