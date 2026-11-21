@@ -1,0 +1,175 @@
+{
+ "measuredAt": "2026-11-21",
+ "environment": "Lighthouse 13.6.0 run on a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), Google Chrome 158.0.8127.36, headless, 3 analyses per page and form factor, median of those that gave a result; Lighthouse's CPU benchmark index median 4206, lowest 4142; machine load (1-minute average) median 2.4, highest 2.9, on 12 cores",
+ "base": "https://editors.benchmarks.law",
+ "query": "open=lorem-500.docx",
+ "stopped": null,
+ "raw": [
+  {
+   "page": "e/docen",
+   "run": 0,
+   "load1": 2.63,
+   "cores": 12,
+   "desktop": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 2.42,
+    "cores": 12
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4142,
+    "fetchTime": "2026-11-21T10:53:21.096Z",
+    "error": "the engine failed on this computer, so there is no score: [open-docs] docen failed to start TypeError: Failed to fetch dynamically imported module: https://esm.sh/@docen/editor@0.7.0?target=es2022&deps=@microsoft/fast-",
+    "load1": 2.63,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "run": 0,
+   "load1": 2.18,
+   "cores": 12,
+   "desktop": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4206,
+    "fetchTime": "2026-11-21T10:53:36.965Z",
+    "performance": 61,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 252,
+    "lcpMs": 252,
+    "tbtMs": 1234,
+    "cls": 0.01,
+    "speedIndexMs": 7506,
+    "loadTries": 2,
+    "load1": 2.54,
+    "cores": 12
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4263,
+    "fetchTime": "2026-11-21T10:57:58.145Z",
+    "performance": 60,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 794,
+    "lcpMs": 794,
+    "tbtMs": 6897,
+    "cls": 0.044,
+    "speedIndexMs": 33350,
+    "load1": 2.18,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/docen",
+   "run": 1,
+   "load1": 2.38,
+   "cores": 12,
+   "desktop": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 2.87,
+    "cores": 12
+   },
+   "mobile": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 2.38,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "run": 1,
+   "load1": 1.57,
+   "cores": 12,
+   "desktop": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4200,
+    "fetchTime": "2026-11-21T11:03:31.633Z",
+    "performance": 61,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 251,
+    "lcpMs": 251,
+    "tbtMs": 1222,
+    "cls": 0.01,
+    "speedIndexMs": 7547,
+    "load1": 2.43,
+    "cores": 12
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4276,
+    "fetchTime": "2026-11-21T11:07:52.835Z",
+    "performance": 60,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 841,
+    "lcpMs": 841,
+    "tbtMs": 6908,
+    "cls": 0.045,
+    "speedIndexMs": 33437,
+    "load1": 1.57,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/docen",
+   "run": 2,
+   "load1": 2.09,
+   "cores": 12,
+   "desktop": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 2.01,
+    "cores": 12
+   },
+   "mobile": {
+    "error": "Lighthouse stopped while waiting for the page and wrote no report",
+    "load1": 2.09,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "run": 2,
+   "load1": 1.9,
+   "cores": 12,
+   "desktop": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4161,
+    "fetchTime": "2026-11-21T11:13:25.137Z",
+    "performance": 61,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 256,
+    "lcpMs": 256,
+    "tbtMs": 1210,
+    "cls": 0.01,
+    "speedIndexMs": 7621,
+    "load1": 2.41,
+    "cores": 12
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4242,
+    "fetchTime": "2026-11-21T11:17:46.292Z",
+    "performance": 60,
+    "accessibility": 96,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 795,
+    "lcpMs": 795,
+    "tbtMs": 6912,
+    "cls": 0.044,
+    "speedIndexMs": 34130,
+    "load1": 1.9,
+    "cores": 12
+   }
+  }
+ ]
+}

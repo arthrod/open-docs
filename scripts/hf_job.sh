@@ -45,7 +45,9 @@ D=${DAY:-$(date +%F)}
 # never mistaken for another's (a skipped step uploads nothing, and an older file would stand in).
 P="$D${TAG:+-$TAG}"
 export OD_CHROME_ARGS="--no-sandbox --disable-dev-shm-usage"
-export OD_TIMEOUT_S=600
+# 600 s was too little for docen on the 500 pages: it loads, then holds the main thread for
+# minutes, and nothing can be read from the page until it lets go (2026-11-21).
+export OD_TIMEOUT_S=1800
 # What the job was given, as far as the container can see it (cgroup v2). FLAVOR names the machine
 # type the job was started with; a quota other than that type's vCPU stops the job: the figures
 # would be published under a wrong label.
@@ -138,7 +140,12 @@ smoke() {
 editors() {
   cd /w/editors; export MEASURE_WHERE="$HW"; STATE=docs/samples/steps-done.txt
   for S in showcase redline lorem-500; do
-    T=55; [ "$S" = lorem-500 ] && T=90
+    # lorem-500: one engine that uses its whole deadline (OD_TIMEOUT_S, 30 minutes) in each of three
+    # runs takes 90 minutes by itself; the others took about 40 on 2026-11-20.
+    # The 30-minute deadline is for the 500 pages only. On the short samples an engine that never
+    # gets ready would cost 90 minutes in three runs and the step would be stopped before it wrote
+    # anything, so they keep the 10-minute deadline they always had.
+    T=55; OD_TIMEOUT_S=600; [[ "$S" = lorem-500 ]] && { T=150; OD_TIMEOUT_S=1800; }; export OD_TIMEOUT_S
     step "e-$S" $T $PW scripts/measure_samples.py all $S "$RUNS" --out "docs/samples/$D-$S.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S.log
     grep -c '"engine"' /tmp/$S.log; grep -o '"error": "[^"]*' /tmp/$S.log | sort | uniq -c | head -20
     ran && { cp /tmp/$S.log docs/samples/ 2>/dev/null; up docs/samples "$P/editors/samples"; }
