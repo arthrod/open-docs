@@ -70,7 +70,8 @@ const spread = (f: string, p: LighthousePage): string => {
 export function lighthouseBand(
   all: EditorMeta[],
   data: LighthouseResults = LATEST as LighthouseResults,
-  local: LighthouseResults = LOCAL as LighthouseResults,
+  // The repository's local pass only beside the repository's PageSpeed file: a caller with its own data gets none of ours.
+  local: LighthouseResults = data === LATEST ? LOCAL as LighthouseResults : { measuredAt: null, environment: "", pages: {} } as LighthouseResults,
 ): string {
   // `ours`: the table of a pass made on our computer. It has no PageSpeed link, and its failures are Lighthouse's.
   const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string; base?: string }, ours = false) => {
