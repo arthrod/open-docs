@@ -57,7 +57,7 @@ its own, and the other tables leave it out for that reason.
 - [x] 1.16 Measurements (live medians) Audited 2026-11-21: the live table explains a dash; notes name the engines that load in a frame
 - [x] 1.17 How it fits together Audited 2026-11-21: unchanged by the new engines except the mirrors it names (npm, site, zip)
 - [x] 1.18 What it took to make each editor run from a CDN (one entry per engine) Docxodus and the four view-only renderers had no entry; added 2026-11-21
-- [x] 1.19 Not in the bench, and why Audited 2026-11-21: office-open, docs.plus, GenOffice: still not on the site
+- [x] 1.19 Not in the bench, and why Audited 2026-11-21: historical exclusion notes for office-open, docs.plus and GenOffice are superseded by section 5; all three now have demo pages
 - [x] 1.20 Known limitations Audited 2026-11-21: names what each of the thirteen keeps and where assistant edits have no Undo
 - [x] 1.21 Tests, Development, Licenses Audited 2026-11-21: licenses name all seventeen
 
