@@ -197,79 +197,91 @@ Every engine opening each sample from its own Menu. The table on the
 file beside it.
 
 <!-- samples:start -->
-Measured 2026-11-21: Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs, median; a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage.
+Measured 2026-11-21: Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs, median; a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card).
 
 **Rich sample (`showcase.docx`, 3 pages)**
 
-Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores.
+Host load during these runs (1-minute average): median 5.0, highest 5.8, on 12 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 427 ms | 427 ms | 6 MB | 463 MB (+45 MB) | 3 | 3 of 3 |
-| Docxodus | 1.23 s | 1.23 s | 8 MB | 559 MB (+13 MB) | n/a | 3 of 3 |
-| SuperDoc | 1.36 s | 1.36 s | 15 MB | 610 MB (+55 MB) | 3 | 3 of 3 |
-| Plate | 542 ms | 542 ms | 10 MB | 455 MB (+57 MB) | n/a | 3 of 3 |
-| docen | 317 ms | 317 ms | 18 MB | 560 MB (+68 MB) | n/a | 3 of 3 |
-| docx-editor.dev | 1.38 s | 1.38 s | 22 MB | 538 MB (+84 MB) | n/a | 3 of 3 |
-| folio | 589 ms | 751 ms | 16 MB | 476 MB (+57 MB) | 3 | 3 of 3 |
-| WordCraft | 646 ms | still busy after 180 s | 4 MB | 551 MB (−190 MB) | n/a | 3 of 3 |
-| Microsoft Word viewer | 599 ms | n/a | n/a | 885 MB (−86 MB) | n/a | 2 of 3 |
-| Google Docs viewer | 595 ms | n/a | n/a | 623 MB (+21 MB) | n/a | 3 of 3 |
-| Apryse WebViewer | 300 ms | 300 ms | 18 MB | 716 MB (+41 MB) | n/a | 3 of 3 |
-| Nutrient | 4.79 s | 4.79 s | 20 MB | 787 MB (+185 MB) | n/a | 2 of 3 |
-| react-docx | 1.10 s | 1.10 s | 11 MB | 523 MB (+39 MB) | 3 | 3 of 3 |
-| Univer | 469 ms | 469 ms | 25 MB | 521 MB (+48 MB) | n/a | 3 of 3 |
-| BetterOffice | 1.39 s | 1.58 s | 12 MB | 648 MB (+64 MB) | 3 | 3 of 3 |
-| OnlyOffice (CryptPad build) | 3.06 s | 3.06 s | 50 MB | 892 MB (+225 MB) | 3 | 3 of 3 |
-| OpenDoc | 720 ms | 840 ms | 12 MB | 676 MB (+63 MB) | 3 | 3 of 3 |
+| canvas-editor (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 427 ms | 427 ms | 6 MB | 463 MB (+45 MB) | 3 | 3 of 3 |
+| Docxodus (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.23 s | 1.23 s | 8 MB | 559 MB (+13 MB) | n/a | 3 of 3 |
+| SuperDoc (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.36 s | 1.36 s | 15 MB | 610 MB (+55 MB) | 3 | 3 of 3 |
+| Plate (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 542 ms | 542 ms | 10 MB | 455 MB (+57 MB) | n/a | 3 of 3 |
+| docen (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 317 ms | 317 ms | 18 MB | 560 MB (+68 MB) | n/a | 3 of 3 |
+| docx-editor.dev (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.38 s | 1.38 s | 22 MB | 538 MB (+84 MB) | n/a | 3 of 3 |
+| folio (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 589 ms | 751 ms | 16 MB | 476 MB (+57 MB) | 3 | 3 of 3 |
+| WordCraft (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 646 ms | still busy after 180 s | 4 MB | 551 MB (−190 MB) | n/a | 3 of 3 |
+| Microsoft Word viewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 599 ms | n/a | n/a | 885 MB (−86 MB) | n/a | 2 of 3 |
+| Google Docs viewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 595 ms | n/a | n/a | 623 MB (+21 MB) | n/a | 3 of 3 |
+| Apryse WebViewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 300 ms | 300 ms | 18 MB | 716 MB (+41 MB) | n/a | 3 of 3 |
+| Nutrient (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 4.79 s | 4.79 s | 20 MB | 787 MB (+185 MB) | n/a | 2 of 3 |
+| react-docx (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.10 s | 1.10 s | 11 MB | 523 MB (+39 MB) | 3 | 3 of 3 |
+| Univer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 469 ms | 469 ms | 25 MB | 521 MB (+48 MB) | n/a | 3 of 3 |
+| BetterOffice (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.39 s | 1.58 s | 12 MB | 648 MB (+64 MB) | 3 | 3 of 3 |
+| OnlyOffice (CryptPad build) (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 3.06 s | 3.06 s | 50 MB | 892 MB (+225 MB) | 3 | 3 of 3 |
+| OpenDoc (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 720 ms | 840 ms | 12 MB | 676 MB (+63 MB) | 3 | 3 of 3 |
+| GenOffice | 391 ms | 391 ms | 17 MB | 566 MB (+134 MB) | 3 | 3 of 3 |
+| office-open | 297 ms | 297 ms | 7 MB | 505 MB (+179 MB) | n/a | 3 of 3 |
+| Fidus Writer | 185 ms | 185 ms | 5 MB | 379 MB (+42 MB) | n/a | 3 of 3 |
+| docs.plus | 190 ms | 190 ms | 10 MB | 423 MB (+58 MB) | n/a | 3 of 3 |
 
 **Redline (`redline.docx`, 3 pages)**
 
-Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64 cores.
+Host load during these runs (1-minute average): median 5.1, highest 6.3, on 12 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 413 ms | 413 ms | 6 MB | 466 MB (+50 MB) | 3 | 3 of 3 |
-| Docxodus | 1.09 s | 1.09 s | 8 MB | 573 MB (+16 MB) | n/a | 3 of 3 |
-| SuperDoc | 1.83 s | 1.83 s | 16 MB | 648 MB (+91 MB) | 3 | 3 of 3 |
-| Plate | 523 ms | 523 ms | 11 MB | 458 MB (+61 MB) | n/a | 3 of 3 |
-| docen | 388 ms | 388 ms | 19 MB | 565 MB (+77 MB) | n/a | 2 of 3 |
-| docx-editor.dev | 1.37 s | 1.37 s | 23 MB | 537 MB (+79 MB) | n/a | 3 of 3 |
-| folio | 452 ms | 614 ms | 17 MB | 474 MB (+58 MB) | 3 | 3 of 3 |
-| WordCraft | 519 ms | 2.93 s | 3 MB | 534 MB (−148 MB) | n/a | 3 of 3 |
-| Microsoft Word viewer | 313 ms | n/a | n/a | 877 MB (−36 MB) | n/a | 3 of 3 |
-| Google Docs viewer | 558 ms | n/a | n/a | 622 MB (+16 MB) | n/a | 3 of 3 |
-| Apryse WebViewer | 300 ms | 300 ms | 18 MB | 715 MB (+52 MB) | n/a | 3 of 3 |
-| Nutrient | 3.96 s | 3.96 s | 20 MB | 786 MB (+188 MB) | n/a | 3 of 3 |
-| react-docx | 988 ms | 1.03 s | 13 MB | 513 MB (+27 MB) | 3 | 3 of 3 |
-| Univer | 381 ms | 381 ms | 25 MB | 518 MB (+42 MB) | n/a | 3 of 3 |
-| BetterOffice | 1.28 s | 1.28 s | 14 MB | 696 MB (+116 MB) | 3 | 2 of 3 |
-| OnlyOffice (CryptPad build) | 2.55 s | 2.55 s | 50 MB | 898 MB (+230 MB) | 3 | 3 of 3 |
-| OpenDoc | 813 ms | 1.04 s | 13 MB | 728 MB (+111 MB) | 3 | 3 of 3 |
+| canvas-editor (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 413 ms | 413 ms | 6 MB | 466 MB (+50 MB) | 3 | 3 of 3 |
+| Docxodus (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.09 s | 1.09 s | 8 MB | 573 MB (+16 MB) | n/a | 3 of 3 |
+| SuperDoc (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.83 s | 1.83 s | 16 MB | 648 MB (+91 MB) | 3 | 3 of 3 |
+| Plate (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 523 ms | 523 ms | 11 MB | 458 MB (+61 MB) | n/a | 3 of 3 |
+| docen (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 388 ms | 388 ms | 19 MB | 565 MB (+77 MB) | n/a | 2 of 3 |
+| docx-editor.dev (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.37 s | 1.37 s | 23 MB | 537 MB (+79 MB) | n/a | 3 of 3 |
+| folio (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 452 ms | 614 ms | 17 MB | 474 MB (+58 MB) | 3 | 3 of 3 |
+| WordCraft (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 519 ms | 2.93 s | 3 MB | 534 MB (−148 MB) | n/a | 3 of 3 |
+| Microsoft Word viewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 313 ms | n/a | n/a | 877 MB (−36 MB) | n/a | 3 of 3 |
+| Google Docs viewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 558 ms | n/a | n/a | 622 MB (+16 MB) | n/a | 3 of 3 |
+| Apryse WebViewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 300 ms | 300 ms | 18 MB | 715 MB (+52 MB) | n/a | 3 of 3 |
+| Nutrient (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 3.96 s | 3.96 s | 20 MB | 786 MB (+188 MB) | n/a | 3 of 3 |
+| react-docx (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 988 ms | 1.03 s | 13 MB | 513 MB (+27 MB) | 3 | 3 of 3 |
+| Univer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 381 ms | 381 ms | 25 MB | 518 MB (+42 MB) | n/a | 3 of 3 |
+| BetterOffice (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 1.28 s | 1.28 s | 14 MB | 696 MB (+116 MB) | 3 | 2 of 3 |
+| OnlyOffice (CryptPad build) (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 2.55 s | 2.55 s | 50 MB | 898 MB (+230 MB) | 3 | 3 of 3 |
+| OpenDoc (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 813 ms | 1.04 s | 13 MB | 728 MB (+111 MB) | 3 | 3 of 3 |
+| GenOffice | 592 ms | 592 ms | 18 MB | 590 MB (+161 MB) | 3 | 3 of 3 |
+| office-open | 292 ms | 292 ms | 7 MB | 517 MB (+190 MB) | n/a | 3 of 3 |
+| Fidus Writer | 183 ms | 183 ms | 5 MB | 379 MB (+45 MB) | n/a | 3 of 3 |
+| docs.plus | 190 ms | 190 ms | 10 MB | 426 MB (+60 MB) | n/a | 3 of 3 |
 
 **500 pages (`lorem-500.docx`)**
 
-Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores.
+Host load during these runs (1-minute average): median 30.5, highest 40.0, on 12 cores; median 4.1, highest 4.8, on 12 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 18.4 s | 18.5 s | 678 MB | 4816 MB (+4396 MB) | 661 | 3 of 3 |
-| Docxodus | 5.17 s | 5.17 s | 9 MB | 749 MB (+205 MB) | n/a | 3 of 3 |
-| SuperDoc | 13.3 s | 13.3 s | 21 MB | 1071 MB (+515 MB) | 25 | 3 of 3 |
-| Plate | 64.8 s | 64.8 s | 64 MB | 628 MB (+222 MB) | n/a | 3 of 3 |
-| docen (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 30.5, highest 40.0, on 12 cores) | 2.30 s | still busy after 180 s | 128 MB | 1781 MB (+1343 MB) | n/a | 3 of 3 |
-| docx-editor.dev | 5.20 s | 5.20 s | 121 MB | 702 MB (+243 MB) | n/a | 3 of 3 |
-| folio | 14.0 s | 14.0 s | 44 MB | 2389 MB (+1970 MB) | 500 | 3 of 3 |
-| WordCraft | 3.81 s | still busy after 180 s | 4 MB | 710 MB (−42 MB) | n/a | 3 of 3 |
-| Microsoft Word viewer | 787 ms | n/a | n/a | 874 MB (−65 MB) | n/a | 3 of 3 |
-| Google Docs viewer | 703 ms | n/a | n/a | 641 MB (+36 MB) | n/a | 3 of 3 |
-| Apryse WebViewer | 911 ms | 7.11 s | 39 MB | 1522 MB (+856 MB) | n/a | 2 of 3 |
-| Nutrient | 20.8 s | 20.8 s | 21 MB | 778 MB (+166 MB) | n/a | 2 of 3 |
-| react-docx | 8.70 s | 8.70 s | 98 MB | 920 MB (+433 MB) | 500 | 3 of 3 |
-| Univer | 29.3 s | 29.3 s | 880 MB | 2394 MB (+1916 MB) | n/a | 3 of 3 |
-| BetterOffice | 8.05 s | 8.90 s | 23 MB | 1296 MB (+717 MB) | 500 | 3 of 3 |
-| OnlyOffice (CryptPad build) | 12.8 s | 12.8 s | 134 MB | 949 MB (+278 MB) | 500 | 2 of 3 |
-| OpenDoc | 3.54 s | 7.01 s | 12 MB | 910 MB (+291 MB) | 500 | 3 of 3 |
+| canvas-editor (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 18.4 s | 18.5 s | 678 MB | 4816 MB (+4396 MB) | 661 | 3 of 3 |
+| Docxodus (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 5.17 s | 5.17 s | 9 MB | 749 MB (+205 MB) | n/a | 3 of 3 |
+| SuperDoc (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 13.3 s | 13.3 s | 21 MB | 1071 MB (+515 MB) | 25 | 3 of 3 |
+| Plate (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 64.8 s | 64.8 s | 64 MB | 628 MB (+222 MB) | n/a | 3 of 3 |
+| docen | 2.30 s | still busy after 180 s | 128 MB | 1781 MB (+1343 MB) | n/a | 3 of 3 |
+| docx-editor.dev (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 5.20 s | 5.20 s | 121 MB | 702 MB (+243 MB) | n/a | 3 of 3 |
+| folio (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 14.0 s | 14.0 s | 44 MB | 2389 MB (+1970 MB) | 500 | 3 of 3 |
+| WordCraft (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 3.81 s | still busy after 180 s | 4 MB | 710 MB (−42 MB) | n/a | 3 of 3 |
+| Microsoft Word viewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 787 ms | n/a | n/a | 874 MB (−65 MB) | n/a | 3 of 3 |
+| Google Docs viewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 703 ms | n/a | n/a | 641 MB (+36 MB) | n/a | 3 of 3 |
+| Apryse WebViewer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 911 ms | 7.11 s | 39 MB | 1522 MB (+856 MB) | n/a | 2 of 3 |
+| Nutrient (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 20.8 s | 20.8 s | 21 MB | 778 MB (+166 MB) | n/a | 2 of 3 |
+| react-docx (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 8.70 s | 8.70 s | 98 MB | 920 MB (+433 MB) | 500 | 3 of 3 |
+| Univer (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 29.3 s | 29.3 s | 880 MB | 2394 MB (+1916 MB) | n/a | 3 of 3 |
+| BetterOffice (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 8.05 s | 8.90 s | 23 MB | 1296 MB (+717 MB) | 500 | 3 of 3 |
+| OnlyOffice (CryptPad build) (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 12.8 s | 12.8 s | 134 MB | 949 MB (+278 MB) | 500 | 2 of 3 |
+| OpenDoc (measured 2026-11-21: a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are ) | 3.54 s | 7.01 s | 12 MB | 910 MB (+291 MB) | 500 | 3 of 3 |
+| GenOffice | 531 ms | 5.50 s | 38 MB | 1072 MB (+641 MB) | 500 | 3 of 3 |
+| office-open | 533 ms | 533 ms | 7 MB | 692 MB (+364 MB) | n/a | 3 of 3 |
+| Fidus Writer | 292 ms | 292 ms | 7 MB | 458 MB (+122 MB) | n/a | 3 of 3 |
+| docs.plus | 582 ms | 582 ms | 13 MB | 576 MB (+210 MB) | n/a | 3 of 3 |
 <!-- samples:end -->
 
 What to know when reading them:
