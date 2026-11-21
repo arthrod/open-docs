@@ -306,11 +306,13 @@ What to know when reading them:
   the viewport (25), so its number is not a page count of the document.
 - **Renderer memory growth** can be negative: the "before" reading is taken one
   second after startup, when the engine's start-up garbage is still resident.
-- 10 of the 153 runs did not load. docen three times on the 500 pages (the deadline, above) and once on the
+- 7 of the 153 runs in these tables did not load. docen once on the
   redline, when a module of its package did not download; the Word Online viewer and Nutrient
   were once each not ready within 600 s on the rich sample; BetterOffice's page once did not
   start; and on the 500 pages the site once closed the connection (OnlyOffice) and twice
-  answered an error status (Apryse, Nutrient). Each reason is in the dated file, and the last
+  answered an error status (Apryse, Nutrient). The three docen runs on the 500 pages that the
+  2026-11-20 pass counted as not loaded were its deadline, not docen (above), and its row is now the
+  three runs measured on the Mac. Each reason is in the dated file, and the last
   column of the tables says how many runs each median stands on.
 - **Settled cannot see everything**: see the definition below. An engine that
   starts work more than two seconds after it last kept the thread busy would

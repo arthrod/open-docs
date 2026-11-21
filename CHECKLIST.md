@@ -21,6 +21,10 @@ renderers: Word Online viewer, Google viewer, Apryse WebViewer, Nutrient.
 A part that lists engines is complete only when all seventeen are in it, or
 the part says why one is missing.
 
+cite-check has a page (`/e/cite-check`) and a Lighthouse row, which makes
+eighteen rows there: it is our application on canvas-editor, not an engine of
+its own, and the other tables leave it out for that reason.
+
 ## 1. Home page and README
 
 - [ ] 1.1 The editors table (13 rows: package, renderer, .docx in and out, assistant write path, assistant read path)
@@ -36,7 +40,7 @@ the part says why one is missing.
   - [x] OnlyOffice (CryptPad build): the dash was in the live Measurements table, which had two visits and neither a fresh Chromium tab. The page now says what a dash means; a Chrome visit recorded 129 MB
 - [ ] 1.9 What to know when reading them (notes under the tables)
 - [ ] 1.10 Figures to distrust (table)
-- [ ] 1.11 Lighthouse, PageSpeed table (17 rows × 3 samples)
+- [ ] 1.11 Lighthouse, PageSpeed table (17 engines and cite-check × 3 samples)
 - [~] 1.12 Lighthouse on our computer (every page, blank and 500 pages): script, page band and README block in; the pass is running
   - [x] WordCraft: Lighthouse measures it directly on a machine with a graphics card (checked by hand, the page draws)
   - [ ] docen on the 500 pages: `PAGE_HUNG`, re-check
@@ -59,6 +63,7 @@ pages, and the figures band matches the README row.
 - [ ] docx-editor.dev · [ ] folio · [ ] WordCraft · [ ] react-docx · [ ] Univer
 - [ ] OpenDoc · [ ] BetterOffice · [ ] OnlyOffice
 - [ ] Word Online viewer · [ ] Google viewer · [ ] Apryse WebViewer · [ ] Nutrient
+- [ ] cite-check (our application on canvas-editor)
 
 ## 3. Blog (`/blog`)
 
