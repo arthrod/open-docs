@@ -35,7 +35,7 @@ its own, and the other tables leave it out for that reason.
 - [x] 1.6 The samples, measured: showcase table (17 rows, host-load line). The home page had no rich-sample table while the README had one; added 2026-11-21
 - [x] 1.7 The samples, measured: redline table (17 rows, host-load line). Audited 2026-11-21: README and home page
 - [x] 1.8 The samples, measured: 500 pages table (17 rows, host-load line). Audited 2026-11-21: README and home page
-  - [x] docen row: it opens the file (500 pages, Word's count); the pass gave up too early. Row re-measured on a Mac with a 30-minute deadline, notes, distrust table and blog corrected, live 2026-11-21
+  - [x] docen row: it opens the file (500 pages, Word's count); the pass gave up too early. The row on the page itself says so since 2026-11-21 (a caution beside the name; before that only the README did). Row re-measured on a Mac with a 30-minute deadline, notes, distrust table and blog corrected, live 2026-11-21
   - [x] docen at phone width: repeated 2026-11-21 in Chrome in a 500-pixel-wide window (the narrowest Chrome allows), not emulated. Read about fifteen minutes after opening: "Page 1 of 500", 500 page canvases. The earlier emulated run that showed an empty document was read too early or was the emulation; it is not a finding. This is a laptop's processor, not a phone's, and the time to open was not taken
   - [x] OnlyOffice (CryptPad build): the dash was in the live Measurements table, which had two visits and neither a fresh Chromium tab. The page now says what a dash means; a Chrome visit recorded 129 MB
 - [x] 1.9 What to know when reading them (notes under the tables) Audited 2026-11-21: the notes name every engine with an unusual row (docen, WordCraft, Univer, the viewers); corrected this week for docen and OnlyOffice
@@ -102,3 +102,4 @@ has no figures of its own.
 | 2026-11-21 | vendor notes | benchmarks.law has the six new sections; their links are on |
 | 2026-11-21 | 1.3, 1.4, 1.9, 1.10, 1.13 to 1.21, 3.2 to 3.6, 3.9, 4.1, 4.2 | Audited; CDN entries added for Docxodus and the renderers; one name for each embed viewer |
 | 2026-11-21 | 4.4 | The four checklists read side by side after the trial's et-v0.11.0 |
+| 2026-11-21 | 1.8 | The docen row of the 500-page table says on the page that it opens the file |
