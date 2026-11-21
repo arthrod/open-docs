@@ -31,13 +31,14 @@ the part says why one is missing.
 - [ ] 1.6 The samples, measured: showcase table (17 rows, host-load line)
 - [ ] 1.7 The samples, measured: redline table (17 rows, host-load line)
 - [ ] 1.8 The samples, measured: 500 pages table (17 rows, host-load line)
-  - [ ] docen row: says "did not open it" from the test machine; it opens on a phone. Re-check in a real browser and rewrite the row and its note
-  - [ ] OnlyOffice (CryptPad build) row: confirm a JS heap figure is shown everywhere the row appears (README, home page, `/e/onlyoffice`)
+  - [x] docen row: it opens the file (500 pages, Word's count); the pass gave up too early. Row re-measured on a Mac with a 30-minute deadline, notes, distrust table and blog corrected, live 2026-11-21
+  - [ ] docen at phone size: one emulated run showed an empty document after a 3.5-minute freeze; repeat before saying anything about it
+  - [x] OnlyOffice (CryptPad build): the dash was in the live Measurements table, which had two visits and neither a fresh Chromium tab. The page now says what a dash means; a Chrome visit recorded 129 MB
 - [ ] 1.9 What to know when reading them (notes under the tables)
 - [ ] 1.10 Figures to distrust (table)
 - [ ] 1.11 Lighthouse, PageSpeed table (17 rows × 3 samples)
-- [ ] 1.12 Lighthouse, this computer (17 rows × 3 samples; every engine, not some)
-  - [ ] WordCraft: find out whether Lighthouse can measure it directly, and measure it
+- [~] 1.12 Lighthouse on our computer (every page, blank and 500 pages): script, page band and README block in; the pass is running
+  - [x] WordCraft: Lighthouse measures it directly on a machine with a graphics card (checked by hand, the page draws)
   - [ ] docen on the 500 pages: `PAGE_HUNG`, re-check
 - [ ] 1.13 The assistant: what it does, per engine
 - [ ] 1.14 How fairness to each vendor is decided (table)
@@ -61,14 +62,14 @@ pages, and the figures band matches the README row.
 
 ## 3. Blog (`/blog`)
 
-- [ ] 3.1 Index lists the five posts in reading order
+- [x] 3.1 Index lists the five posts in reading order, numbered
 - [ ] 3.2 Why we test
 - [ ] 3.3 What the numbers mean
 - [ ] 3.4 Test an editor yourself
 - [ ] 3.5 What went wrong
 - [ ] 3.6 What the new numbers say, and how to choose an editor
-- [ ] 3.7 Navigation: the same burger menu as the other pages of the site
-- [ ] 3.8 Footers: Previous and Next follow the reading order on every post
+- [x] 3.7 Navigation: the same burger menu as the other pages of the site (checked live at phone width)
+- [x] 3.8 Footers: Previous and Next follow the reading order on every post; the two stray "Next:" lines are gone
 - [ ] 3.9 Every figure a post quotes matches the current tables
 
 ## 4. Cross-site consistency
@@ -83,3 +84,6 @@ pages, and the figures band matches the README row.
 | Date | Part | What changed |
 | --- | --- | --- |
 | 2026-11-21 | all | Checklist created |
+| 2026-11-21 | 3.1, 3.7, 3.8 | Blog uses the site's header, menu and footer; posts in reading order |
+| 2026-11-21 | 1.8, 1.10 | docen opens the 500 pages: row, notes and blog corrected |
+| 2026-11-21 | 1.16 | What a dash in JS heap means |
