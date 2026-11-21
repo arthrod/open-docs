@@ -1,5 +1,5 @@
 /** The comparison page at `/`: every editor, with what it measurably costs. */
-import type { EditorMeta } from "./registry.ts";
+import { type EditorMeta, vendorNote } from "./registry.ts";
 import { DS_ROOT, FONT_MONO_URL, FONT_SANS_URL, WORDMARK_CSS } from "./styles.ts";
 import { samplesBand } from "./samples-band.ts";
 import { lighthouseBand } from "./lighthouse-band.ts";
@@ -60,7 +60,7 @@ export function landingPage(all: EditorMeta[]): string {
 
   const row = (e: EditorMeta) => `
     <tr data-slug="${e.slug}">
-      <td><a href="/e/${e.slug}">${esc(e.name)}</a></td>
+      <td><a href="/e/${e.slug}">${esc(e.name)}</a>${vendorNote(e.slug) ? ` <a class="about" href="${vendorNote(e.slug)}" target="_blank" rel="noopener" title="Pros, cons and every benchmark of ${esc(e.name)} on benchmarks.law">about →</a>` : ""}</td>
       <td class="n" data-k="startupMs">—</td>
       <td class="n hide-sm" data-k="coldStartupMs">—</td>
       <td class="n hide-sm" data-k="mountMs">—</td>
@@ -174,6 +174,8 @@ ${SITE_NAV_CSS}
 }
 .tags span.vo { background: var(--mark); border-color: var(--ink); }
 .smp-h { font-size: 20px; margin: 34px 0 6px; }
+.tbl .about { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+.tbl .about:hover { color: var(--ink); }
 .tbl .prov, .tbl .prov-warn, .tbl .lh-part { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 3px; }
 .smp-h small { display: block; font-family: var(--font-mono); font-size: 10.5px; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
 #samples .tbl td small { color: var(--muted); font-size: 11px; }

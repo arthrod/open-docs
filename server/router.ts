@@ -16,7 +16,7 @@
 import type { Hono } from "npm:hono@4";
 import { bodyLimit } from "npm:hono@4/body-limit";
 import { serveFile } from "https://esm.town/v/std/utils/serve-file.ts";
-import { editors, type Maker } from "./registry.ts";
+import { editors, type Maker, vendorNote } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
 import { fixtureBytes, FIXTURES } from "./fixtures.ts";
@@ -85,7 +85,7 @@ function madeBySection(makers: Maker[]): string {
         ${items}`;
 }
 
-function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string, makers: Maker[] = []): string {
+function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string, makers: Maker[] = [], note: string | null = null): string {
   const allEditors = embed
     ? `<a role="menuitem" href="/" target="_blank" rel="noopener">All editors &amp; measurements</a>`
     : `<a role="menuitem" href="/">All editors &amp; measurements</a>`;
@@ -109,7 +109,7 @@ ${FIXTURES.map((f) => `        <button role="menuitem" class="od-fixture" data-f
         <button role="menuitem" id="od-reload">Reload editor</button>${madeBySection(makers)}
         <hr />
         ${allEditors}${arena}
-        <a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
+        ${note ? `<a role="menuitem" href="${esc(note)}" target="_blank" rel="noopener">About this ${viewer ? "viewer" : "editor"}: pros, cons, every benchmark →</a>\n        ` : ""}<a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
         <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
         <a role="menuitem" class="od-contact" href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
       </div>`;
@@ -141,7 +141,7 @@ function shell(o: EditorShell, embed = false): string {
     `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
   const switcher = `<optgroup label="Open-source editors">${editors.filter((e) => e.kind !== "viewer").map(option).join("")}</optgroup>` +
     `<optgroup label="Proprietary viewers (view-only)">${editors.filter((e) => e.kind === "viewer").map(option).join("")}</optgroup>`;
-  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#", meta?.makers ?? []);
+  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#", meta?.makers ?? [], vendorNote(o.slug));
   // Leading spaces live on the template line, so a non-embed page stays byte-identical.
   const embedMenu = embed
     ? `<div class="od-menu-wrap od-embed-menu">\n${panel}\n    </div>\n`

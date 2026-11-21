@@ -338,4 +338,28 @@ export function getEditor(slug: string): EditorMeta | undefined {
   return editors.find((e) => e.slug === slug);
 }
 
+/** Where benchmarks.law describes each vendor: one page, one section per tool. */
+export const VENDOR_NOTES = "https://benchmarks.law/editors-trial/vendor-notes";
+/** Engine → its section's anchor there (the heading of reports/vendors.md in editors_trial, slugged). */
+const VENDOR_NOTE_ANCHOR: Record<string, string> = {
+  "canvas-editor": "canvas-editor",
+  docxodus: "docxodus",
+  superdoc: "superdoc",
+  plate: "platejs",
+  docen: "docen",
+  eigenpal: "eigenpal",
+  folio: "folio",
+  wordcraft: "wordcraft",
+  "react-docx": "react-docx",
+  univer: "univer",
+  opendoc: "opendoc",
+  betteroffice: "betteroffice",
+  onlyoffice: "onlyoffice-cryptpad-build",
+  apryse: "apryse",
+  nutrient: "nutrient",
+};
+/** The vendor note of an engine, or null when the trial has no section for it. */
+export const vendorNote = (slug: string): string | null =>
+  VENDOR_NOTE_ANCHOR[slug] ? `${VENDOR_NOTES}#${VENDOR_NOTE_ANCHOR[slug]}` : null;
+
 export const isViewer = (e?: EditorMeta) => e?.kind === "viewer";
