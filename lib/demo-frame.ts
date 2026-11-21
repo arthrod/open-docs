@@ -49,9 +49,20 @@ export function demoFrame(o: DemoFrame): EditorAdapter {
     // The demo's page asks its parent for the document (the line the mirror adds to its <head>).
     (window as unknown as { __odDemoDoc: () => Uint8Array }).__odDemoDoc = () => current.slice();
     const mine = ++shown;
-    const loaded = new Promise<void>((resolve) => frame!.addEventListener("load", () => resolve(), { once: true }));
-    frame!.src = `${base}?n=${mine}`;
-    await loaded;
+    // The navigation itself has a deadline too: a page that never fires `load` would hold every later open.
+    const target = frame!;
+    await new Promise<void>((resolve, reject) => {
+      const onLoad = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        target.removeEventListener("load", onLoad);
+        reject(new Error(`${o.name} did not load its demo page within ${(o.openMs ?? 120_000) / 1000} s`));
+      }, o.openMs ?? 120_000);
+      target.addEventListener("load", onLoad, { once: true });
+      target.src = `${base}?n=${mine}`;
+    });
     await until(() => {
       if (mine !== shown) return true; // a newer document replaced this one
       const doc = frame!.contentDocument;
