@@ -314,7 +314,7 @@ export const editors: EditorMeta[] = [
     license: "MIT",
     repo: "https://github.com/docs-plus/docs.plus",
     blurb:
-      "A collaborative Tiptap editor where every heading has its own chat: its own DOCX import (mammoth) and export around its editor, without the collaboration server. A document must start with a title there: one without a heading, such as the blank document, gets the demo's placeholder, \"Complex Fixture\".",
+      "A collaborative Tiptap editor where every heading has its own chat: its own DOCX import (mammoth) and export around its editor, without the collaboration server. A document must start with a title there: one without a heading, such as the blank document, gets the demo's placeholder, \"Complex Fixture\". The demo build keeps only the pictures of the trial's own test file: a picture in any other document is dropped by the demo, not by docs.plus (its server route on viewers.benchmarks.law keeps them).",
     docxRoundTrip: true,
     agent: true,
     makers: [

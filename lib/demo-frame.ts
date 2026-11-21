@@ -70,7 +70,14 @@ export function demoFrame(o: DemoFrame): EditorAdapter {
     }, "show the document", o.openMs ?? 120_000);
   }
 
+  // One at a time, opens and exports alike: an open replaces the frame an export is reading, and an
+  // export pressed while a document is still opening presses a control that is not ready.
   let exporting: Promise<unknown> = Promise.resolve();
+  function openInTurn(bytes: Uint8Array): Promise<void> {
+    const next = exporting.then(() => open(bytes), () => open(bytes));
+    exporting = next.catch(() => undefined);
+    return next;
+  }
   function exported(): Promise<Uint8Array> {
     const next = exporting.then(exportOnce, exportOnce);
     exporting = next.catch(() => undefined);
@@ -138,9 +145,9 @@ export function demoFrame(o: DemoFrame): EditorAdapter {
       const v = window.od.viewer;
       await open(v ? await v.initialDocx() : await window.od.blankDocx());
     },
-    load: (bytes: Uint8Array) => open(bytes),
+    load: (bytes: Uint8Array) => openInTurn(bytes),
     getMarkdown: async () => docxToMarkdown(await exported()),
-    applyMarkdown: async (markdown: string) => open(await markdownToDocx(markdown)),
+    applyMarkdown: async (markdown: string) => openInTurn(await markdownToDocx(markdown)),
     exportDocx: () => exported(),
   };
 }

@@ -671,6 +671,12 @@ Download ([`lib/demo-frame.ts`](lib/demo-frame.ts)).
   no assistant for that reason.
 - **docs.plus needs a title.** A document without a heading, such as the blank
   one, gets the demo's placeholder title, "Complex Fixture".
+- **The docs.plus demo drops pictures.** docs.plus hands each picture to an
+  uploader; the demo's stand-in for it knows only the pictures of the trial's own
+  test file and refuses any other. So a picture in the rich sample, or in a file
+  you open, is missing on that page. That is the demo build's limit, not
+  docs.plus's: its server route on viewers.benchmarks.law runs the same import
+  and keeps the pictures.
 - They were not run through the probes of 2026-11-20 below.
 
 ### Assessment (2026-11-09): harness or editor?
