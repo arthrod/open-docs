@@ -86,7 +86,7 @@ has no figures of its own.
 - [x] 4.1 Same engine names on the three sites and in the trial The README tables said "Word Online viewer" and "Google viewer" where the sites say "Microsoft Word viewer" and "Google Docs viewer"; the tables and their scripts now use the sites' names (2026-11-21)
 - [x] 4.2 Same menu on every page of the three sites Audited 2026-11-21: the header of the three sites carries Editors, Viewers, Arena, Blog, Source and Contact, with the burger menu at phone width; an engine page has its own compact bar
 - [x] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes`, the six new tools included since benchmarks.law published their sections (et-v0.10.6, 2026-11-21)
-- [ ] 4.4 The checklist files in the four repositories agree with each other
+- [x] 4.4 The checklist files in the four repositories agree with each other. Read side by side 2026-11-21 after the trial's et-v0.11.0: the same legend, the same six added tools under the same names, and the same account of them (react-docx, OpenDoc and BetterOffice measured by the trial; OnlyOffice run with no output; Univer with no .docx path; Nutrient a viewer). The trial's checklist marks two speed reports as blocked for the new tools (not timed) and five parts as partial (their code was not read); the three site checklists have nothing open
 
 ## Log
 
@@ -101,3 +101,4 @@ has no figures of its own.
 | 2026-11-21 | 1.1, 1.2, 1.5 to 1.8, 1.11, 2 | Audited against the live site and the measuring pass; rich-sample table added to the home page |
 | 2026-11-21 | vendor notes | benchmarks.law has the six new sections; their links are on |
 | 2026-11-21 | 1.3, 1.4, 1.9, 1.10, 1.13 to 1.21, 3.2 to 3.6, 3.9, 4.1, 4.2 | Audited; CDN entries added for Docxodus and the renderers; one name for each embed viewer |
+| 2026-11-21 | 4.4 | The four checklists read side by side after the trial's et-v0.11.0 |
