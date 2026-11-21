@@ -95,7 +95,8 @@ compact top bar — editor dropdown, metrics chip, assistant toggle — and a
 - **New blank document** (⌥N). Pages also *open* blank.
 - **Open .docx from your computer…** (⌘O), or drag a .docx onto the page.
 - **Export this document as .docx** (⌘S): the document you are editing, in the
-  editor's own bytes, named after the document name.
+  editor's own bytes, named after the document name. Not in Univer, which has
+  no .docx export.
 - **Load the rich sample**: a Word-valid showcase (title/subtitle, three heading
   levels, every common run format, nested bullets and numbers, a table with a
   shaded header and a merged cell, a quote, a code block, a hyperlink, a chart
@@ -112,7 +113,9 @@ compact top bar — editor dropdown, metrics chip, assistant toggle — and a
 The **metrics chip** shows startup / JS heap / loaded bytes for *this* page
 load; click it for the breakdown by file type and origin. The **Assistant**
 panel drafts, rewrites, restructures or summarises; with *Auto-apply* on, edits
-land immediately and each has an **Undo**.
+land immediately and each has an **Undo**, except in react-docx, Univer,
+OpenDoc, BetterOffice and OnlyOffice: there an edit opens a new document
+([why](#the-assistant)), so export first if you want the one before it.
 
 **Phones and narrow windows.** The layout follows the window: the bar drops
 labels, the Menu becomes a full-width sheet, the assistant becomes a sheet over
@@ -194,114 +197,115 @@ Every engine opening each sample from its own Menu. The table on the
 file beside it.
 
 <!-- samples:start -->
-Measured 2026-11-18: Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs (6 for Univer, measured in both passes of the day; OpenDoc in the second only), median; a Hugging Face Jobs cpu-upgrade machine (8 vCPU, 32 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage; machine load (1-minute average) median 10.5, highest 65.4, on 64 cores.
+Measured 2026-11-21: Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs, median; a Hugging Face Jobs cpu-xl machine (16 vCPU, 124 GB, Linux x86-64, no GPU: Chrome draws in software; the load average and core count recorded with each run are the shared host's), Chrome under Xvfb with --no-sandbox --disable-dev-shm-usage.
 
 **Rich sample (`showcase.docx`, 3 pages)**
 
+Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores.
+
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 397 ms | 397 ms | 9 MB | 468 MB (+48 MB) | 3 | 2 of 3 |
-| Docxodus | 824 ms | 824 ms | 9 MB | 564 MB (+14 MB) | n/a | 2 of 3 |
-| SuperDoc | 1.08 s | 1.08 s | 17 MB | 623 MB (+67 MB) | 3 | 2 of 3 |
-| Plate | 430 ms | 430 ms | 12 MB | 454 MB (+56 MB) | n/a | 2 of 3 |
-| docen | 218 ms | 218 ms | 25 MB | 563 MB (+76 MB) | n/a | 2 of 3 |
-| docx-editor.dev | 190 ms | 781 ms | 25 MB | 552 MB (+95 MB) | n/a | 3 of 3 |
-| folio | 322 ms | 438 ms | 22 MB | 480 MB (+61 MB) | 3 | 3 of 3 |
-| WordCraft | 508 ms | 18.3 s | 5 MB | 542 MB (−189 MB) | n/a | 3 of 3 |
-| Word Online viewer | 207 ms | n/a | n/a | 786 MB (−133 MB) | n/a | 3 of 3 |
-| Google viewer | 462 ms | n/a | n/a | 627 MB (+25 MB) | n/a | 3 of 3 |
-| Apryse WebViewer | 220 ms | 220 ms | 19 MB | 705 MB (+41 MB) | n/a | 2 of 3 |
-| Nutrient | 3.71 s | 3.71 s | 27 MB | 776 MB (+171 MB) | n/a | 3 of 3 |
-| react-docx | 655 ms | 655 ms | 15 MB | 527 MB (+39 MB) | 3 | 2 of 3 |
-| Univer | 249 ms | 249 ms | 29 MB | 514 MB (+41 MB) | n/a | 5 of 6 |
-| BetterOffice | 887 ms | 887 ms | 16 MB | 654 MB (+69 MB) | 3 | 3 of 3 |
-| OnlyOffice (CryptPad build) | 2.04 s | 2.04 s | 104 MB | 901 MB (+234 MB) | 3 | 3 of 3 |
-| OpenDoc | 578 ms | 702 ms | 15 MB | 710 MB (+96 MB) | 3 | 2 of 3 |
+| canvas-editor | 427 ms | 427 ms | 6 MB | 463 MB (+45 MB) | 3 | 3 of 3 |
+| Docxodus | 1.23 s | 1.23 s | 8 MB | 559 MB (+13 MB) | n/a | 3 of 3 |
+| SuperDoc | 1.36 s | 1.36 s | 15 MB | 610 MB (+55 MB) | 3 | 3 of 3 |
+| Plate | 542 ms | 542 ms | 10 MB | 455 MB (+57 MB) | n/a | 3 of 3 |
+| docen | 317 ms | 317 ms | 18 MB | 560 MB (+68 MB) | n/a | 3 of 3 |
+| docx-editor.dev | 1.38 s | 1.38 s | 22 MB | 538 MB (+84 MB) | n/a | 3 of 3 |
+| folio | 589 ms | 751 ms | 16 MB | 476 MB (+57 MB) | 3 | 3 of 3 |
+| WordCraft | 646 ms | still busy after 180 s | 4 MB | 551 MB (−190 MB) | n/a | 3 of 3 |
+| Word Online viewer | 599 ms | n/a | n/a | 885 MB (−86 MB) | n/a | 2 of 3 |
+| Google viewer | 595 ms | n/a | n/a | 623 MB (+21 MB) | n/a | 3 of 3 |
+| Apryse WebViewer | 300 ms | 300 ms | 18 MB | 716 MB (+41 MB) | n/a | 3 of 3 |
+| Nutrient | 4.79 s | 4.79 s | 20 MB | 787 MB (+185 MB) | n/a | 2 of 3 |
+| react-docx | 1.10 s | 1.10 s | 11 MB | 523 MB (+39 MB) | 3 | 3 of 3 |
+| Univer | 469 ms | 469 ms | 25 MB | 521 MB (+48 MB) | n/a | 3 of 3 |
+| BetterOffice | 1.39 s | 1.58 s | 12 MB | 648 MB (+64 MB) | 3 | 3 of 3 |
+| OnlyOffice (CryptPad build) | 3.06 s | 3.06 s | 50 MB | 892 MB (+225 MB) | 3 | 3 of 3 |
+| OpenDoc | 720 ms | 840 ms | 12 MB | 676 MB (+63 MB) | 3 | 3 of 3 |
 
 **Redline (`redline.docx`, 3 pages)**
 
+Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64 cores.
+
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 449 ms | 449 ms | 10 MB | 476 MB (+58 MB) | 3 | 2 of 3 |
-| Docxodus | 1.18 s | 1.18 s | 9 MB | 579 MB (+42 MB) | n/a | 2 of 3 |
-| SuperDoc | 1.52 s | 1.52 s | 22 MB | 661 MB (+106 MB) | 3 | 3 of 3 |
-| Plate | 486 ms | 486 ms | 12 MB | 456 MB (+59 MB) | n/a | 3 of 3 |
-| docen | 273 ms | 273 ms | 29 MB | 560 MB (+71 MB) | n/a | 3 of 3 |
-| docx-editor.dev | 160 ms | 696 ms | 25 MB | 547 MB (+90 MB) | n/a | 3 of 3 |
-| folio | 423 ms | 539 ms | 18 MB | 480 MB (+62 MB) | 3 | 2 of 3 |
-| WordCraft | 535 ms | 32.9 s | 4 MB | 542 MB (−117 MB) | n/a | 2 of 3 |
-| Word Online viewer | 334 ms | n/a | n/a | 873 MB (+185 MB) | n/a | 3 of 3 |
-| Google viewer | 622 ms | n/a | n/a | 627 MB (+20 MB) | n/a | 3 of 3 |
-| Apryse WebViewer | 298 ms | 298 ms | 18 MB | 714 MB (+56 MB) | n/a | 2 of 3 |
-| Nutrient | 3.72 s | 3.72 s | 27 MB | 784 MB (+176 MB) | n/a | 3 of 3 |
-| react-docx | 798 ms | 861 ms | 17 MB | 514 MB (+27 MB) | 3 | 2 of 3 |
-| Univer | 263 ms | 263 ms | 32 MB | 516 MB (+41 MB) | n/a | 4 of 6 |
-| BetterOffice | 1.03 s | 1.16 s | 17 MB | 697 MB (+116 MB) | 3 | 3 of 3 |
-| OnlyOffice (CryptPad build) | 2.09 s | 2.09 s | 104 MB | 889 MB (+221 MB) | 3 | 3 of 3 |
-| OpenDoc | 652 ms | 850 ms | 14 MB | 694 MB (+86 MB) | 3 | 3 of 3 |
+| canvas-editor | 413 ms | 413 ms | 6 MB | 466 MB (+50 MB) | 3 | 3 of 3 |
+| Docxodus | 1.09 s | 1.09 s | 8 MB | 573 MB (+16 MB) | n/a | 3 of 3 |
+| SuperDoc | 1.83 s | 1.83 s | 16 MB | 648 MB (+91 MB) | 3 | 3 of 3 |
+| Plate | 523 ms | 523 ms | 11 MB | 458 MB (+61 MB) | n/a | 3 of 3 |
+| docen | 388 ms | 388 ms | 19 MB | 565 MB (+77 MB) | n/a | 2 of 3 |
+| docx-editor.dev | 1.37 s | 1.37 s | 23 MB | 537 MB (+79 MB) | n/a | 3 of 3 |
+| folio | 452 ms | 614 ms | 17 MB | 474 MB (+58 MB) | 3 | 3 of 3 |
+| WordCraft | 519 ms | 2.93 s | 3 MB | 534 MB (−148 MB) | n/a | 3 of 3 |
+| Word Online viewer | 313 ms | n/a | n/a | 877 MB (−36 MB) | n/a | 3 of 3 |
+| Google viewer | 558 ms | n/a | n/a | 622 MB (+16 MB) | n/a | 3 of 3 |
+| Apryse WebViewer | 300 ms | 300 ms | 18 MB | 715 MB (+52 MB) | n/a | 3 of 3 |
+| Nutrient | 3.96 s | 3.96 s | 20 MB | 786 MB (+188 MB) | n/a | 3 of 3 |
+| react-docx | 988 ms | 1.03 s | 13 MB | 513 MB (+27 MB) | 3 | 3 of 3 |
+| Univer | 381 ms | 381 ms | 25 MB | 518 MB (+42 MB) | n/a | 3 of 3 |
+| BetterOffice | 1.28 s | 1.28 s | 14 MB | 696 MB (+116 MB) | 3 | 2 of 3 |
+| OnlyOffice (CryptPad build) | 2.55 s | 2.55 s | 50 MB | 898 MB (+230 MB) | 3 | 3 of 3 |
+| OpenDoc | 813 ms | 1.04 s | 13 MB | 728 MB (+111 MB) | 3 | 3 of 3 |
 
 **500 pages (`lorem-500.docx`)**
 
+Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores.
+
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| canvas-editor | 16.6 s | 16.6 s | 680 MB | 4134 MB (+3717 MB) | 661 | 3 of 3 |
-| Docxodus | 4.60 s | 4.60 s | 10 MB | 753 MB (+202 MB) | n/a | 3 of 3 |
-| SuperDoc | 12.8 s | 12.8 s | 35 MB | 1076 MB (+520 MB) | 25 | 3 of 3 |
-| Plate | 58.0 s | 58.0 s | 69 MB | 623 MB (+226 MB) | n/a | 3 of 3 |
-| docen | 4.07 s | still busy after 180 s | 127 MB | 3528 MB (+3042 MB) | n/a | 3 of 3 |
-| docx-editor.dev | 284 ms | 1.19 s | 149 MB | 707 MB (+250 MB) | n/a | 3 of 3 |
-| folio | 9.76 s | 9.76 s | 45 MB | 2402 MB (+1983 MB) | 500 | 3 of 3 |
-| WordCraft | 2.52 s | 20.6 s | 4 MB | 708 MB (+9 MB) | n/a | 3 of 3 |
-| Word Online viewer | 580 ms | n/a | n/a | 905 MB (−68 MB) | n/a | 3 of 3 |
-| Google viewer | 14.2 s | n/a | n/a | 641 MB (+39 MB) | n/a | 2 of 3 |
-| Apryse WebViewer | 650 ms | 984 ms | 48 MB | 1980 MB (+1315 MB) | n/a | 3 of 3 |
-| Nutrient | 13.0 s | 13.0 s | 29 MB | 736 MB (+132 MB) | n/a | 3 of 3 |
-| react-docx | 5.38 s | 5.38 s | 98 MB | 915 MB (+430 MB) | 500 | 3 of 3 |
-| Univer | 14.3 s | 14.3 s | 1772 MB | 2395 MB (+1920 MB) | n/a | 6 of 6 |
-| BetterOffice | 5.03 s | 5.47 s | 31 MB | 1300 MB (+716 MB) | 500 | 3 of 3 |
-| OnlyOffice (CryptPad build) | 3.40 s | 3.56 s | 161 MB | 948 MB (+265 MB) | 409 | 3 of 3 |
-| OpenDoc | 2.33 s | 4.53 s | 17 MB | 916 MB (+307 MB) | 500 | 3 of 3 |
+| canvas-editor | 18.4 s | 18.5 s | 678 MB | 4816 MB (+4396 MB) | 661 | 3 of 3 |
+| Docxodus | 5.17 s | 5.17 s | 9 MB | 749 MB (+205 MB) | n/a | 3 of 3 |
+| SuperDoc | 13.3 s | 13.3 s | 21 MB | 1071 MB (+515 MB) | 25 | 3 of 3 |
+| Plate | 64.8 s | 64.8 s | 64 MB | 628 MB (+222 MB) | n/a | 3 of 3 |
+| docen | **did not open it**: not loaded within 600s of navigation (the page stopped answering) | | | | | 0 of 3 |
+| docx-editor.dev | 5.20 s | 5.20 s | 121 MB | 702 MB (+243 MB) | n/a | 3 of 3 |
+| folio | 14.0 s | 14.0 s | 44 MB | 2389 MB (+1970 MB) | 500 | 3 of 3 |
+| WordCraft | 3.81 s | still busy after 180 s | 4 MB | 710 MB (−42 MB) | n/a | 3 of 3 |
+| Word Online viewer | 787 ms | n/a | n/a | 874 MB (−65 MB) | n/a | 3 of 3 |
+| Google viewer | 703 ms | n/a | n/a | 641 MB (+36 MB) | n/a | 3 of 3 |
+| Apryse WebViewer | 911 ms | 7.11 s | 39 MB | 1522 MB (+856 MB) | n/a | 2 of 3 |
+| Nutrient | 20.8 s | 20.8 s | 21 MB | 778 MB (+166 MB) | n/a | 2 of 3 |
+| react-docx | 8.70 s | 8.70 s | 98 MB | 920 MB (+433 MB) | 500 | 3 of 3 |
+| Univer | 29.3 s | 29.3 s | 880 MB | 2394 MB (+1916 MB) | n/a | 3 of 3 |
+| BetterOffice | 8.05 s | 8.90 s | 23 MB | 1296 MB (+717 MB) | 500 | 3 of 3 |
+| OnlyOffice (CryptPad build) | 12.8 s | 12.8 s | 134 MB | 949 MB (+278 MB) | 500 | 2 of 3 |
+| OpenDoc | 3.54 s | 7.01 s | 12 MB | 910 MB (+291 MB) | 500 | 3 of 3 |
 <!-- samples:end -->
 
-Read these with care:
+What to know when reading them:
 
-- **These figures are from another machine than the ones before 2026-11-18**, so they do not
-  continue the earlier series: a Linux machine with 8 vCPU and no GPU (Chrome draws in software),
-  3 runs per engine and sample where the earlier files have 5. The earlier files stay in
-  `docs/samples/`.
-- **WordCraft is now measured on release 0.18.1** in these tables. The Lighthouse tables were
-  not taken again and still describe 0.17.0.
-- **OpenDoc's rows come from a second pass the same day.** In the first pass all 9 of its starts
-  failed: the adapter handed it a document before its engine was ready, which a slower machine
-  shows every time. The adapter was fixed and OpenDoc measured again; the 9 failed runs are in
-  the dated file under `discarded`. **Univer** was measured in both passes (6 runs).
-  The second pass was a separate job on the same machine type, and its load-average readings
-  do not continue the first job's, so it ran on another host of that type (64 cores, 493 GB).
-  A third job that evening, meant to take every row on one host, was not used: its host ran at
-  a load of 77 to 148, and its upload token expired before two of the three sample files were
-  saved.
-- **docen on 500 pages** answers "loaded" after about 4 s and shows page 1, but in all three
-  runs its main thread was still busy when the wait gave up at 180 s, so it has no Settled
-  figure. The tab is not usable during that time.
+- **These figures are the pass of 2026-11-20** (it ran past midnight UTC, so the heading says
+  2026-11-21): one job on one host, every engine, 3 runs per engine and sample, made with the
+  corrected script (see "Figures to distrust"). The machine is a Linux one with 16 vCPU and no
+  GPU (Chrome draws in software). The tables of 2026-11-18 came from a machine with 8 vCPU, so
+  the two do not form one series; the earlier files stay in `docs/samples/`.
+- **The host was shared and busy.** A run starts only while the host's load average is under a
+  limit, 100 for this pass (64 cores). It was 40 to 49 during the rich sample, 22 to 32 during
+  the redline and 28 to 76 during the 500 pages; each run in the dated files carries its own.
+  How much of that slowed our Chrome cannot be told from inside the job.
+- **WordCraft is measured on release 0.18.1.** The Lighthouse tables were not taken again and
+  still describe 0.17.0.
+- **docen did not open the 500 pages** in any of its three runs: the page stopped answering and
+  nothing was loaded within 600 s. On 2026-11-18 it answered "loaded" after about 4 s and then
+  kept its main thread busy past the 180 s wait. Either way the tab is not usable on that file.
 - **Page counts differ by engine** on the 500-page file. canvas-editor's 661 is its own layout:
   it gave 637 on a Mac with Times as the fallback and 650 with a Calibri-metric font loaded
-  (2026-11-20), so the count is not a font accident. **OnlyOffice's 409 is wrong**: it is a count
-  read while OnlyOffice was still paginating (see "Figures to distrust" below). It reaches 500.
-- **canvas-editor's memory on the 500 pages** is about 680 MB of JavaScript heap (it keeps one
-  object per character: 1.6 million of them) and 4 GB of renderer memory. The 4 GB is this
-  machine's: with no GPU, Chrome keeps each of the 661 page canvases in the renderer's own
-  memory. On a Mac with a GPU the same page read 0.5 to 1.8 GB (the files of 2026-11-15 and
-  2026-11-17).
+  (2026-11-20), so the count is not a font accident. OnlyOffice shows 500.
+- **canvas-editor's memory on the 500 pages** is 678 MB of JavaScript heap after a collection (it
+  keeps one object per character: 1.6 million of them) and 4.8 GB of renderer memory. The
+  renderer figure is this machine's: with no GPU, Chrome keeps each of the 661 page canvases in
+  the renderer's own memory. On a Mac with a GPU the same page read 0.5 to 1.8 GB (the files of
+  2026-11-15 and 2026-11-17).
 - **Pages shown** counts what is in the DOM: SuperDoc keeps only the pages near
   the viewport (25), so its number is not a page count of the document.
 - **Renderer memory growth** can be negative: the "before" reading is taken one
   second after startup, when the engine's start-up garbage is still resident.
-- 18 of the 162 runs did not load, 17 of them on the two short samples. Eleven times the page
-  itself answered an error status and once a sample download answered HTTP 429 (the site's
-  rate limit on one machine loading engine after engine); three runs were not ready within
-  600 s (Apryse twice, Univer once); OpenDoc once did not start within 120 s; react-docx once
-  missed one of its modules; the Google viewer once did not load. Each reason is in the dated
-  file, and the last column of the tables says how many runs each median stands on.
+- 10 of the 153 runs did not load. docen three times on the 500 pages (above) and once on the
+  redline, when a module of its package did not download; the Word Online viewer and Nutrient
+  were once each not ready within 600 s on the rich sample; BetterOffice's page once did not
+  start; and on the 500 pages the site once closed the connection (OnlyOffice) and twice
+  answered an error status (Apryse, Nutrient). Each reason is in the dated file, and the last
+  column of the tables says how many runs each median stands on.
 - **Settled cannot see everything**: see the definition below. An engine that
   starts work more than two seconds after it last kept the thread busy would
   read as settled before that work.
@@ -309,42 +313,38 @@ Read these with care:
 #### Figures to distrust
 
 Every figure that stood far from its neighbours, or that the method cannot really measure, was
-looked at again on 2026-11-20: by hand, in Chrome on a Mac, on the live site. What was found is
-below. None of the published figures was changed by it: they are that machine's runs, and a
-corrected figure needs a new pass on it.
+looked at again on 2026-11-20: by hand, in Chrome on a Mac, on the live site. Two faults of the
+measuring and one of an adapter were found and corrected, and the tables above were then taken
+again. Each row says what was wrong and what the new pass shows.
 
 | Figure in the tables | Verdict | What was seen |
 | --- | --- | --- |
-| **OnlyOffice, 500 pages: 409 pages, Settled 3.56 s** | **Wrong** | OnlyOffice reports the document ready and goes on paginating in slices too short to count as long tasks, so Settled does not see them. Watched by hand: 52, 103, 154 … 409, 460 and **500 pages**. The three published runs read 409, 358 and 409: the same file, three counts. With the changed script on a Mac: Loaded 1.73 s, Settled 1.73 s, and the page count still moving until 4.32 s, where it stopped at 500. Its true figures on the 500 pages are 500 pages and a layout that ends well after its Settled. |
-| **docx-editor.dev, Loaded: 190 ms, 160 ms, 284 ms** | **Not a measurement** | Its adapter's `load()` hands the bytes to the engine and returns at once (`ref.load(bytes)`, nothing awaited): 58 ms on the 500 pages here. The column times the call, not the document. |
-| **docx-editor.dev, 500 pages: Settled 1.19 s** | **Not reliable** | Here its main thread was busy for 11.1 s after the click. The 11 runs on file range from 610 ms to 5.45 s. Its work comes in bursts with pauses, and Settled stops at the first pause of two seconds. |
-| **Settled, for every engine** | **Blind to sliced work** | It counts tasks of 50 ms or more (the Long Tasks API). An engine that works in shorter slices, in a Worker or on the GPU reads as settled while it is still working. Seen for OnlyOffice; possible for any engine whose Settled equals its Loaded on the 500 pages (Docxodus, SuperDoc, Plate, folio, Nutrient, react-docx, Univer; canvas-editor's also equals it, and its loader was seen to wait for its layout). |
-| **WordCraft, Settled: 18.3 s, 32.9 s, 20.6 s** | **This machine, not the engine** | Its Loaded is about 0.5 s. With no GPU its canvas is drawn in software on the main thread, and those repaints are the long tasks: one run of the 500 pages read 147 s, another 7.3 s. On the Mac runner of 2026-11-17 it settled on the 500 pages in 2.8 to 4.0 s. |
-| **Renderer memory, canvas engines** (canvas-editor 4,134 MB, docen 3,528 MB, Univer 2,395 MB) | **This machine, not the engine** | With no GPU every canvas is kept in the renderer's memory; with one, most of it is in the GPU process, which the tables do not show (`gpuRss` is in the dated file). Compare these only with each other. |
-| **Renderer memory, small documents** (454 to 901 MB; growth of −189 MB, −133 MB) | **Mostly Chrome** | Three or more renderer processes are resident before any document opens (about 400 to 1,000 MB over the runs). The growth is the engine's part, and for a small document it is smaller than the noise: it comes out negative for four rows, three of them on the two short samples. |
-| **Univer, 500 pages: 1,772 MB of heap** | **Real, and not a .docx figure** | Still 1,888 MiB a minute after loading here, so it is held, not garbage. But Univer never reads the file: it holds the text this site's reader gave it (`lib/univer-doc.ts`). The same goes for its Loaded (249 ms on the rich sample): text only, no tables, pictures or page set-up. |
-| **canvas-editor, every figure on the editors site** | **Confirmed** | 500 pages here: 17.7 s and 21.9 s to load, 637 and 650 pages, heap 700 to 730 MiB and steady for 20 s. The published 16.6 s, 661 pages and 680 MB are of the same order. What is misleading is its renderer memory (above) and, on the viewers site, its heap, read before garbage was collected: 1,256 there, about 700 after collection. |
-| **Apryse, Loaded 220 ms to 650 ms** | **Partly blind** | Its adapter waits for the SDK's `documentLoaded`, and the office engine runs in a Worker: neither Loaded nor Settled sees the pages being drawn. |
-| **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Fourteen rows of the two short samples stand on two runs. |
+| **OnlyOffice, 500 pages: 409 pages, Settled 3.56 s** (2026-11-18) | **Was wrong; corrected** | OnlyOffice reported the document ready and went on paginating in slices too short to count as long tasks. Watched by hand: 52, 103, 154 … 409, 460 and 500 pages; the three runs of 2026-11-18 read 409, 358 and 409. Settled now also waits until the page count has not changed for five seconds. The new pass: 500 pages in both runs that loaded, Loaded and Settled 10.4 s and 15.2 s. |
+| **docx-editor.dev, Loaded: 190 ms, 160 ms, 284 ms** (2026-11-18) | **Was not a measurement; corrected** | Its adapter's `load()` handed the bytes to the engine and returned at once (`ref.load(bytes)`, nothing awaited), so the column timed the call. The adapter now waits for the engine's layout. The new pass: 1.38 s, 1.37 s and 5.20 s on the three samples. |
+| **docx-editor.dev, 500 pages: Settled 1.19 s** (2026-11-18) | **Was not reliable; steadier now** | Its work comes in bursts with pauses, and Settled stopped at the first pause of two seconds: the 11 runs then on file ranged from 610 ms to 5.45 s. With the adapter waiting for the layout the three new runs read 5.06 s, 5.20 s and 5.93 s. By hand on a Mac its main thread was busy for 11.1 s after the click, so work after the layout may still go unseen. |
+| **Settled, for every engine** | **Blind to sliced work** | It counts tasks of 50 ms or more (the Long Tasks API). An engine that works in shorter slices, in a Worker or on the GPU reads as settled while it is still working. The page count now catches it for the engines that show pages; for one that shows none (Docxodus, Plate, docx-editor.dev, Nutrient, Univer) nothing does. |
+| **WordCraft, Settled: "still busy after 180 s"** on the rich sample and the 500 pages, 2.93 s on the redline | **This machine, not the engine** | Its Loaded is 0.5 to 3.8 s. With no GPU its canvas is drawn in software on the main thread, and those repaints are the long tasks: the three redline runs read 1.35 s, 2.93 s and 19.8 s. On the Mac runner of 2026-11-17 it settled on the 500 pages in 2.8 to 4.0 s. |
+| **Renderer memory, canvas engines** (canvas-editor 4,816 MB, Univer 2,394 MB, folio 2,389 MB) | **This machine, not the engine** | With no GPU every canvas is kept in the renderer's memory; with one, most of it is in the GPU process, which the tables do not show (`gpuRss` is in the dated file). Compare these only with each other. |
+| **Renderer memory, small documents** (455 to 898 MB; growth of −190 MB, −148 MB) | **Mostly Chrome** | Three or more renderer processes are resident before any document opens. The growth is the engine's part, and for a small document it is smaller than the noise: it comes out negative for WordCraft and the Word Online viewer on all three samples. |
+| **Univer, 500 pages: 1,772 MB of heap** (2026-11-18) | **Half of it was garbage; corrected. Not a .docx figure** | Read after a forced collection it is 880 MB in each of the three new runs (1,760 to 1,773 MB before it). It stayed at 1,888 MiB for a minute by hand, so Chrome does not collect it by itself soon. And Univer never reads the file: it holds the text this site's reader gave it (`lib/univer-doc.ts`), with no tables, pictures or page set-up. |
+| **canvas-editor, every figure on the editors site** | **Confirmed** | 500 pages by hand: 17.7 s and 21.9 s to load, 637 and 650 pages, heap 700 to 730 MiB and steady for 20 s. The new pass: 18.4 s, 661 pages and 678 MB, the heap the same before and after the collection. What is misleading is its renderer memory (above). |
+| **Apryse, Loaded 300 ms to 911 ms** | **Partly blind** | Its adapter waits for the SDK's `documentLoaded`, and the office engine runs in a Worker: neither Loaded nor Settled sees the pages being drawn. Its two runs on the 500 pages settled at 1.14 s and 13.1 s. |
+| **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Seven rows stand on two runs: the Word Online viewer and Nutrient on the rich sample, docen and BetterOffice on the redline, Apryse, Nutrient and OnlyOffice on the 500 pages. |
 | **Sizes** | **Mislabelled** | Every "MB" in these tables is a mebibyte (1,048,576 bytes): the 680 MB of canvas-editor's heap is 713 million bytes. |
 
-Two of these are faults of the measuring, and are fixed in
-[`scripts/measure_samples.py`](scripts/measure_samples.py) for the next pass: the page count is
-now read until it has not changed for five seconds (`pagesSettledMs` is when it last changed, for
-an engine whose count moved after "loaded"), and the heap is read after a forced garbage
-collection (`heapBytes`; the reading before it is kept as `heapBytesBeforeGc`, which is what the
-files up to 2026-11-18 call `heapBytes`). Tried on a Mac on 2026-11-20, one run each on the 500
-pages: OnlyOffice 500 pages, heap 185 MiB before the collection and 134 MiB after; docx-editor.dev
-148 MiB and 121 MiB; canvas-editor 699 MiB and 697 MiB (and on the viewers site, where the heap is
-read sooner, 1,273 MiB and 697 MiB). The others are limits of the method, said here. **The tables
-above still hold the readings of 2026-11-18**: correcting them takes a new pass on the Hugging
-Face machine.
+The two faults of the measuring are corrected in
+[`scripts/measure_samples.py`](scripts/measure_samples.py): the page count is read until it has
+not changed for five seconds (`pagesSettledMs` is when it last changed, for an engine whose count
+moved after "loaded"), and the heap is read after a forced garbage collection (`heapBytes`; the
+reading before it is kept as `heapBytesBeforeGc`, which is what the files up to 2026-11-18 call
+`heapBytes`). In the new pass every run that loaded was collected. The others are limits of the
+method, said here.
 
-The published figures were made by this job (two passes on 2026-11-18; the dated file lists
-each pass's job, command and commits under `passes`):
+The published figures were made by this job, at commit `76ae221` (its files are in the dataset
+`arthrod/open-docs-measurements` under `2026-11-20-xl1`):
 
 ```sh
-hf jobs run --flavor cpu-upgrade --timeout 4h --secrets HF_TOKEN -e SITE=editors -e RUNS=3 python:3.12 \
+hf jobs run --flavor cpu-xl --timeout 4h --secrets HF_TOKEN -e SITE=both -e RUNS=3 -e FLAVOR=cpu-xl -e MAX_LOAD=100 python:3.12 \
   bash -c 'curl -fsSL https://raw.githubusercontent.com/arthrod/open-docs/main/scripts/hf_job.sh -o /tmp/job.sh && bash /tmp/job.sh'
 ```
 
@@ -356,12 +356,15 @@ uv run --with playwright python -I scripts/measure_samples.py all showcase,redli
   --out .scratch/samples/$(date +%F).json --latest .scratch/samples/latest.json --shots .scratch/shots
 ```
 
-The published sample figures are taken on a Hugging Face Jobs machine (`cpu-upgrade`: 8 vCPU,
-32 GB, Linux, no GPU) by [`scripts/hf_job.sh`](scripts/hf_job.sh), because a timing taken on a
-laptop that is doing other work is slower than the engine, and anyone can rent the same machine.
-Every run records the load average and the Chrome version, so the dated file shows both. That
-load average and core count are the shared host's (64 cores), not our 8 vCPU: it reached 65
-during these runs, and how much of that slowed our Chrome cannot be told from inside the job.
+The published sample figures are taken on a Hugging Face Jobs machine (Linux, no GPU; the pass of
+2026-11-20 on `cpu-xl`, 16 vCPU and 124 GB; the one of 2026-11-18 on `cpu-upgrade`, 8 vCPU and
+32 GB, whose hosts were too busy all of 2026-11-20 for a run to start) by
+[`scripts/hf_job.sh`](scripts/hf_job.sh), because a timing taken on a laptop that is doing other
+work is slower than the engine, and anyone can rent the same machine. Every run records the load
+average and the Chrome version, so the dated file shows both. That load average and core count
+are the shared host's (64 cores), not ours: a run waits until the load is under a limit
+(`MAX_LOAD`, 100 for this pass), it was between 22 and 76 during these runs, and how much of
+that slowed our Chrome cannot be told from inside the job.
 Chrome runs headed under Xvfb and draws in software. Read the figures as that machine's; what
 carries to another machine is the order between engines, not the seconds. The
 [Measure workflow](.github/workflows/measure.yml) (push a branch named `measure/<anything>`)
@@ -373,10 +376,13 @@ fresh profile. The page opens on its blank document, then the script clicks the
 Menu's own button. **Loaded** is the click until the adapter's `load()` returns
 (plus two frames). **Settled** is the click until the main thread has been quiet
 for two seconds (counted from the later of the last long task and the load's
-return), taken from the Long Tasks API. Work an engine starts more than two
+return), taken from the Long Tasks API. With the script of 2026-11-20, where an
+engine's page count still moved after that, Settled is when the count last
+changed (the run says `settledBy: "pages"` and keeps the other reading as
+`settledMsLongTasks`; the row counts such runs in `settledByPages`), and a run
+whose count was still moving after 180 s has no Settled. Work an engine starts more than two
 seconds after it last kept the thread busy is not seen, and the wait gives up
-after 180 s ("still busy"). docx-editor.dev's loader
-returns before it draws, and several engines keep paginating after theirs
+after 180 s ("still busy"). Several engines keep working after their loader
 returns, so on the 500-page file Settled is the number to compare. Work in a
 worker or on the GPU is invisible to it. **JS heap** is JavaScript objects only.
 **Renderer memory** is the resident memory of Chrome's renderer processes read
@@ -438,7 +444,7 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | react-docx (measured 2026-11-20) | 37 · 34 | 6.89 s · 42.0 s | 1.36 s · 1.89 s | 0.011 · 0.018 | 214 ms · 2.20 s | 3.93 s · 14.6 s | 96 | 100 | 90 | 85/37/37/36/fail · 30/39/36/32/fail |
 | Univer (measured 2026-11-20) | 61 · 60 | 448 ms · 1.66 s | 10.2 s · 10.4 s | 0.005 · 0.02 | 448 ms · 1.66 s | 3.77 s · 11.6 s | 83 | 100 | 90 | fail/62/fail/fail/61 · fail/60/fail/fail/fail |
 | OpenDoc (measured 2026-11-20) | 59 · 59 | 212 ms · 1.51 s | 8.46 s · 12.3 s | 0.076 · 0.044 | 212 ms · 1.51 s | 5.43 s · 28.7 s | 100 | 100 | 90 | 59/59/58/58/60 · 59/56/fail/60/60 |
-| BetterOffice (measured 2026-11-20) | n/a · 92 | n/a · 905 ms | n/a · 92 ms | n/a · 0.026 | n/a · 905 ms | n/a · 7.22 s | n/a | n/a | n/a | fail/fail/fail/fail/fail · 94/68/92/92/86 |
+| BetterOffice (measured 2026-11-20) | 95 · 91 | 246 ms · 906 ms | 59 ms · 138 ms | 0.001 · 0.026 | 246 ms · 906 ms | 2.41 s · 7.36 s | 96 | 100 | 90 | 95/88/97/94/97 · 92/91/88/91/93 |
 | OnlyOffice (CryptPad build) (measured 2026-11-20) | 100 · 100 | 214 ms · 773 ms | 0 ms · 0 ms | 0 · 0 | 214 ms · 773 ms | 436 ms · 2.38 s | 100 | 96 | 90 | 100/100/100/100/100 · 100/100/100/100/100 |
 <!-- lighthouse:end -->
 
@@ -466,9 +472,11 @@ Read these with care:
   inside the page, and Lighthouse's paint and blocking-time figures are the top page's: OnlyOffice scores 100
   with a blank document and with the 500 pages alike, while it downloads 18 MB and paginates for seconds. Read
   both rows as the frame page, like Microsoft's and Google's viewers.
-- **BetterOffice has no desktop score on the 500 pages**: in all five desktop analyses the sample failed to open
-  on Google's machine (the page's own error is in the row), while the five mobile analyses scored 68 to 94.
-  Not looked into.
+- **BetterOffice's row on the 500 pages was taken twice.** First, three of the five desktop analyses had no
+  score (the other two scored 89 and 96, and the row showed none: a row with a failed analysis shows its error): the sample failed to open on Google's machine with "Document was replaced", which the engine raises
+  when a document's identity moves under a wait, with nobody replacing anything. The adapter now takes the
+  wait up again (`editors/betteroffice/main.ts`), and the row was analysed again the same day: five of five
+  on desktop (88 to 97) and on mobile (88 to 93).
 
 ## The assistant
 
@@ -530,9 +538,8 @@ the assistant offers no Undo there:
 | OnlyOffice (CryptPad build) | the document is opened in a new editor | editor binary → x2t → .docx |
 | Univer | it has no .docx reader or writer (those are in its Server SDK) | its body, through `lib/univer-doc.ts` |
 
-The probes below were written for the first eight, and their results are dated
-2026-11-09: the five new engines have **not** been run through them, so nothing
-here says they pass.
+All thirteen were run through the probes below on 2026-11-20 (the table under
+"Measured with").
 
 ### Assessment (2026-11-09): harness or editor?
 
@@ -584,18 +591,58 @@ What is the vendors' (written down, worked around fairly, reportable upstream):
 
 Measured with [`lib/probes/md-mapping.js`](lib/probes/md-mapping.js): it applies
 a fixed markdown sample, exports the .docx, checks styles/marks/numbering/links
-in `document.xml`, and checks that the markdown read back keeps heading levels
-and marks. All eight editors pass all ten checks and the read-back check.
-[`lib/probes/md-edge.js`](lib/probes/md-edge.js) round-trips the hard cases
-(escaped `#`/`1.` text, inline code alone in a paragraph, a code block, backticks
-in code, a quote whose text also appears as a plain paragraph, a table with a
-cell line break and a link): all eight pass, except SuperDoc's cell line break.
+in `document.xml` (ten checks), and checks that the markdown read back keeps
+heading levels and marks. [`lib/probes/md-edge.js`](lib/probes/md-edge.js)
+round-trips the hard cases (escaped `#`/`1.` text, inline code alone in a
+paragraph, a code block, backticks in code, a quote whose text also appears as a
+plain paragraph, a table with a cell line break and a link).
+
+Run on the live site on 2026-11-20, in Chrome on a Mac, once per engine:
+
+| Engine | Mapping: in the .docx | Mapping: read back | Edge cases |
+| --- | --- | --- | --- |
+| docx-editor.dev | 10 of 10 | all | all |
+| react-docx | 10 of 10 | all | all |
+| OpenDoc | 10 of 10 | all | all |
+| BetterOffice | 10 of 10 | all | all |
+| OnlyOffice (CryptPad build) | 10 of 10 | all | all |
+| SuperDoc | 10 of 10 | all | all but the table cell (its importers drop a line break inside a cell) |
+| docen | 10 of 10 | all | all (after the reader fix below; the run before it failed the code block) |
+| Docxodus | 10 of 10 | all | all but two: its Markdown parser reads ` ``a`b`` ` wrongly, and its table builder takes plain text, so a link in a cell is lost |
+| folio | 10 of 10 | all | all but two: its `fromMarkdown` writes a code block as a Courier paragraph (as it writes inline code), and it adds a `/` to a bare-host link |
+| Plate | 9 of 10: its own Export button writes inline code as a grey highlight in the body face, not a monospace one (that is Plate's exporter as shipped; the preparation below is applied to the assistant's Markdown for other engines, not to Plate's Export) | all | all |
+| WordCraft | 10 of 10 | all but the quote: its paste makes a quote an indented Normal paragraph, which nothing tells from an indented paragraph | all but the quote; and the first paragraph kept the Heading 1 of the document it replaced (the mapping probe ran before it on the same page): **not looked into** |
+| canvas-editor | 2 of 10 (the two headings): its `plugin-docx` writes no bold, italic, code, link, list or quote this probe recognises | headings and lists only | table only |
+| Univer | not applicable: no .docx export | not applicable | fails seven of eight: it is handed text, so code, quotes, tables and links do not exist in it |
+
+**The run of 2026-11-09 said all eight editors passed everything, and on
+2026-11-20 that was no longer true of any engine that takes the assistant's
+Markdown as a .docx.** The same day the probes were last run, the hand-written
+.docx writer was replaced by Plate's exporter (`9f3a4bb`), and nobody ran them
+again. Plate's exporter writes inline code as a grey highlight with no monospace
+face, a quote as a bordered indent with no style, a code block as one paragraph
+with its lines run together, and a line break in a table cell as three
+paragraphs. The reader knew none of that, so **every assistant turn stripped
+code and quotes from the document** on docx-editor.dev, Docxodus and the five
+engines added on 2026-11-18 (WordCraft's lost quote is its own paste, and stays). Found by running the probes on the new five. Fixed
+on both sides, without going back to a hand-written writer:
+
+- [`lib/plate-for-word.ts`](lib/plate-for-word.ts) prepares Plate's nodes before
+  its exporter runs: inline code also carries Plate's font-family mark (Courier
+  New), a code block becomes one block per line, and a line break in a table
+  cell becomes a paragraph break.
+- [`lib/docx-markdown.ts`](lib/docx-markdown.ts) reads a left border with an
+  indent as a quote, a paragraph of shaded monospace runs as code, joins
+  consecutive code paragraphs into one block, and reads a style the document
+  names but does not define by its id (Docxodus writes `Quote` and `Code` into
+  documents that define neither).
+
 [`lib/probes/ai-export.js`](lib/probes/ai-export.js) is the end-to-end check:
 it loads the rich sample, sends the assistant a prompt through the real chat
 box, waits for the edit to apply, reads the document back, then clicks
-**Export** and looks for the edit inside the exported `word/document.xml`. All
-eight editors pass (2026-11-09, gpt-5.6-luna): edit applied, read back, present
-in the export, table kept.
+**Export** and looks for the edit inside the exported `word/document.xml`. It
+passed on the first eight on 2026-11-09 (gpt-5.6-luna) and was **not** run again
+on 2026-11-20, on any engine.
 
 Run any of them in an editor page's console (ai-export runs in the background
 and leaves its result in `window.__ai`):
