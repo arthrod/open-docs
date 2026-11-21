@@ -150,7 +150,7 @@ export function samplesBand(
   <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for two seconds and the page count has stopped changing (work in a worker or on the GPU is not seen).
   <b>JS heap</b>: JavaScript objects only, read after a forced garbage collection. <b>Renderer memory</b>: resident memory of Chrome's renderer processes, which also counts WebAssembly memory, canvases and the DOM; in brackets, how much it grew when the sample was opened, run by run (a view-only engine already shows the rich sample, so its bracket is what replacing that one cost).
   Microsoft's and Google's viewers render on their own servers, so only their frame's load is timed.
-  A row marked <b>read with care</b> has a figure that was checked again${typeof caveats.checked === "string" ? ` on ${esc(caveats.checked)}` : ""} and found wrong, unreliable or about this machine rather than the engine: the <a href="https://github.com/arthrod/open-docs#figures-to-distrust">README</a> says what was seen.</p>
+  A row marked <b>read with care</b> has a figure that was checked again${typeof caveats.checked === "string" ? ` on ${esc(caveats.checked)}` : ""} and found to be about this machine, or about something the method cannot see, rather than the engine: the <a href="https://github.com/arthrod/open-docs#figures-to-distrust">README</a> says what was seen.</p>
   ${tables}
 </div></section>`;
 }
