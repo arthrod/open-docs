@@ -61,7 +61,12 @@ const mb = (v: number | null | undefined) => {
   return n == null ? "n/a" : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${Math.round(n / 1048576)} MB`;
 };
 
+/** The rich sample is the document every engine's Menu offers first; it is measured in the same pass and heads the band. */
+const RICH = { file: "showcase.docx", label: "rich", note: "tables, lists, an image, styles; 3 pages in Microsoft Word" };
+
 const INTRO: Record<string, string> = {
+  "showcase.docx":
+    "The everyday case: a short document with the constructs most files have. <b>Loaded</b> and <b>Settled</b> are close here for most engines; the two harder samples below pull them apart.",
   "redline.docx":
     "The rich sample after two reviewers. What matters here is the last column: whether the reader can see what changed.",
   "lorem-500.docx":
@@ -106,7 +111,7 @@ export function samplesBand(
   // The caveats are about the published file: another data set (a test's) has none unless it brings its own.
   caveats: Caveats = data === (LATEST as unknown) ? (CAVEATS as Caveats) : {},
 ): string {
-  const tables = FIXTURES.map((f) => {
+  const tables = [RICH, ...FIXTURES].map((f) => {
     const id = f.file.replace(/\.docx$/, "");
     const rows = data.samples?.[id];
     if (!rows || !Object.keys(rows).length) return "";
@@ -160,7 +165,7 @@ export function samplesBand(
   if (!tables.trim()) return "";
   return `<section class="band" id="samples"><div class="wrap">
   <h2 class="sec-label"><span class="sq" aria-hidden="true"></span> / Samples</h2>
-  <p class="sec-copy">Every engine opening the two harder samples from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(machine(data.environment))}.
+  <p class="sec-copy">Every engine opening the rich sample and the two harder ones from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(machine(data.environment))}.
   <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for two seconds and the page count has stopped changing (work in a worker or on the GPU is not seen).
   <b>JS heap</b>: JavaScript objects only, read after a forced garbage collection. <b>Renderer memory</b>: resident memory of Chrome's renderer processes, which also counts WebAssembly memory, canvases and the DOM; in brackets, how much it grew when the sample was opened, run by run (a view-only engine already shows the rich sample, so its bracket is what replacing that one cost).
   Microsoft's and Google's viewers render on their own servers, so only their frame's load is timed.

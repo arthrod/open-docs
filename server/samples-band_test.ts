@@ -165,3 +165,11 @@ Deno.test("a row measured on another machine keeps the load it was measured unde
   // The table's own line still speaks of its own machine only.
   assert(!/Host load during these runs[^<]*30\.5/.test(html));
 });
+
+Deno.test("the band heads with the rich sample when the pass measured it, as the README does", () => {
+  const row = { loadMs: 427, settledMs: 427, heapBytes: 6 << 20, rendererRss: 463 << 20, pages: 3, runs: [427, 430, 420] };
+  const html = samplesBand(editors, { measuredAt: "2026-11-21", environment: "t", samples: { showcase: { "canvas-editor": row }, redline: { "canvas-editor": row } } } as never);
+  const rich = html.indexOf('id="sample-showcase"'), red = html.indexOf('id="sample-redline"');
+  assertEquals(rich > 0 && rich < red, true);
+  assertEquals(html.includes('href="/api/showcase.docx"'), true);
+});
