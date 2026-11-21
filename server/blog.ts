@@ -18,6 +18,13 @@ export interface Post {
 
 export const POSTS: Post[] = [
   {
+    slug: "what-we-found",
+    title: "What the new numbers say, and how to choose an editor",
+    date: "2026-11-21",
+    summary: "The whole test, run again with our mistakes fixed. Four questions the tables answer, what they cannot tell you, and a short way to choose.",
+    minutes: 5,
+  },
+  {
     slug: "what-went-wrong",
     title: "Six ways our benchmark lied to us",
     date: "2026-11-20",
