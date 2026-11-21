@@ -374,6 +374,14 @@ average and the Chrome version, so the dated file shows both. That load average 
 are the shared host's (64 cores), not ours: a run waits until the load is under a limit
 (`MAX_LOAD`, 100 for this pass), it was between 22 and 76 during these runs, and how much of
 that slowed our Chrome cannot be told from inside the job.
+For new editor sample jobs, `MAX_LOAD` defaults to 48 and `WAIT_MIN` to 45
+minutes (3 for smoke and probe). The job passes these as `OD_MAX_LOAD` and
+`OD_LOAD_WAIT_S` to the sample script; a direct local invocation has no load
+gate unless `OD_MAX_LOAD` is set. If its wait expires, the script writes the
+results collected so far and exits with status 4; the job exits with status 3.
+These checks are in the editor sample collector; the viewer commands run a
+separate repository’s scripts.
+
 Chrome runs headed under Xvfb and draws in software. Read the figures as that machine's; what
 carries to another machine is the order between engines, not the seconds. The
 [Measure workflow](.github/workflows/measure.yml) (push a branch named `measure/<anything>`)

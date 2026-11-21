@@ -38,7 +38,11 @@ directory):
 python3 -I scripts/zip_index.py "<release .zip URL>" full-index.json
 ```
 
-then keep the word editor's subset (drop the spreadsheet, presentation, PDF
+The generated JSON contains `total` (archive size) and `files`, whose values
+are `[offset, compressed size, uncompressed size, method]`. Drop the
+uncompressed-size field when building the serving index below.
+
+Then keep the word editor's subset (drop the spreadsheet, presentation, PDF
 and Visio editors, `dictionaries/`, `web-apps/vendor/monaco/`, help, mobile,
 embed, forms and `*.map`) as `{path: [offset, csize, method]}`.
 
