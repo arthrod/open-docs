@@ -59,3 +59,15 @@ def test_no_end_record_is_an_error_that_says_so():
 
     with pytest.raises(ValueError, match="end of central directory"):
         zip_index.index(reader(b"x" * 100), 100)
+
+
+def test_an_empty_archive_asks_for_no_reversed_range():
+    buf = io.BytesIO()
+    zipfile.ZipFile(buf, "w").close()
+    data = buf.getvalue()
+
+    def read(a, b):
+        assert a <= b, f"reversed range {a}-{b}"
+        return data[a : b + 1]
+
+    assert zip_index.index(read, len(data)) == {}
