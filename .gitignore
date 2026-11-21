@@ -9,3 +9,4 @@ __pycache__/
 .pytest_cache/
 cov/
 .ruff_cache/
+.local-state/blobs/

@@ -16,7 +16,7 @@ import sys
 ROOT = __file__.rsplit("/", 2)[0]
 NAMES = {
     "canvas-editor": "canvas-editor", "cite-check": "cite-check", "docxodus": "Docxodus", "superdoc": "SuperDoc",
-    "plate": "Plate", "docen": "docen", "eigenpal": "docx-editor.dev", "folio": "folio", "wordcraft": "WordCraft", "react-docx": "react-docx", "univer": "Univer", "opendoc": "OpenDoc", "betteroffice": "BetterOffice", "onlyoffice": "OnlyOffice (CryptPad build)",
+    "plate": "Plate", "docen": "docen", "eigenpal": "docx-editor.dev", "folio": "folio", "wordcraft": "WordCraft", "react-docx": "react-docx", "univer": "Univer", "opendoc": "OpenDoc", "betteroffice": "BetterOffice", "onlyoffice": "OnlyOffice (CryptPad build)", "genoffice": "GenOffice", "office-open": "office-open", "fidus-writer": "Fidus Writer", "docs-plus": "docs.plus",
     "word-online": "Microsoft Word viewer", "google-viewer": "Google Docs viewer", "apryse": "Apryse WebViewer", "nutrient": "Nutrient",
 }
 # Cross-origin frames: only the frame's load is timed, and the heap is not theirs.

@@ -22,6 +22,10 @@ const RENDER: Record<string, string> = {
   "opendoc": "Rust WASM engine → canvas",
   "betteroffice": "Rust WASM engines in a Worker → canvas",
   "onlyoffice": "Canvas (sdkjs) + x2t converter in WASM",
+  "genoffice": "ProseMirror + its own page layout",
+  "office-open": "No editor: a parsed outline",
+  "fidus-writer": "ProseMirror / DOM",
+  "docs-plus": "Tiptap / DOM",
   "word-online": "Microsoft's servers (iframe)",
   "google-viewer": "Google's servers (iframe)",
   "apryse": "WASM office engine → canvas",
@@ -30,6 +34,11 @@ const RENDER: Record<string, string> = {
 
 const FAVICON =
   "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230A0A0A'/><rect x='4' y='20' width='24' height='7' fill='%23FFD400'/></svg>";
+
+/** office-open is a library: its page shows what its parser read, and there is nothing to edit in. */
+const NO_EDITOR = new Set(["office-open"]);
+/** Fidus Writer's exporter failed on every sample of this site (2026-11-21). */
+const NO_EXPORT = new Set(["fidus-writer"]);
 
 export function landingPage(all: EditorMeta[]): string {
   const editors = all.filter((e) => e.kind !== "viewer");
@@ -46,14 +55,14 @@ export function landingPage(all: EditorMeta[]): string {
       <div class="tags"><span>${esc(RENDER[e.slug] ?? "")}</span>${
         e.kind === "viewer"
           ? `<span class="vo">View-only</span>${e.opensFiles === false ? "<span>Site samples only</span>" : "<span>.docx in</span>"}`
-          : "<span>.docx in/out</span><span>AI assistant</span>"
+          : `<span>${NO_EXPORT.has(e.slug) ? ".docx in" : ".docx in/out"}</span>${e.agent === false ? "" : "<span>AI assistant</span>"}`
       }</div>
       <dl class="card-metrics">
         <div><dt>Startup</dt><dd data-k="startupMs">—</dd></div>
         <div><dt>JS heap</dt><dd data-k="heapBytes">—</dd></div>
         <div><dt>Loaded</dt><dd data-k="loadedBytes">—</dd></div>
       </dl>
-      <span class="open">${e.kind === "viewer" ? "Open viewer →" : "Open editor →"}</span>
+      <span class="open">${e.kind === "viewer" ? "Open viewer →" : NO_EDITOR.has(e.slug) ? "Open page →" : "Open editor →"}</span>
     </a>`;
   const cards = editors.map(card).join("");
   const vcards = viewers.map(card).join("");

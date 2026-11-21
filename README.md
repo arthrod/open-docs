@@ -3,10 +3,11 @@
 [![Live on Val Town](https://img.shields.io/badge/live-editors.benchmarks.law-2557d6)](https://editors.benchmarks.law)
 [![Val Town](https://img.shields.io/badge/runs%20on-Val%20Town-111)](https://www.val.town/x/arthrod/open-docs)
 [![Release](https://img.shields.io/github/v/tag/arthrod/open-docs?label=release)](https://github.com/arthrod/open-docs/tags)
-[![Editors](https://img.shields.io/badge/editors-13-informational)](#the-editors)
+[![Editors](https://img.shields.io/badge/editors-17-informational)](#the-editors)
 
 Thirteen open-source Word editors, running entirely in the browser with no build
-step. Each one opens on a **blank document**, has an **AI assistant** that edits
+step, and four more tools shown through the editors trial's demo builds of them
+(GenOffice, office-open, Fidus Writer, docs.plus: [what differs](#four-more-through-the-editors-trials-demo-builds-2026-11-21)). Each of the thirteen opens on a **blank document**, has an **AI assistant** that edits
 the open document, and is **measured on every visit**: startup time, JS memory
 and download size. Twelve import and export real **.docx** files; Univer's
 open-source packages have no .docx reader, so it is handed the text. Eight were
@@ -32,6 +33,10 @@ BetterOffice, OnlyOffice).
 | [OpenDoc](https://editors.benchmarks.law/e/opendoc) | its editor application, snapshot of 2026-11-05 (commit `5ac261c`), in a same-origin frame | Rust → WASM engine, canvas | native (through its own file input) | markdown → Plate → docx-io .docx → opened as a new document (not undoable) | its .docx export (caught before the download) → `lib/docx-markdown.ts` |
 | [BetterOffice](https://editors.benchmarks.law/e/betteroffice) | `@betteroffice/docx-react@0.5.1` + `@betteroffice/docx@0.5.1`, `@betteroffice/fonts@0.4.2` (served from this origin) | Rust → WASM engines in a Worker, canvas pages, React UI | native | markdown → Plate → docx-io .docx → opened as a new document (not undoable) | its .docx (`save()`) → `lib/docx-markdown.ts` |
 | [OnlyOffice (CryptPad build)](https://editors.benchmarks.law/e/onlyoffice) | `cryptpad/onlyoffice-editor` v9.3.2+3 + `cryptpad/onlyoffice-x2t-wasm` v9.3.2+3, read out of their release archives | sdkjs canvas; x2t converter in WASM; no document server | native (x2t: .docx → editor binary) | markdown → Plate → docx-io .docx → opened in a new editor (not undoable) | editor binary → x2t → .docx → `lib/docx-markdown.ts` |
+| [GenOffice](https://editors.benchmarks.law/e/genoffice) | `genspark-ai/genoffice` at `36a509e`: its Docs application, as built for the editors trial | ProseMirror with its own page layout; a stand-in for the Electron desktop it expects | native (its own reader and writer) | markdown → Plate → docx-io .docx → the demo opened again on it (not undoable) | its Download, caught on the way out → `lib/docx-markdown.ts` |
+| [office-open](https://editors.benchmarks.law/e/office-open) | `@office-open/docx` from `DemoMacro/office-open` at `567addf`, as built for the editors trial | no editor: an outline of what its parser read | native (parse, then generate) | markdown → Plate → docx-io .docx → the demo opened again on it (not undoable) | its Download, caught on the way out → `lib/docx-markdown.ts` |
+| [Fidus Writer](https://editors.benchmarks.law/e/fidus-writer) | `@fiduswriter/document` from `fiduswriter/fiduswriter-document-ts` at `dc0981d`, as built for the editors trial | ProseMirror, DOM | its importer; **its exporter failed on every sample of this site** (see below) | no assistant | none |
+| [docs.plus](https://editors.benchmarks.law/e/docs-plus) | `docs-plus/docs.plus` at `a9b0c69`: its editor and document conversion, as built for the editors trial | Tiptap, DOM | its own import (mammoth) and export | markdown → Plate → docx-io .docx → the demo opened again on it (not undoable) | its Download, caught on the way out → `lib/docx-markdown.ts` |
 
 Every editor shows its **own** toolbar: the vendor's ribbon where the library
 ships one (Docxodus, SuperDoc, docen, docx-editor.dev, folio, WordCraft), and a
@@ -176,6 +181,10 @@ their adapters recorded them that day. The list the site shows is
 | OpenDoc | Insertions and deletions in the text; a card per change and per comment (author, date, Accept / Reject) in its review pane | Nothing |
 | BetterOffice | Deletions struck and insertions underlined in the text; a card per change and per comment (author, date, accept / reject) in its review sidebar | Nothing |
 | OnlyOffice (CryptPad build) | Deletions struck and insertions underlined, in the author's colour; its own review and comment panels open from its side bar | Nothing |
+| GenOffice | Insertions underlined and deletions struck in the text, change bars in the margin, a balloon per comment (author, date, Resolve) | Nothing |
+| office-open | **Not drawn.** An outline of what the parser read; the words inside tracked insertions and deletions are not in it | Nothing (the library has no editor) |
+| Fidus Writer | **Not drawn, and words are missing.** The text inside tracked insertions and deletions is left out (the title reads "Coastal Wind Farm —  Field Report"); comments are kept as marks | Nothing |
+| docs.plus | **Not drawn.** The text as if every change were accepted; no comments | Nothing (its import, mammoth, has no revision model) |
 | Univer | **Not drawn.** The text, with inserted and moved-in words kept and deleted words left out | It has no .docx reader, so this site's reader hands it the text: what it shows is not its reading of the file |
 | Google Docs viewer | Insertions and deletions in the text | Nothing |
 | Apryse WebViewer | Insertions and deletions in the text | Nothing |
@@ -222,6 +231,10 @@ Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64
 | BetterOffice | 1.39 s | 1.58 s | 12 MB | 648 MB (+64 MB) | 3 | 3 of 3 |
 | OnlyOffice (CryptPad build) | 3.06 s | 3.06 s | 50 MB | 892 MB (+225 MB) | 3 | 3 of 3 |
 | OpenDoc | 720 ms | 840 ms | 12 MB | 676 MB (+63 MB) | 3 | 3 of 3 |
+| GenOffice (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 391 ms | 391 ms | 17 MB | 566 MB (+134 MB) | 3 | 3 of 3 |
+| office-open (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 297 ms | 297 ms | 7 MB | 505 MB (+179 MB) | n/a | 3 of 3 |
+| Fidus Writer (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 185 ms | 185 ms | 5 MB | 379 MB (+42 MB) | n/a | 3 of 3 |
+| docs.plus (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 190 ms | 190 ms | 10 MB | 423 MB (+58 MB) | n/a | 3 of 3 |
 
 **Redline (`redline.docx`, 3 pages)**
 
@@ -246,6 +259,10 @@ Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64
 | BetterOffice | 1.28 s | 1.28 s | 14 MB | 696 MB (+116 MB) | 3 | 2 of 3 |
 | OnlyOffice (CryptPad build) | 2.55 s | 2.55 s | 50 MB | 898 MB (+230 MB) | 3 | 3 of 3 |
 | OpenDoc | 813 ms | 1.04 s | 13 MB | 728 MB (+111 MB) | 3 | 3 of 3 |
+| GenOffice (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 592 ms | 592 ms | 18 MB | 590 MB (+161 MB) | 3 | 3 of 3 |
+| office-open (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 292 ms | 292 ms | 7 MB | 517 MB (+190 MB) | n/a | 3 of 3 |
+| Fidus Writer (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 183 ms | 183 ms | 5 MB | 379 MB (+45 MB) | n/a | 3 of 3 |
+| docs.plus (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 190 ms | 190 ms | 10 MB | 426 MB (+60 MB) | n/a | 3 of 3 |
 
 **500 pages (`lorem-500.docx`)**
 
@@ -270,6 +287,10 @@ Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64
 | BetterOffice | 8.05 s | 8.90 s | 23 MB | 1296 MB (+717 MB) | 500 | 3 of 3 |
 | OnlyOffice (CryptPad build) | 12.8 s | 12.8 s | 134 MB | 949 MB (+278 MB) | 500 | 2 of 3 |
 | OpenDoc | 3.54 s | 7.01 s | 12 MB | 910 MB (+291 MB) | 500 | 3 of 3 |
+| GenOffice (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 531 ms | 5.50 s | 38 MB | 1072 MB (+641 MB) | 500 | 3 of 3 |
+| office-open (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 533 ms | 533 ms | 7 MB | 692 MB (+364 MB) | n/a | 3 of 3 |
+| Fidus Writer (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 292 ms | 292 ms | 7 MB | 458 MB (+122 MB) | n/a | 3 of 3 |
+| docs.plus (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 582 ms | 582 ms | 13 MB | 576 MB (+210 MB) | n/a | 3 of 3 |
 <!-- samples:end -->
 
 What to know when reading them:
@@ -432,6 +453,10 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | OpenDoc (measured 2026-11-20) | 85 · 76 | 214 ms · 763 ms | 226 ms · 374 ms | 0.064 · 0.032 | 214 ms · 763 ms | 2.83 s · 11.6 s | 100 | 100 | 90 | 85/86/75/79/86 · 61/70/86/76/86 |
 | BetterOffice (measured 2026-11-20) | 98 · 94 | 245 ms · 905 ms | 59 ms · 77 ms | 0 · 0.018 | 245 ms · 905 ms | 1.59 s · 6.24 s | 96 | 88 | 90 | 98/98/99/96/98 · 91/89/94/96/95 |
 | OnlyOffice (CryptPad build) (measured 2026-11-20) | 100 · 100 | 217 ms · 772 ms | 0 ms · 0 ms | 0 · 0 | 217 ms · 772 ms | 429 ms · 2.30 s | 100 | 96 | 90 | 100/100/100/100/100 · 100/100/100/100/100 |
+| GenOffice (measured 2026-11-21) | 83 · 83 | 225 ms · 764 ms | 338 ms · 306 ms | 0.054 · 0.115 | 213 ms · 764 ms | 1.64 s · 7.10 s | 100 | 96 | 90 | 75/83/92/82/94 · 82/83/86/85/83 |
+| office-open (measured 2026-11-21) | 100 · 92 | 212 ms · 778 ms | 0 ms · 0 ms | 0 · 0.17 | 212 ms · 778 ms | 879 ms · 2.48 s | 100 | 100 | 90 | 100/100/100/100/100 · 87/93/92/92/92 |
+| Fidus Writer (measured 2026-11-21) | 100 · 99 | 224 ms · 775 ms | 68 ms · 59 ms | 0 · 0.027 | 224 ms · 775 ms | 1.05 s · 3.18 s | 100 | 100 | 90 | 99/100/100/100/95 · 81/100/98/99/99 |
+| docs.plus (measured 2026-11-21) | 99 · 96 | 213 ms · 905 ms | 37 ms · 84 ms | 0.001 · 0.018 | 213 ms · 905 ms | 1.20 s · 4.18 s | 100 | 100 | 90 | 97/100/93/100/99 · 94/96/98/95/98 |
 
 **Opening the 500 pages sample (`?open=lorem-500.docx`)**
 
@@ -455,6 +480,10 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | OpenDoc (measured 2026-11-20) | 59 · 59 | 212 ms · 1.51 s | 8.46 s · 12.3 s | 0.076 · 0.044 | 212 ms · 1.51 s | 5.43 s · 28.7 s | 100 | 100 | 90 | 59/59/58/58/60 · 59/56/fail/60/60 |
 | BetterOffice (measured 2026-11-20) | 95 · 91 | 246 ms · 906 ms | 59 ms · 138 ms | 0.001 · 0.026 | 246 ms · 906 ms | 2.41 s · 7.36 s | 96 | 100 | 90 | 95/88/97/94/97 · 92/91/88/91/93 |
 | OnlyOffice (CryptPad build) (measured 2026-11-20) | 100 · 100 | 214 ms · 773 ms | 0 ms · 0 ms | 0 · 0 | 214 ms · 773 ms | 436 ms · 2.38 s | 100 | 96 | 90 | 100/100/100/100/100 · 100/100/100/100/100 |
+| GenOffice (measured 2026-11-21) | **no result**: PageSpeed refused the address: Oops! Something went wrong. | | | | | | | | | |
+| office-open (measured 2026-11-21) | 67 · 51 | 214 ms · 919 ms | 1.59 s · 1.47 s | 0 · 0.326 | 214 ms · 919 ms | 2.01 s · 4.95 s | 100 | 100 | 90 | 67/64/64/68/68 · 25/56/45/58/51 |
+| Fidus Writer (measured 2026-11-21) | 75 · 90 | 213 ms · 905 ms | 625 ms · 382 ms | 0.008 · 0.027 | 213 ms · 905 ms | 1.22 s · 3.94 s | 100 | 100 | 90 | 72/75/73/94/93 · 51/91/72/92/90 |
+| docs.plus (measured 2026-11-21) | 66 · 69 | 216 ms · 762 ms | 2.08 s · 1.49 s | 0.001 · 0.018 | 216 ms · 762 ms | 2.02 s · 6.17 s | 100 | 100 | 90 | 65/68/66/66/66 · 63/71/38/69/71 |
 <!-- lighthouse:end -->
 
 Read these with care:
@@ -521,6 +550,10 @@ Measured 2026-11-21: Lighthouse 13.6.0 run on a MacBook Pro (Apple M4 Pro, 12 co
 | OpenDoc | 93 · 80 | 354 ms · 948 ms | 18 ms · 435 ms | 0.063 · 0.033 | 354 ms · 948 ms | 2.61 s · 10.6 s | 100 | 100 | 90 | 100/93/92 · 79/82/80 |
 | BetterOffice (measured 2026-11-21: Lighthouse's CPU benchmark index median 4287, lowest 4196, load median 2.4, highest 3.5, on 12 cores) | 100 · 99 | 315 ms · 962 ms | 0 ms · 51 ms | 0 · 0.018 | 315 ms · 962 ms | 945 ms · 3.15 s | 96 | 88 | 90 | 100/100/100 · 99/98/100 |
 | OnlyOffice (CryptPad build) (measured 2026-11-21: Lighthouse's CPU benchmark index median 4287, lowest 4196, load median 2.4, highest 3.5, on 12 cores) | 90 · 66 | 262 ms · 818 ms | 96 ms · 1.17 s | 0.002 · 0.044 | 262 ms · 818 ms | 4.59 s · 22.4 s | 96 | 96 | 90 | 90/90/100 · 66/66/100 |
+| GenOffice (measured 2026-11-21: Lighthouse's CPU benchmark index median 4297, lowest 4240, load median 2.8, highest 3.7, on 12 cores) | 98 · 88 | 337 ms · 893 ms | 15 ms · 229 ms | 0.054 · 0.116 | 337 ms · 893 ms | 1.38 s · 5.37 s | 100 | 96 | 90 | 97/99/98 · 88/87/88 |
+| office-open (measured 2026-11-21: Lighthouse's CPU benchmark index median 4297, lowest 4240, load median 2.8, highest 3.7, on 12 cores) | 100 · 93 | 363 ms · 960 ms | 0 ms · 6 ms | 0 · 0.163 | 363 ms · 960 ms | 771 ms · 1.99 s | 100 | 100 | 90 | 100/100/100 · 93/92/93 |
+| Fidus Writer (measured 2026-11-21: Lighthouse's CPU benchmark index median 4297, lowest 4240, load median 2.8, highest 3.7, on 12 cores) | 100 · 100 | 342 ms · 904 ms | 0 ms · 86 ms | 0 · 0.029 | 342 ms · 904 ms | 859 ms · 2.32 s | 100 | 100 | 90 | 100/90/100 · 100/99/100 |
+| docs.plus (measured 2026-11-21: Lighthouse's CPU benchmark index median 4297, lowest 4240, load median 2.8, highest 3.7, on 12 cores) | 100 · 99 | 353 ms · 951 ms | 0 ms · 119 ms | 0 · 0.018 | 353 ms · 951 ms | 988 ms · 2.44 s | 100 | 100 | 90 | 100/100/100 · 99/99/99 |
 
 **Opening the 500 pages sample (`?open=lorem-500.docx`)**
 
@@ -546,6 +579,10 @@ Measured 2026-11-21: Lighthouse 13.6.0 run on a MacBook Pro (Apple M4 Pro, 12 co
 | OpenDoc | 59 · 60 | 363 ms · 905 ms | 1.84 s · 16.6 s | 0.088 · 0.04 | 363 ms · 905 ms | 3.95 s · 17.2 s | 100 | 100 | 90 | 59/60/59 · 60/60/60 |
 | BetterOffice | 99 · 100 | 293 ms · 960 ms | 0 ms · 0 ms | 0.001 · 0 | 293 ms · 960 ms | 1.26 s · 1.61 s | 97 | 88 | 90 | 99/100/99 · 100/100/97 |
 | OnlyOffice (CryptPad build) (measured 2026-11-21: Lighthouse's CPU benchmark index median 4206, lowest 4142, load median 2.4, highest 2.9, on 12 cores) | 61 · 60 | 252 ms · 795 ms | 1.22 s · 6.91 s | 0.01 · 0.044 | 252 ms · 795 ms | 7.55 s · 33.4 s | 96 | 96 | 90 | 61/61/61 · 60/60/60 |
+| GenOffice (measured 2026-11-21: Lighthouse's CPU benchmark index median 4228, lowest 4150, load median 2.7, highest 3.4, on 12 cores) | 59 · 50 | 294 ms · 843 ms | 7.81 s · 11.7 s | 0.11 · 0.211 | 294 ms · 843 ms | 3.06 s · 11.3 s | 100 | 96 | 90 | 59/59/60 · 57/50/50 |
+| office-open (measured 2026-11-21: Lighthouse's CPU benchmark index median 4228, lowest 4150, load median 2.7, highest 3.4, on 12 cores) | 94 · 57 | 342 ms · 900 ms | 186 ms · 1.01 s | 0 · 0.487 | 342 ms · 900 ms | 1.00 s · 2.38 s | 100 | 100 | 90 | 94/95/94 · 57/56/57 |
+| Fidus Writer (measured 2026-11-21: Lighthouse's CPU benchmark index median 4228, lowest 4150, load median 2.7, highest 3.4, on 12 cores) | 100 · 93 | 319 ms · 902 ms | 0 ms · 277 ms | 0.009 · 0.059 | 319 ms · 902 ms | 820 ms · 2.12 s | 100 | 100 | 90 | 100/100/100 · 93/94/93 |
+| docs.plus (measured 2026-11-21: Lighthouse's CPU benchmark index median 4228, lowest 4150, load median 2.7, highest 3.4, on 12 cores) | 86 · 71 | 349 ms · 912 ms | 316 ms · 2.18 s | 0.001 · 0.018 | 349 ms · 912 ms | 1.20 s · 3.47 s | 100 | 100 | 90 | 86/86/86 · 71/70/71 |
 <!-- lighthouse-local:end -->
 
 ## The assistant
@@ -606,10 +643,41 @@ the assistant offers no Undo there:
 | OpenDoc | its host contract (0.1.0-alpha) cannot be handed a document: the adapter puts a File on its own file input, as a user would | its .docx export, caught on the way to the download |
 | BetterOffice | its `applyEdits` takes plain-text steps and refuses a full replacement | its .docx (`save()`) |
 | OnlyOffice (CryptPad build) | the document is opened in a new editor | editor binary → x2t → .docx |
+| GenOffice, office-open, docs.plus | the demo build has no call that takes a document: its page is loaded again on the new file | the .docx its own Download produces |
+| Fidus Writer | none: its exporter fails, so an edit could not be read back | none |
 | Univer | it has no .docx reader or writer (those are in its Server SDK) | its body, through `lib/univer-doc.ts` |
 
 All thirteen were run through the probes below on 2026-11-20 (the table under
 "Measured with").
+
+### Four more, through the editors trial's demo builds (2026-11-21)
+
+GenOffice, office-open, Fidus Writer and docs.plus are the four tools of the
+[editors trial](https://benchmarks.law/editors-trial/) that had no page here.
+None of them publishes a package a page can load, so each runs as the trial's
+own demo build of it (the project's code at the commit the trial measured, in a
+same-origin frame mirrored from `benchmarks.law/demo-apps/`). Opening a file
+loads that frame again with the document; export presses the demo's own
+Download ([`lib/demo-frame.ts`](lib/demo-frame.ts)).
+
+- **They were measured on a Mac, not on the rented machine of the other rows**
+  (2026-11-21, three runs each). Their rows say so, and their times and memory
+  are not comparable with the others'. Their download sizes are.
+- **office-open is a library with no editor.** Its page shows what the parser
+  read. docen is the editor built on it.
+- **Fidus Writer's exporter failed on every sample here**: "File not found" on
+  a file without `word/fontTable.xml` (the blank document), and `Namespace
+  prefix "w15" is not declared` on the rich and tracked-changes samples. It has
+  no assistant for that reason.
+- **docs.plus needs a title.** A document without a heading, such as the blank
+  one, gets the demo's placeholder title, "Complex Fixture".
+- **The docs.plus demo drops pictures.** docs.plus hands each picture to an
+  uploader; the demo's stand-in for it knows only the pictures of the trial's own
+  test file and refuses any other. So a picture in the rich sample, or in a file
+  you open, is missing on that page. That is the demo build's limit, not
+  docs.plus's: its server route on viewers.benchmarks.law runs the same import
+  and keeps the pictures.
+- They were not run through the probes of 2026-11-20 below.
 
 ### Assessment (2026-11-09): harness or editor?
 
