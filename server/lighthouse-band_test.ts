@@ -115,3 +115,16 @@ Deno.test("without a local pass the band is PageSpeed's alone", () => {
   const html = lighthouseBand(editors, data(undefined), { measuredAt: null, environment: "", pages: {} });
   assertEquals(html.includes('id="lighthouse-local"'), false);
 });
+
+Deno.test("the local 500-page table is shown when the blank document was not measured here yet", () => {
+  const local: LighthouseResults = {
+    measuredAt: null, environment: "", pages: {},
+    docs: { "lorem-500": { "e/folio": { desktop: page(), mobile: page() } } },
+    docsMeta: { "lorem-500": { measuredAt: "2026-11-21", environment: "our computer" } },
+  } as unknown as LighthouseResults;
+  const html = lighthouseBand(editors, data({}), local);
+  assertEquals(html.includes('id="lighthouse-local"'), true);
+  assertEquals(html.includes('id="lighthouse-local-lorem-500"'), true);
+  assertEquals(html.includes("Measured 2026-11-21: our computer."), true);
+  assertEquals(html.includes("Measured : "), false);
+});

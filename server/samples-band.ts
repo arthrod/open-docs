@@ -86,7 +86,10 @@ const machine = (env?: string | null) => (env ?? "").split(LOAD)[0];
  */
 function placeOf(mine?: string | null, table?: string | null): string {
   const a = machine(mine).split("; "), b = machine(table).split("; ");
-  return a.length > 1 && a[0] === b[0] ? a.slice(1).join("; ") : mine ?? "";
+  if (!(a.length > 1 && a[0] === b[0])) return mine ?? "";
+  // Its load goes with it: the table's host-load line speaks only of the table's own machine.
+  const load = (mine ?? "").split(LOAD)[1];
+  return a.slice(1).join("; ") + (load ? `, load ${load}` : "");
 }
 
 /** One sentence with the host load of a table's runs, from its rows' environments. */

@@ -124,16 +124,16 @@ export function lighthouseBand(
   const mine = table(local.pages ?? {}, "", local, true);
   const mineLong = table(local.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx", local.docsMeta?.["lorem-500"] ?? local, true);
   const longHead = local.docsMeta?.["lorem-500"];
-  const localBlock = mine
+  const localBlock = mine || mineLong
     ? `<h3 class="smp-h" id="lighthouse-local">Lighthouse on our computer <small>the same pages, the same Lighthouse release, on a machine with a graphics card</small></h3>
-  <p class="sec-copy">Google's machines have no graphics card, and an engine that draws through one cannot start there: it has no score above.
+  <p class="sec-copy">On Google's machines two engines do not start (their files do not download there; why is not known), so they have no score above. This computer has a graphics card, which Google's machines do not.
   So the same Lighthouse was also run here, on every page, not only on those. These figures depend on this computer and on what else it was doing:
   the heading gives its load and Lighthouse's own reading of how fast its processor was. Compare rows within this table, not with the one above.
-  Measured ${esc(local.measuredAt ?? "")}: ${esc(local.environment)}.</p>
+  ${mine ? `Measured ${esc(local.measuredAt ?? "")}: ${esc(local.environment)}.` : ""}</p>
   ${mine}${
       mineLong
         ? `<h3 class="smp-h" id="lighthouse-local-lorem-500">Opening the 500 pages sample, on our computer</h3>${
-          longHead && (longHead.measuredAt !== local.measuredAt || longHead.environment !== local.environment)
+          longHead && (!mine || longHead.measuredAt !== local.measuredAt || longHead.environment !== local.environment)
             ? `<p class="sec-copy">Measured ${esc(longHead.measuredAt)}: ${esc(longHead.environment)}.</p>`
             : ""
         }

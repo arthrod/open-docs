@@ -83,6 +83,9 @@ def elsewhere(row: dict, head: dict) -> str:
         # "<browser and method>; <the machine>; <its load>": when only the machine differs, name the machine.
         mine, theirs = machine(where).split("; "), machine(head.get("environment")).split("; ")
         told = "; ".join(mine[1:]) if len(mine) > 1 and mine[0] == theirs[0] else where
+        # Its load goes with it: the table's host-load line speaks only of the table's own machine.
+        if told != where and LOAD in (where or ""):
+            told += ", load " + where.split(LOAD)[1]
         return f" (measured {when}{on}: {cell(told)})"
     return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
 
@@ -148,13 +151,16 @@ def lighthouse_block(data: dict, who: str = "PageSpeed") -> str:
     """The Lighthouse tables: the blank page, then the same pages opening the 500-page sample."""
     said = lambda h: f"Measured {h['measuredAt']}: {h['environment']}. Cells read desktop · mobile; accessibility, best practices and SEO are the desktop scores."
     label = lambda k: NAMES.get(k[2:], k)
-    out = ["**Blank document (the page as it opens)**", "", said(data), "", *LH_HEAD]
-    out += [lighthouse_line(label(k), r, data, who) for k, r in data["pages"].items()]
+    out = []
+    if data.get("pages"):
+        out = ["**Blank document (the page as it opens)**", "", said(data), "", *LH_HEAD]
+        out += [lighthouse_line(label(k), r, data, who) for k, r in data["pages"].items()]
     big = data.get("docs", {}).get("lorem-500")
     if big:
         head = {"base": data.get("base"), **(data.get("docsMeta", {}).get("lorem-500") or data)}
-        out += ["", "**Opening the 500 pages sample (`?open=lorem-500.docx`)**", ""]
-        if (head.get("measuredAt"), head.get("environment")) != (data.get("measuredAt"), data.get("environment")):
+        out += [*([""] if out else []), "**Opening the 500 pages sample (`?open=lorem-500.docx`)**", ""]
+        # Its own heading when it differs from the blank document's, or when there is no blank document to head it.
+        if not data.get("pages") or (head.get("measuredAt"), head.get("environment")) != (data.get("measuredAt"), data.get("environment")):
             out += [said(head), ""]
         out += [*LH_HEAD, *[lighthouse_line(label(k), r, head, who) for k, r in big.items()]]
     return "\n".join(out)
@@ -162,7 +168,8 @@ def lighthouse_block(data: dict, who: str = "PageSpeed") -> str:
 
 def local_block(data: dict) -> str:
     """The same tables from Lighthouse run on our computer (docs/lighthouse/local.json)."""
-    return lighthouse_block(data, "Lighthouse") if data.get("pages") else "Not measured yet."
+    # Either population by itself is a result: the 500 pages may be measured before the blank document.
+    return lighthouse_block(data, "Lighthouse") if data.get("pages") or any((data.get("docs") or {}).values()) else "Not measured yet."
 
 
 def put(text: str, name: str, body: str) -> str:

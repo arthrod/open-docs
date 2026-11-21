@@ -109,6 +109,22 @@ def test_the_local_lighthouse_block_is_headed_by_its_own_machine_and_blames_ligh
 def test_a_row_measured_on_another_machine_names_the_machine_not_the_first_160_characters():
     head = {"measuredAt": "2026-11-21", "environment": "Chrome 158 via Playwright, fresh profile per run (cold cache), 3 runs, median; a Hugging Face Jobs cpu-xl machine (16 vCPU, no GPU: Chrome draws in software; the load is the shared host's), Chrome under Xvfb; machine load (1-minute average) median 56.6"}
     row = {"measuredAt": "2026-11-21", "environment": "Chrome 158 via Playwright, fresh profile per run (cold cache), 3 runs, median; a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card); machine load (1-minute average) median 30.5"}
-    assert rt.elsewhere(row, head) == " (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card))"
+    assert rt.elsewhere(row, head) == " (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 30.5)"
     # An environment of another shape is shown as it is.
     assert rt.elsewhere({"measuredAt": "2026-11-16", "environment": "PSI, 2 analyses"}, head) == " (measured 2026-11-16: PSI, 2 analyses)"
+
+
+def test_the_local_block_shows_the_500_pages_when_only_they_were_measured():
+    row = {f: {"performance": 90, "lcpMs": 1000, "tbtMs": 0, "cls": 0, "fcpMs": 500, "speedIndexMs": 900, "accessibility": 100, "bestPractices": 100, "seo": 90, "performanceRuns": [90, 90, 90]} for f in ("desktop", "mobile")}
+    only_long = {"measuredAt": None, "environment": "", "docs": {"lorem-500": {"e/folio": row}}, "docsMeta": {"lorem-500": {"measuredAt": "2026-11-21", "environment": "our computer"}}}
+    text = rt.local_block(only_long)
+    assert "Not measured yet" not in text and "Blank document" not in text
+    assert "Measured 2026-11-21: our computer" in text and "| folio |" in text
+    assert rt.local_block({"measuredAt": None, "environment": "", "pages": {}, "docs": {"lorem-500": {}}}) == "Not measured yet."
+
+
+def test_a_row_measured_elsewhere_keeps_the_load_it_was_measured_under():
+    method = "Chrome 158 via Playwright, 3 runs, median"
+    head = {"measuredAt": "2026-11-21", "environment": f"{method}; a rented machine; machine load (1-minute average) median 56.6, highest 75.7, on 64 cores"}
+    row = {"measuredAt": "2026-11-21", "environment": f"{method}; a MacBook Pro; machine load (1-minute average) median 30.5, highest 40.0, on 12 cores"}
+    assert rt.elsewhere(row, head) == " (measured 2026-11-21: a MacBook Pro, load median 30.5, highest 40.0, on 12 cores)"

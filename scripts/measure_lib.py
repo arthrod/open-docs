@@ -503,13 +503,33 @@ def lighthouse_local_cmd(binary: list[str], url: str, form: str, out: str, limit
     return cmd
 
 
+# chrome-launcher starts Chrome detached, in a profile folder named "lighthouse.XXXXXXX": killing
+# Lighthouse leaves that Chrome running. Analyses run one at a time, so every such Chrome is ours.
+LIGHTHOUSE_CHROME = r"--user-data-dir=\S*lighthouse\.[A-Za-z0-9]+"
+
+
+def stop_lighthouse_chrome() -> list[str]:
+    """The command that ends any Chrome a killed Lighthouse left behind."""
+    return ["pkill", "-9", "-f", LIGHTHOUSE_CHROME]
+
+
+def read_results(path: str | None) -> dict:
+    """The results file to merge into: {} when there is none yet. A file that cannot be read or parsed stops the pass: writing over it would lose what it held."""
+    if not path or not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return json.load(f)
+
+
 def lighthouse_local_env(version: str, runs: int, raw: list[dict], chrome: str, where: str) -> str:
     """The environment line of a local Lighthouse pass: where, with what, and how fast and how busy the machine was."""
     bench = sorted(x[f]["benchmarkIndex"] for x in raw for f in ("desktop", "mobile") if isinstance(x.get(f), dict) and x[f].get("benchmarkIndex"))
     parts = [f"Lighthouse {version} run on {where}, {chrome}, headless", f"{runs} analyses per page and form factor, median of those that gave a result"]
     if bench:
         parts.append(f"Lighthouse's CPU benchmark index median {statistics.median(bench):.0f}, lowest {bench[0]}")
-    if note := load_note(raw):
+    # Each analysis carries the load it started under; older records carry one per page.
+    each = [x[f] for x in raw for f in ("desktop", "mobile") if isinstance(x.get(f), dict) and "load1" in x[f]]
+    if note := load_note(each or raw):
         parts.append(note)
     return ", ".join(parts[:2]) + "".join("; " + p for p in parts[2:])
 

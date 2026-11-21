@@ -150,5 +150,18 @@ Deno.test("a row measured on another machine names that machine, not the whole e
     samples: { "lorem-500": { folio: row(), docen: row({ measuredAt: "2026-11-21", environment: `${method}; a MacBook Pro (with its graphics card); machine load (1-minute average) median 30.5` }) } },
   };
   const html = samplesBand(editors, data);
-  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro (with its graphics card)</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro (with its graphics card), load median 30.5</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+});
+
+Deno.test("a row measured on another machine keeps the load it was measured under, beside the machine", () => {
+  const method = "Chrome 158 via Playwright, 3 runs, median";
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21",
+    environment: `${method}; a rented machine; machine load (1-minute average) median 56.6, highest 75.7, on 64 cores`,
+    samples: { "lorem-500": { folio: row(), docen: row({ measuredAt: "2026-11-21", environment: `${method}; a MacBook Pro; machine load (1-minute average) median 30.5, highest 40.0, on 12 cores` }) } },
+  };
+  const html = samplesBand(editors, data);
+  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro, load median 30.5, highest 40.0, on 12 cores</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+  // The table's own line still speaks of its own machine only.
+  assert(!/Host load during these runs[^<]*30\.5/.test(html));
 });

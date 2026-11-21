@@ -127,8 +127,10 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
 
         ctx.on("requestfinished", lambda r: asyncio.ensure_future(finished(r)))
         try:
-            await page.goto(f"{BASE}/e/{slug}", wait_until="commit", timeout=TIMEOUT_S * 1000)
+            # One budget for the run: navigation and the waits after it share TIMEOUT_S, so a slow
+            # commit followed by a page that never gets ready costs one deadline, not two.
             deadline = time.monotonic() + TIMEOUT_S
+            await page.goto(f"{BASE}/e/{slug}", wait_until="commit", timeout=TIMEOUT_S * 1000)
 
             async def until(js: str):
                 while time.monotonic() < deadline:

@@ -25,7 +25,7 @@ import asyncio, datetime, json, os, shlex, subprocess, sys, tempfile
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import lighthouse_local_cmd, lighthouse_local_env, machine_load, merge_pagespeed, page_entry, page_list, pagespeed_args, quiet_host, summarize
+from measure_lib import read_results, stop_lighthouse_chrome, lighthouse_local_cmd, lighthouse_local_env, machine_load, merge_pagespeed, page_entry, page_list, pagespeed_args, quiet_host, summarize
 
 LIGHTHOUSE_VERSION = "13.6.0"
 ARGS = pagespeed_args(sys.argv[1:])
@@ -50,6 +50,8 @@ def analyse(page: str, form: str, work: str) -> dict:
             env={**os.environ, **({"CHROME_PATH": CHROME} if CHROME else {})},
         )
     except subprocess.TimeoutExpired:
+        # The Chrome it started is detached and outlives it: the next analysis must not run beside it.
+        subprocess.run(stop_lighthouse_chrome(), capture_output=True)
         return {"error": f"Lighthouse did not finish within {LIMIT_S * 3} s"}
     try:
         return summarize(json.load(open(out)), here=True)
@@ -67,18 +69,19 @@ async def main() -> int:
                 for form in ("desktop", "mobile"):
                     if stopped := await quiet_host():
                         break
-                    x.update(machine_load())
-                    x[form] = await asyncio.to_thread(analyse, page, form, work)
+                    load = machine_load()
+                    x.update(load)
+                    # The load each analysis started under: the two of a page can be minutes apart.
+                    x[form] = {**await asyncio.to_thread(analyse, page, form, work), **load}
+                # A page stopped between its two analyses keeps the one it has, in the raw file only.
+                if "desktop" in x or "mobile" in x:
+                    raw.append(x)
+                    print(json.dumps(x), file=sys.stderr, flush=True)
                 if stopped:
                     break
-                raw.append(x)
-                print(json.dumps(x), file=sys.stderr, flush=True)
             if stopped:
                 break
-    try:
-        result = json.load(open(ARGS.out)) if ARGS.out else {}
-    except (OSError, ValueError):
-        result = {}
+    result = read_results(ARGS.out)
     version = next((x[f]["version"] for x in raw for f in ("desktop", "mobile") if f in x and x[f].get("version")), LIGHTHOUSE_VERSION)
     chrome = subprocess.run([CHROME, "--version"], capture_output=True, text=True).stdout.strip() if CHROME else "Chrome"
     meta = {
@@ -87,7 +90,7 @@ async def main() -> int:
         "base": BASE,
     }
     # Only the pages every run reached are published: a pass that was stopped keeps its raw file.
-    whole = [p for p in PAGES if sum(1 for x in raw if x["page"] == p) == ARGS.runs]
+    whole = [p for p in PAGES if sum(1 for x in raw if x["page"] == p and "desktop" in x and "mobile" in x) == ARGS.runs]
     merge_pagespeed(result, {p: page_entry([x for x in raw if x["page"] == p], LIMIT_S, who="Lighthouse") for p in whole}, ARGS.label, meta)
     if ARGS.raw:
         os.makedirs(os.path.dirname(ARGS.raw) or ".", exist_ok=True)

@@ -257,7 +257,7 @@ Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64
 | Docxodus | 5.17 s | 5.17 s | 9 MB | 749 MB (+205 MB) | n/a | 3 of 3 |
 | SuperDoc | 13.3 s | 13.3 s | 21 MB | 1071 MB (+515 MB) | 25 | 3 of 3 |
 | Plate | 64.8 s | 64.8 s | 64 MB | 628 MB (+222 MB) | n/a | 3 of 3 |
-| docen (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card)) | 2.30 s | still busy after 180 s | 128 MB | 1781 MB (+1343 MB) | n/a | 3 of 3 |
+| docen (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 30.5, highest 40.0, on 12 cores) | 2.30 s | still busy after 180 s | 128 MB | 1781 MB (+1343 MB) | n/a | 3 of 3 |
 | docx-editor.dev | 5.20 s | 5.20 s | 121 MB | 702 MB (+243 MB) | n/a | 3 of 3 |
 | folio | 14.0 s | 14.0 s | 44 MB | 2389 MB (+1970 MB) | 500 | 3 of 3 |
 | WordCraft | 3.81 s | still busy after 180 s | 4 MB | 710 MB (−42 MB) | n/a | 3 of 3 |
@@ -489,9 +489,9 @@ Read these with care:
 
 #### Lighthouse on our computer
 
-Google's machines have no graphics card, and an engine that draws through one cannot start there, so WordCraft
-and Nutrient have no score above. The same Lighthouse release also runs here, on a computer with a graphics
-card, and on every page, not only on those two (`uv run python -I scripts/measure_lighthouse_local.py`, same
+On Google's machines WordCraft and Nutrient do not start (their engines do not download there, and why is not
+known: see above), so they have no score above. The same Lighthouse release also runs here, on a computer that
+has a graphics card, which Google's machines do not, and on every page, not only on those two (`uv run python -I scripts/measure_lighthouse_local.py`, same
 arguments as the PageSpeed script). The price is that these figures depend on this computer and on what else
 it was doing: the heading gives its load and Lighthouse's own reading of how fast its processor was during the
 analyses. Compare rows within this table, not with PageSpeed's.

@@ -641,3 +641,29 @@ def test_local_lighthouse_environment_says_where_and_how_fast_the_machine_was():
     assert "3 analyses per page and form factor" in env
     assert "Lighthouse's CPU benchmark index median 900, lowest 700" in env
     assert "machine load (1-minute average) median 60.0, highest 80.0, on 12 cores" in env
+
+
+def test_a_results_file_that_cannot_be_parsed_stops_the_pass_and_a_missing_one_starts_empty(tmp_path):
+    assert lib.read_results(None) == {} and lib.read_results(str(tmp_path / "none.json")) == {}
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"pages": {"e/folio": ')
+    with pytest.raises(ValueError):
+        lib.read_results(str(bad))
+    good = tmp_path / "good.json"
+    good.write_text('{"pages": {"e/folio": {}}}')
+    assert lib.read_results(str(good)) == {"pages": {"e/folio": {}}}
+
+
+def test_the_local_heading_reports_the_load_of_every_analysis_not_the_last_of_each_page():
+    raw = [{"page": "e/folio", "load1": 10, "cores": 12, "desktop": {"benchmarkIndex": 4000, "load1": 80, "cores": 12}, "mobile": {"benchmarkIndex": 4000, "load1": 10, "cores": 12}}]
+    env = lib.lighthouse_local_env("13.6.0", 3, raw, "Chrome 158", "this computer")
+    assert "highest 80.0" in env
+
+
+def test_the_cleanup_after_a_killed_lighthouse_matches_only_the_chrome_lighthouse_started():
+    import re
+    cmd = lib.stop_lighthouse_chrome()
+    assert cmd[:3] == ["pkill", "-9", "-f"]
+    theirs = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --remote-debugging-port=51234 --user-data-dir=/var/folders/x/T/lighthouse.Ab3dE9f --headless=new"
+    someone = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/Users/me/Library/Application Support/Google/Chrome"
+    assert re.search(cmd[3], theirs) and not re.search(cmd[3], someone)
