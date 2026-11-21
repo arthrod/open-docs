@@ -76,7 +76,7 @@ pages, and the figures band matches the README row.
 
 - [ ] 4.1 Same engine names on the three sites and in the trial
 - [ ] 4.2 Same menu on every page of the three sites
-- [ ] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes`
+- [x] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes` (live 2026-11-21; the sections of the six new tools appear on benchmarks.law with its next deploy)
 - [ ] 4.4 The checklist files in the four repositories agree with each other
 
 ## Log
@@ -87,3 +87,4 @@ pages, and the figures band matches the README row.
 | 2026-11-21 | 3.1, 3.7, 3.8 | Blog uses the site's header, menu and footer; posts in reading order |
 | 2026-11-21 | 1.8, 1.10 | docen opens the 500 pages: row, notes and blog corrected |
 | 2026-11-21 | 1.16 | What a dash in JS heap means |
+| 2026-11-21 | 4.3 | Each engine links to its vendor note |
