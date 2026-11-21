@@ -61,5 +61,3 @@ These come from Google's public PageSpeed test, which loads the page on Google's
 1. **The seconds belong to our machine.** We test on a rented machine with no graphics card. Your laptop will be faster. What carries over is the order: an editor that is five times slower here will be slower on your machine too.
 2. **A missing number is not a zero.** "n/a" means we could not take that reading. The notes with each table say why.
 3. **One number never tells the story.** An editor can be the fastest to load and the worst at tracked changes. Look at the row, not the cell.
-
-Next: [run the test yourself](/blog/test-an-editor-yourself).
