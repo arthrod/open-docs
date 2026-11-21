@@ -22,10 +22,10 @@ Deno.test("maker links are LinkedIn or GitHub profiles only, at least one per ma
 });
 
 Deno.test("every engine with a section in the trial's vendor notes links to it; the two embed viewers have none", () => {
-  const without = editors.filter((e) => !vendorNote(e.slug)).map((e) => e.slug).sort();
-  assertEquals(without, ["cite-check", "google-viewer", "word-online", ...VENDOR_NOTE_PENDING].filter((s) => editors.some((e) => e.slug === s)).sort());
+  const without = editors.filter((e) => !vendorNote(e.slug)).map((e) => e.slug).sort((a, b) => a.localeCompare(b));
+  assertEquals(without, ["cite-check", "google-viewer", "word-online", ...VENDOR_NOTE_PENDING].filter((s) => editors.some((e) => e.slug === s)).sort((a, b) => a.localeCompare(b)));
   // The six whose sections are written and not yet published get no link, not one to the top of the page.
-  assertEquals([...VENDOR_NOTE_PENDING].sort(), []);
+  assertEquals([...VENDOR_NOTE_PENDING].sort((a, b) => a.localeCompare(b)), []);
   assertEquals(vendorNote("plate"), "https://benchmarks.law/editors-trial/vendor-notes#platejs");
   assertEquals(vendorNote("onlyoffice"), "https://benchmarks.law/editors-trial/vendor-notes#onlyoffice-cryptpad-build");
   assertEquals(vendorNote("nope"), null);

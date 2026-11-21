@@ -144,26 +144,30 @@ async def main() -> int:
                     break
             if stopped:
                 break
-    version = next((x[f]["version"] for x in raw for f in ("desktop", "mobile") if f in x and x[f].get("version")), LIGHTHOUSE_VERSION)
-    chrome = subprocess.run([CHROME, "--version"], capture_output=True, text=True).stdout.strip() if CHROME else "Chrome"
-    meta = {
-        "measuredAt": datetime.date.today().isoformat(),
-        "environment": lighthouse_local_env(version, ARGS.runs, raw, chrome, os.environ.get("MEASURE_WHERE", "this computer")),
-        "base": BASE,
-    }
-    # Only the pages every run reached are published: a pass that was stopped keeps its raw file.
-    whole = [p for p in PAGES if sum(1 for x in raw if x["page"] == p and "desktop" in x and "mobile" in x) == ARGS.runs]
-    merge_pagespeed(result, {p: page_entry([x for x in raw if x["page"] == p], LIMIT_S, who="Lighthouse") for p in whole}, ARGS.label, meta)
-    if ARGS.raw:
-        os.makedirs(os.path.dirname(ARGS.raw) or ".", exist_ok=True)
-        with open(ARGS.raw, "w") as f:
-            f.write(json.dumps({**meta, "query": ARGS.query, "stopped": stopped, "raw": raw}, indent=1) + "\n")
-    text = json.dumps(result, indent=1) + "\n"
-    if ARGS.out:
-        os.makedirs(os.path.dirname(ARGS.out) or ".", exist_ok=True)
-        open(ARGS.out, "w").write(text)
-    else:
-        print(text)
+    def publish() -> None:
+        """Write the results: file work, kept off the event loop."""
+        version = next((x[f]["version"] for x in raw for f in ("desktop", "mobile") if f in x and x[f].get("version")), LIGHTHOUSE_VERSION)
+        chrome = subprocess.run([CHROME, "--version"], capture_output=True, text=True).stdout.strip() if CHROME else "Chrome"
+        meta = {
+            "measuredAt": datetime.date.today().isoformat(),
+            "environment": lighthouse_local_env(version, ARGS.runs, raw, chrome, os.environ.get("MEASURE_WHERE", "this computer")),
+            "base": BASE,
+        }
+        # Only the pages every run reached are published: a pass that was stopped keeps its raw file.
+        whole = [p for p in PAGES if sum(1 for x in raw if x["page"] == p and "desktop" in x and "mobile" in x) == ARGS.runs]
+        merge_pagespeed(result, {p: page_entry([x for x in raw if x["page"] == p], LIMIT_S, who="Lighthouse") for p in whole}, ARGS.label, meta)
+        if ARGS.raw:
+            os.makedirs(os.path.dirname(ARGS.raw) or ".", exist_ok=True)
+            with open(ARGS.raw, "w") as f:
+                f.write(json.dumps({**meta, "query": ARGS.query, "stopped": stopped, "raw": raw}, indent=1) + "\n")
+        text = json.dumps(result, indent=1) + "\n"
+        if ARGS.out:
+            os.makedirs(os.path.dirname(ARGS.out) or ".", exist_ok=True)
+            open(ARGS.out, "w").write(text)
+        else:
+            print(text)
+
+    await asyncio.to_thread(publish)
     if stopped:
         print(f"stopped: {stopped}", file=sys.stderr)
         return 3
