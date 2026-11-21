@@ -28,7 +28,7 @@ Some editors do not show pages at all. They show one long scroll, like a web pag
 
 ## JS heap: "how much memory does its code hold?"
 
-The **JS heap** is the memory the editor's JavaScript is holding on to. We ask the browser to throw away its garbage first, then we read it. What is left is what the editor really keeps.
+The **JS heap** is the memory the editor's JavaScript is holding on to. We ask the browser to throw away its garbage first, then we read it. If collection fails, the run keeps the earlier reading and flags it as not collected. The table uses collected readings for its median whenever any are available; if none are, its heap figure includes uncollected memory. Files dated through 2026-11-18 used readings taken without forced collection.
 
 Why it matters: a tab that holds 1.5 GB for one document will be closed by a phone, and will slow a laptop that has twenty other tabs open.
 

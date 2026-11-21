@@ -42,7 +42,7 @@ A redline that opens as clean text is the most dangerous result on this list, be
 
 Click the **Performance** tab in the developer tools. Press the record button, open the 500-page sample, wait until the editor has clearly finished, and stop the recording.
 
-Look at the "Main" row. Blocks marked with a red corner are **long tasks**: moments where the page could not answer you. The time from your click to the last of those blocks is what we call **Settled**.
+Look at the "Main" row. Blocks marked with a red corner are **long tasks**: moments where the page could not answer you. Those blocks explain the long-task part of **Settled**: we wait for two quiet seconds after the later of the last long task and the loader returning, and record that point before the quiet wait. The sample measurement script also waits until the page count has not changed for five seconds. If its last change was later, that becomes Settled; if the count is still changing when the wait gives up, there is no Settled figure. Work in shorter slices, workers or on the GPU can still go unseen when it does not change a visible page count.
 
 No patience for the Performance tab? Use the simple version:
 
