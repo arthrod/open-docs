@@ -600,3 +600,44 @@ def test_a_count_of_zero_followed_by_failed_reads_is_flagged_too():
 
 def test_a_page_named_twice_is_analysed_once_per_round():
     assert lib.page_list("e/plate,e/folio,e/plate, ,e/folio") == ["e/plate", "e/folio"]
+
+
+# --- Lighthouse run on this computer (scripts/measure_lighthouse_local.py) ---
+
+
+def test_local_lighthouse_command_is_one_page_one_form_factor():
+    cmd = lib.lighthouse_local_cmd(["lighthouse"], "https://x.test/v/a?src=b", "desktop", "/o/a.json", 240)
+    assert cmd[:2] == ["lighthouse", "https://x.test/v/a?src=b"]
+    assert "--preset=desktop" in cmd and "--output-path=/o/a.json" in cmd and "--max-wait-for-load=240000" in cmd
+    assert any(a.startswith("--chrome-flags=") and "--headless=new" in a for a in cmd)
+    mobile = lib.lighthouse_local_cmd(["pnpm", "dlx", "lighthouse@13.6.0"], "https://x.test/e/a", "mobile", "/o/b.json", 240)
+    assert not any(a.startswith("--preset") for a in mobile), "mobile is Lighthouse's default: a phone on slow 4G"
+    assert mobile[:3] == ["pnpm", "dlx", "lighthouse@13.6.0"]
+
+
+def test_local_lighthouse_failure_is_blamed_on_this_computer_not_google():
+    report = {"lighthouseVersion": "13.6.0", "categories": {"performance": {"score": 1}},
+              "audits": {"errors-in-console": {"details": {"items": [{"description": "[open-docs-viewer] WordCraft failed to start"}]}}}}
+    here = lib.summarize(report, here=True)
+    assert here["error"].startswith("the engine failed on this computer"), here
+    assert "Google" not in here["error"]
+    assert lib.summarize(report)["error"].startswith("the engine failed on Google's machine")
+    # Both wordings count as the engine failing when a page's analyses are put together.
+    entry = lib.page_entry([{"page": "v/a", "desktop": here, "mobile": here}], 240, who="Lighthouse")
+    assert entry["desktop"]["performance"] is None and entry["desktop"]["error"].startswith("the engine failed on this computer")
+
+
+def test_local_lighthouse_missing_result_names_lighthouse():
+    entry = lib.page_entry([{"page": "v/a", "desktop": {"performance": 90, "version": "13.6.0"}}], 240, who="Lighthouse")
+    assert entry["mobile"]["error"] == "Lighthouse gave no mobile result within 240 s"
+    assert lib.page_entry([{"page": "v/a"}], 240)["desktop"]["error"].startswith("PageSpeed gave no desktop result")
+
+
+def test_local_lighthouse_environment_says_where_and_how_fast_the_machine_was():
+    raw = [{"load1": 80.0, "cores": 12, "desktop": {"benchmarkIndex": 700}, "mobile": {"benchmarkIndex": 900}},
+           {"load1": 40.0, "cores": 12, "desktop": {"benchmarkIndex": 1100}}]
+    env = lib.lighthouse_local_env("13.6.0", 3, raw, "Chrome/158.0.1", "a MacBook")
+    assert env.startswith("Lighthouse 13.6.0 run on a MacBook, Chrome/158.0.1, headless")
+    assert "3 analyses per page and form factor" in env
+    assert "Lighthouse's CPU benchmark index median 900, lowest 700" in env
+    assert "machine load (1-minute average) median 60.0, highest 80.0, on 12 cores" in env

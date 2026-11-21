@@ -15,7 +15,8 @@ def test_the_readme_in_the_repository_matches_its_data():
     samples = json.loads((ROOT / "docs/samples/latest.json").read_text())
     lighthouse = json.loads((ROOT / "docs/lighthouse/latest.json").read_text())
     readme = (ROOT / "README.md").read_text()
-    assert rt.render(readme, samples, lighthouse) == readme, "run scripts/readme_tables.py"
+    local = json.loads((ROOT / "docs/lighthouse/local.json").read_text())
+    assert rt.render(readme, samples, lighthouse, local) == readme, "run scripts/readme_tables.py"
 
 
 def test_growth_is_the_paired_figure_and_never_a_difference_of_medians():
@@ -87,3 +88,19 @@ def test_rows_of_one_pass_differing_only_in_host_load_carry_no_note_and_each_tab
     assert out.splitlines()[0] == f"Measured 2026-11-21: {m}."
     assert "Host load during these runs (1-minute average): median 25.0, highest 32.0, on 64 cores." in out
     assert "Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores." in out
+
+
+def test_the_local_lighthouse_block_says_not_measured_until_a_pass_exists():
+    assert rt.local_block({"measuredAt": None, "environment": "", "pages": {}}) == "Not measured yet."
+
+
+def test_the_local_lighthouse_block_is_headed_by_its_own_machine_and_blames_lighthouse_for_a_missing_score():
+    page = lambda **o: {"performance": 60, "accessibility": 94, "bestPractices": 96, "seo": 90, "fcpMs": 500, "lcpMs": 500, "tbtMs": 1840, "cls": 0.002, "speedIndexMs": 8500, "performanceRuns": [60, 61, 59], "error": None, **o}
+    none = page(performance=None, performanceRuns=[None, None, None])
+    local = {"measuredAt": "2026-11-21", "environment": "Lighthouse 13.6.0 run on a MacBook Pro", "base": "https://editors.benchmarks.law",
+             "pages": {"e/wordcraft": {"desktop": page(), "mobile": page(performance=44)}, "e/docen": {"desktop": none, "mobile": none}}}
+    out = rt.local_block(local)
+    assert "Measured 2026-11-21: Lighthouse 13.6.0 run on a MacBook Pro." in out
+    assert "| WordCraft | 60 · 44 |" in out
+    assert "| docen | **no result**: Lighthouse gave no score |" in out
+    assert "PageSpeed" not in out

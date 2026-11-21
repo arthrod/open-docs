@@ -271,7 +271,7 @@ ${siteNav("editors", "")}
 </div></section>
 <section class="band" id="metrics"><div class="wrap">
   <h2 class="sec-label"><span class="sq" aria-hidden="true"></span> / Measurements</h2>
-  <p class="sec-copy">Medians over the most recent visits, measured in visitors' browsers. <b>Startup</b> is navigation start → editor ready. <b>Cold</b> counts only loads where the files came from the network. <b>JS heap</b> is Chromium's <code>performance.memory</code> after the editor settles, counted only for the first editor opened in a tab (later ones share the tab's process and would inherit its heap). <b>Loaded</b> is the decoded size of every script, stylesheet, font and WASM file the page pulled in.</p>
+  <p class="sec-copy">Medians over the most recent visits, measured in visitors' browsers. <b>Startup</b> is navigation start → editor ready. <b>Cold</b> counts only loads where the files came from the network. <b>JS heap</b> is Chromium's <code>performance.memory</code> after the editor settles, counted only for the first editor opened in a tab (later ones share the tab's process and would inherit its heap). Safari and Firefox do not report it, so a dash there means no visit so far was a fresh tab in a Chromium browser, not that the editor uses no memory. <b>Loaded</b> is the decoded size of every script, stylesheet, font and WASM file the page pulled in.</p>
   <div class="table-wrap"><table class="tbl"><thead><tr>
     <th>Editor</th><th class="n">Startup</th><th class="n hide-sm">Cold</th><th class="n hide-sm">Mount</th>
     <th class="n">JS heap</th><th class="n">Loaded</th><th class="n hide-sm">Files</th><th class="n hide-sm">Runs</th><th class="bar">Startup</th>

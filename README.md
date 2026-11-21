@@ -478,6 +478,19 @@ Read these with care:
   wait up again (`editors/betteroffice/main.ts`), and the row was analysed again the same day: five of five
   on desktop (88 to 97) and on mobile (88 to 93).
 
+#### Lighthouse on our computer
+
+Google's machines have no graphics card, and an engine that draws through one cannot start there, so WordCraft
+and Nutrient have no score above. The same Lighthouse release also runs here, on a computer with a graphics
+card, and on every page, not only on those two (`uv run python -I scripts/measure_lighthouse_local.py`, same
+arguments as the PageSpeed script). The price is that these figures depend on this computer and on what else
+it was doing: the heading gives its load and Lighthouse's own reading of how fast its processor was during the
+analyses. Compare rows within this table, not with PageSpeed's.
+
+<!-- lighthouse-local:start -->
+Not measured yet.
+<!-- lighthouse-local:end -->
+
 ## The assistant
 
 [`server/agent.ts`](server/agent.ts) uses Val Town's OpenAI integration

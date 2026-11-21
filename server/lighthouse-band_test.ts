@@ -91,3 +91,27 @@ Deno.test("a 500-page row is compared with its own table's address, not the defa
   assertEquals(html.includes("https://a.example</small>"), true); // measured on the other address than its table
   assertEquals(html.includes("https://b.example</small>"), false); // on its table's own address: nothing to say
 });
+
+Deno.test("the band shows Lighthouse run on our computer beside PageSpeed, without a PageSpeed link", () => {
+  const local: LighthouseResults = {
+    measuredAt: "2026-11-21", environment: "Lighthouse 13.6.0 run on a MacBook Pro", base: "https://editors.benchmarks.law",
+    pages: { "e/wordcraft": { desktop: page({ performance: 61 }), mobile: page({ performance: 44 }) } },
+    docs: { "lorem-500": { "e/wordcraft": { desktop: page({ performance: 52 }), mobile: page({ performance: null, performanceRuns: [null, null, null], error: "PAGE_HUNG" }) } } },
+  };
+  const html = lighthouseBand(editors, data(undefined), local);
+  const at = html.indexOf('id="lighthouse-local"');
+  assertEquals(at > 0, true);
+  const mine = html.slice(at);
+  assertEquals(mine.includes("Measured 2026-11-21: Lighthouse 13.6.0 run on a MacBook Pro"), true);
+  assertEquals(mine.includes('<b class="lh lh-mid">61</b>'), true);
+  assertEquals(mine.includes('id="lighthouse-local-lorem-500"'), true);
+  assertEquals(mine.includes("pagespeed.web.dev/analysis"), false);
+  assertEquals(mine.includes(">PageSpeed<"), false);
+  // PageSpeed's own table keeps its link.
+  assertEquals(html.slice(0, at).includes("pagespeed.web.dev/analysis"), true);
+});
+
+Deno.test("without a local pass the band is PageSpeed's alone", () => {
+  const html = lighthouseBand(editors, data(undefined), { measuredAt: null, environment: "", pages: {} });
+  assertEquals(html.includes('id="lighthouse-local"'), false);
+});

@@ -161,11 +161,20 @@ def psi_refusal(text: str) -> str | None:
 
 
 ENGINE_FAILED = "the engine failed on Google's machine, so there is no score"
+# The same finding when Lighthouse ran here (scripts/measure_lighthouse_local.py).
+ENGINE_FAILED_HERE = "the engine failed on this computer, so there is no score"
 
 
-def summarize(l: dict) -> dict:
-    """One Lighthouse report. A report Lighthouse or we rejected keeps its reason and none of its numbers."""
+def summarize(l: dict, here: bool = False) -> dict:
+    """One Lighthouse report. A report Lighthouse or we rejected keeps its reason and none of its numbers.
+
+    `here` is for a report made on this computer rather than by PageSpeed: a failed engine is
+    then said to have failed here, and the report's CPU benchmark index is kept.
+    """
     out: dict = {"version": l.get("lighthouseVersion")}
+    bench = (l.get("environment") or {}).get("benchmarkIndex") if isinstance(l.get("environment"), dict) else None
+    if here and isinstance(bench, (int, float)):
+        out["benchmarkIndex"] = round(bench)  # Lighthouse's own reading of how fast this machine's CPU was during the run
     if l.get("fetchTime"):
         out["fetchTime"] = l["fetchTime"]  # when Google made this analysis: the same time twice is one analysis (repeated_analysis)
     # A report of an unexpected shape is read as far as it goes: thrown, it was swallowed by the
@@ -186,7 +195,7 @@ def summarize(l: dict) -> dict:
     # Exactly this site's two tags, at the start of the line: not another script's "[open-docs-…]".
     own = [d for d in logged if re.match(r"\s*\[open-docs(-viewer)?\]", d)]
     if own and "error" not in out:  # a rejected report keeps the first reason it was rejected for
-        out["error"] = ENGINE_FAILED + ": " + " ".join(own[0].split())[:160]
+        out["error"] = (ENGINE_FAILED_HERE if here else ENGINE_FAILED) + ": " + " ".join(own[0].split())[:160]
     if "error" in out:
         return out
     for k, name in LH_CATS.items():
@@ -314,8 +323,11 @@ def settle_by_pages(out: dict, pages_settled_ms: int, still_changing: bool) -> N
         out["settledMsLongTasks"], out["settledMs"], out["settledBy"] = out["settledMs"], pages_settled_ms, "pages"
 
 
-def page_entry(xs: list[dict], limit_s: int) -> dict:
-    """One page's published entry from its analyses: medians per form factor, each with its own error."""
+def page_entry(xs: list[dict], limit_s: int, who: str = "PageSpeed") -> dict:
+    """One page's published entry from its analyses: medians per form factor, each with its own error.
+
+    `who` made the analyses: PageSpeed, or Lighthouse when it ran on this computer.
+    """
     entry: dict = {}
     for f in ("desktop", "mobile"):
         fs = [x[f] for x in xs if f in x]
@@ -324,10 +336,10 @@ def page_entry(xs: list[dict], limit_s: int) -> dict:
             v = [y[k] for y in fs if y.get(k) is not None]
             return None if not v else (round(statistics.median(v), 3) if k == "cls" else int(statistics.median(v)))
 
-        missing = next((x.get("error") or f"PageSpeed gave no {f} result within {limit_s} s" for x in xs if f not in x), None)
+        missing = next((x.get("error") or f"{who} gave no {f} result within {limit_s} s" for x in xs if f not in x), None)
         # The engine failed in most analyses: the few that "passed" most likely scored the same
         # failing page before it logged its error, so they are not published as the engine's score.
-        broke = [y["error"] for y in fs if str(y.get("error", "")).startswith(ENGINE_FAILED)]
+        broke = [y["error"] for y in fs if str(y.get("error", "")).startswith((ENGINE_FAILED, ENGINE_FAILED_HERE))]
         scored = [y for y in fs if y.get("performance") is not None]
         if broke and len(broke) >= len(scored):
             entry[f] = {**{k: None for k in LH_KEYS}, "performanceRuns": [None for _ in xs], "error": broke[0]}
@@ -475,6 +487,31 @@ def load_note(runs: list[dict]) -> str:
         return ""
     cores = next((r["cores"] for r in runs if r.get("cores")), None)
     return f"machine load (1-minute average) median {statistics.median(loads):.1f}, highest {loads[-1]:.1f}" + (f", on {cores} cores" if cores else "")
+
+
+def lighthouse_local_cmd(binary: list[str], url: str, form: str, out: str, limit_s: int) -> list[str]:
+    """The command for one Lighthouse analysis of one page on this computer.
+
+    `binary` starts it (["lighthouse"], or ["pnpm", "dlx", "lighthouse@13.6.0"]). "mobile" is
+    Lighthouse's default, a phone on slow 4G with the CPU slowed four times, as PageSpeed
+    emulates it; "desktop" is its desktop preset. Chrome runs headless, with the machine's
+    graphics card: WordCraft draws through it. Which Chrome is the caller's to say (CHROME_PATH).
+    """
+    cmd = [*binary, url, "--output=json", f"--output-path={out}", "--quiet", f"--max-wait-for-load={limit_s * 1000}", "--chrome-flags=--headless=new"]
+    if form == "desktop":
+        cmd.append("--preset=desktop")
+    return cmd
+
+
+def lighthouse_local_env(version: str, runs: int, raw: list[dict], chrome: str, where: str) -> str:
+    """The environment line of a local Lighthouse pass: where, with what, and how fast and how busy the machine was."""
+    bench = sorted(x[f]["benchmarkIndex"] for x in raw for f in ("desktop", "mobile") if isinstance(x.get(f), dict) and x[f].get("benchmarkIndex"))
+    parts = [f"Lighthouse {version} run on {where}, {chrome}, headless", f"{runs} analyses per page and form factor, median of those that gave a result"]
+    if bench:
+        parts.append(f"Lighthouse's CPU benchmark index median {statistics.median(bench):.0f}, lowest {bench[0]}")
+    if note := load_note(raw):
+        parts.append(note)
+    return ", ".join(parts[:2]) + "".join("; " + p for p in parts[2:])
 
 
 def runs_note(asked: int, raw: list[dict], key: str = "engine") -> str:

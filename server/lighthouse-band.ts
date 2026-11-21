@@ -5,6 +5,8 @@
  * docs/lighthouse/latest.json (medians).
  */
 import LATEST from "../docs/lighthouse/latest.json" with { type: "json" };
+// The same pages, analysed by the same Lighthouse on our own computer (scripts/measure_lighthouse_local.py).
+import LOCAL from "../docs/lighthouse/local.json" with { type: "json" };
 import type { EditorMeta } from "./registry.ts";
 
 export interface LighthousePage {
@@ -65,8 +67,13 @@ const spread = (f: string, p: LighthousePage): string => {
   return hi - lo >= 10 ? `${f} analyses ranged ${lo} to ${hi}` : "";
 };
 
-export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATEST as LighthouseResults): string {
-  const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string; base?: string }) => {
+export function lighthouseBand(
+  all: EditorMeta[],
+  data: LighthouseResults = LATEST as LighthouseResults,
+  local: LighthouseResults = LOCAL as LighthouseResults,
+): string {
+  // `ours`: the table of a pass made on our computer. It has no PageSpeed link, and its failures are Lighthouse's.
+  const table = (pages: LighthouseResults["pages"], q: string, head: { measuredAt?: string | null; environment?: string; base?: string }, ours = false) => {
     // The link analyses the address the row was measured on.
     const psi = (slug: string, base?: string) => `https://pagespeed.web.dev/analysis?url=${encodeURIComponent(`${base ?? head.base ?? data.base ?? "https://editors.benchmarks.law"}/e/${slug}${q}`)}`;
     const row = (e: EditorMeta) => {
@@ -90,15 +97,15 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
       const elsewhere = (r.measuredAt && r.measuredAt !== head.measuredAt) || (r.environment && r.environment !== head.environment) || otherBase
         ? ` <small class="lh-part prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
-      if (num(d.performance) == null && num(m.performance) == null) return `<tr><td>${name}${elsewhere}</td><td colspan="8"><b>no result</b>: ${esc(String(d.error ?? m.error ?? "PageSpeed gave no score").slice(0, 160))}</td></tr>`;
+      if (num(d.performance) == null && num(m.performance) == null) return `<tr><td>${name}${elsewhere}</td><td colspan="${ours ? 7 : 8}"><b>no result</b>: ${esc(String(d.error ?? m.error ?? (ours ? "Lighthouse gave no score" : "PageSpeed gave no score")).slice(0, 160))}</td></tr>`;
       return `<tr><td>${name}${elsewhere}${partial ? ` <small class="lh-part">${partial}</small>` : ""}</td><td class="n">${score(d.performance)} · ${score(m.performance)}</td><td class="n">${ms(d.lcpMs)} · ${ms(m.lcpMs)}</td><td class="n">${ms(d.tbtMs)} · ${ms(m.tbtMs)}</td>
       <td class="n hide-sm">${num(d.cls) ?? "n/a"} · ${num(m.cls) ?? "n/a"}</td><td class="n hide-sm">${score(d.accessibility)}</td><td class="n hide-sm">${score(d.bestPractices)}</td><td class="n hide-sm">${score(d.seo)}</td>
-      <td class="hide-sm"><a href="${psi(e.slug, r.base)}" target="_blank" rel="noopener">run it →</a></td></tr>`;
+      ${ours ? "" : `<td class="hide-sm"><a href="${psi(e.slug, r.base)}" target="_blank" rel="noopener">run it →</a></td>`}</tr>`;
     };
     const rows = all.map(row).join("");
     return rows && `<div class="table-wrap"><table class="tbl lh-tbl"><thead><tr>
     <th>Engine</th><th class="n">Performance</th><th class="n">LCP</th><th class="n">TBT</th><th class="n hide-sm">CLS</th>
-    <th class="n hide-sm">Accessibility</th><th class="n hide-sm">Best practices</th><th class="n hide-sm">SEO</th><th class="hide-sm">PageSpeed</th>
+    <th class="n hide-sm">Accessibility</th><th class="n hide-sm">Best practices</th><th class="n hide-sm">SEO</th>${ours ? "" : `<th class="hide-sm">PageSpeed</th>`}
   </tr></thead><tbody>${rows}</tbody></table></div>`;
   };
   const blank = table(data.pages ?? {}, "", data);
@@ -113,6 +120,26 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
     }</p>
   ${long}`
     : "";
+  const mine = table(local.pages ?? {}, "", local, true);
+  const mineLong = table(local.docs?.["lorem-500"] ?? {}, "?open=lorem-500.docx", local.docsMeta?.["lorem-500"] ?? local, true);
+  const longHead = local.docsMeta?.["lorem-500"];
+  const localBlock = mine
+    ? `<h3 class="smp-h" id="lighthouse-local">Lighthouse on our computer <small>the same pages, the same Lighthouse release, on a machine with a graphics card</small></h3>
+  <p class="sec-copy">Google's machines have no graphics card, and an engine that draws through one cannot start there: it has no score above.
+  So the same Lighthouse was also run here, on every page, not only on those. These figures depend on this computer and on what else it was doing:
+  the heading gives its load and Lighthouse's own reading of how fast its processor was. Compare rows within this table, not with the one above.
+  Measured ${esc(local.measuredAt ?? "")}: ${esc(local.environment)}.</p>
+  ${mine}${
+      mineLong
+        ? `<h3 class="smp-h" id="lighthouse-local-lorem-500">Opening the 500 pages sample, on our computer</h3>${
+          longHead && (longHead.measuredAt !== local.measuredAt || longHead.environment !== local.environment)
+            ? `<p class="sec-copy">Measured ${esc(longHead.measuredAt)}: ${esc(longHead.environment)}.</p>`
+            : ""
+        }
+  ${mineLong}`
+        : ""
+    }`
+    : "";
   return `<section class="band" id="lighthouse"><div class="wrap">
   <h2 class="sec-label"><span class="sq" aria-hidden="true"></span> / Lighthouse</h2>
   <p class="sec-copy">Google's <a href="https://pagespeed.web.dev">PageSpeed Insights</a> on every engine's page: Lighthouse run on Google's machines, so the figures do not depend on anyone's computer.
@@ -122,5 +149,6 @@ export function lighthouseBand(all: EditorMeta[], data: LighthouseResults = LATE
   For Microsoft's and Google's viewers it sees this site's frame page, not their servers' work.</p>
   ${blank}
   ${longBlock}
+  ${localBlock}
 </div></section>`;
 }
