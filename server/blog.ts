@@ -1,10 +1,12 @@
 /**
  * The blog: `/blog` lists the posts, `/blog/<slug>` shows one. A post is a Markdown file in
- * `blog/`, named by its slug; its title, date and summary are in POSTS below, newest first.
+ * `blog/`, named by its slug; its title, date and summary are in POSTS below, in the order they are
+ * meant to be read: the index lists them so, and each post's footer leads to its neighbours.
  */
 import { marked } from "https://esm.sh/marked@18.1.3?target=es2022";
 import { serveFile } from "https://esm.town/v/std/utils/serve-file.ts";
 import { DS_ROOT, WORDMARK_CSS } from "./styles.ts";
+import { SITE_FOOT_CSS, SITE_NAV_CSS, SITE_NAV_JS, siteFoot, siteNav } from "./site-chrome.ts";
 
 export interface Post {
   slug: string;
@@ -18,25 +20,11 @@ export interface Post {
 
 export const POSTS: Post[] = [
   {
-    slug: "what-we-found",
-    title: "What the new numbers say, and how to choose an editor",
-    date: "2026-11-21",
-    summary: "The whole test, run again with our mistakes fixed. Four questions the tables answer, what they cannot tell you, and a short way to choose.",
-    minutes: 5,
-  },
-  {
-    slug: "what-went-wrong",
-    title: "Six ways our benchmark lied to us",
+    slug: "why-we-test",
+    title: "Why we test Word editors in the browser",
     date: "2026-11-20",
-    summary: "A page count read too early, a timer that timed nothing, memory that was garbage. What we caught, how, and what you should check in any benchmark.",
-    minutes: 6,
-  },
-  {
-    slug: "test-an-editor-yourself",
-    title: "Test a Word editor yourself in fifteen minutes",
-    date: "2026-11-20",
-    summary: "Three files, one browser, a stopwatch you already have. A test anyone can run, and the script that runs it for you.",
-    minutes: 6,
+    summary: "A contract is a Word file. Before you put one in a browser, you want to know what the browser does to it.",
+    minutes: 4,
   },
   {
     slug: "what-the-numbers-mean",
@@ -46,11 +34,25 @@ export const POSTS: Post[] = [
     minutes: 5,
   },
   {
-    slug: "why-we-test",
-    title: "Why we test Word editors in the browser",
+    slug: "test-an-editor-yourself",
+    title: "Test a Word editor yourself in fifteen minutes",
     date: "2026-11-20",
-    summary: "A contract is a Word file. Before you put one in a browser, you want to know what the browser does to it.",
-    minutes: 4,
+    summary: "Three files, one browser, a stopwatch you already have. A test anyone can run, and the script that runs it for you.",
+    minutes: 6,
+  },
+  {
+    slug: "what-went-wrong",
+    title: "Six ways our benchmark lied to us",
+    date: "2026-11-20",
+    summary: "A page count read too early, a timer that timed nothing, memory that was garbage. What we caught, how, and what you should check in any benchmark.",
+    minutes: 6,
+  },
+  {
+    slug: "what-we-found",
+    title: "What the new numbers say, and how to choose an editor",
+    date: "2026-11-21",
+    summary: "The whole test, run again with our mistakes fixed. Four questions the tables answer, what they cannot tell you, and a short way to choose.",
+    minutes: 5,
   },
 ];
 
@@ -67,13 +69,6 @@ body { margin: 0; background: var(--bg); color: var(--ink-prose); font-family: v
 a { color: inherit; text-decoration-color: var(--link-rule); text-underline-offset: 3px; }
 a:hover { text-decoration-color: var(--ink); }
 a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
-.site-nav { position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-height: 52px;
-  padding: 8px clamp(20px, 5vw, 56px); background: color-mix(in srgb, var(--bg) 88%, transparent);
-  -webkit-backdrop-filter: saturate(140%) blur(10px); backdrop-filter: saturate(140%) blur(10px); border-bottom: 1px solid var(--ink); }
-.site-nav nav { margin-left: auto; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.site-nav nav > a { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--muted); text-decoration: none; }
-.site-nav nav > a:hover, .site-nav nav > a[aria-current] { color: var(--ink); }
 main { max-width: 720px; margin-inline: auto; padding: 56px clamp(20px, 5vw, 40px) 88px; }
 .eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
 h1 { font-size: clamp(32px, 5.4vw, 46px); line-height: 1.08; letter-spacing: -0.02em; color: var(--ink); margin: 0 0 18px; text-wrap: balance; }
@@ -103,11 +98,11 @@ h1 { font-size: clamp(32px, 5.4vw, 46px); line-height: 1.08; letter-spacing: -0.
 .list h2 { font-size: 23px; line-height: 1.2; letter-spacing: -0.01em; color: var(--ink); margin: 6px 0 6px; }
 .list a:hover h2 { background: linear-gradient(transparent 62%, var(--mark) 62%); display: inline; }
 .list p { margin: 6px 0 0; color: var(--ink-body); font-size: 16px; }
-.site-foot { background: var(--ink); color: var(--footer-text); padding: 28px clamp(20px, 5vw, 56px) 34px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; display: flex; gap: 18px; flex-wrap: wrap; justify-content: space-between; }
-.site-foot a { color: var(--on-dark); text-decoration: none; }
-.site-foot a:hover { color: var(--mark); }
-.site-foot a:focus-visible { outline-color: var(--mark); }
-`;
+.wrap { max-width: var(--page-max); margin-inline: auto; padding-inline: clamp(20px, 5vw, 56px); }
+.list .eyebrow b { color: var(--ink); }
+.next a { max-width: 46%; }
+.next a:last-child { margin-left: auto; text-align: right; }
+` + SITE_NAV_CSS + SITE_FOOT_CSS;
 
 function page(title: string, description: string, path: string, body: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -119,25 +114,17 @@ function page(title: string, description: string, path: string, body: string): s
 <link rel="icon" href="${FAVICON}">
 <style>${CSS}</style></head>
 <body>
-<header class="site-nav">
-  <a class="wm" href="/"><span class="logo"><span class="del">CHILL</span><span class="ins">NEUROTIC</span></span><span class="dot">.</span>DOCX<span class="dot">.</span>BENCH</a>
-  <span class="crumb">/ blog</span>
-  <nav aria-label="Site">
-    <a href="/">Editors</a>
-    <a href="https://viewers.benchmarks.law">Viewers →</a>
-    <a href="https://arena.benchmarks.law">Arena →</a>
-    <a href="/blog" aria-current="page">Blog</a>
-  </nav>
-</header>
+${siteNav("blog", "/")}
 <main>${body}</main>
-<footer class="site-foot"><span>© MMXXVI open-docs · not affiliated with the editors it runs</span><span><a href="/">The tables</a> · <a href="/source">Source</a></span></footer>
+${siteFoot()}
+<script type="module">${SITE_NAV_JS}</script>
 </body></html>`;
 }
 
 export function blogIndex(): string {
-  const items = POSTS.map((p) => `
+  const items = POSTS.map((p, i) => `
     <li><a href="/blog/${p.slug}">
-      <p class="eyebrow">${day(p.date)} · ${p.minutes} min read</p>
+      <p class="eyebrow"><b>Part ${i + 1} of ${POSTS.length}</b> · ${day(p.date)} · ${p.minutes} min read</p>
       <h2>${esc(p.title)}</h2>
       <p>${esc(p.summary)}</p>
     </a></li>`).join("");
@@ -147,7 +134,7 @@ export function blogIndex(): string {
     "/blog",
     `<p class="eyebrow">Blog</p>
 <h1>How we test, and why</h1>
-<p class="lede">Plain-language notes on measuring Word editors in the browser: what we test, what the numbers mean, what went wrong, and how to do it yourself.</p>
+<p class="lede">Plain-language notes on measuring Word editors in the browser: what we test, what the numbers mean, what went wrong, and how to do it yourself. Five short posts, in the order to read them.</p>
 <ul class="list">${items}</ul>`,
   );
 }
@@ -163,6 +150,16 @@ async function markdownOf(slug: string): Promise<string | null> {
   return text;
 }
 
+/**
+ * The foot of post number `i`: the post before it on the left, the one after it on the right.
+ * The first post has no Previous and the last no Next; the empty side keeps the other in place.
+ */
+export function postFooter(i: number): string {
+  const link = (p: Post | undefined, label: string) =>
+    p ? `<a href="/blog/${p.slug}"><span>${label}</span>${esc(p.title)}</a>` : "<span></span>";
+  return `<div class="next">${link(POSTS[i - 1], "Previous")}${link(POSTS[i + 1], "Next")}</div>`;
+}
+
 /** One post as a page, or null when there is no such post. */
 export async function blogPost(slug: string): Promise<string | null> {
   const i = POSTS.findIndex((p) => p.slug === slug);
@@ -172,17 +169,14 @@ export async function blogPost(slug: string): Promise<string | null> {
   if (md == null) return null;
   const html = (await marked.parse(md, { gfm: true }))
     .replaceAll("<table>", '<div class="tw"><table>').replaceAll("</table>", "</table></div>");
-  // POSTS is newest first: the one to read next is the older neighbour's opposite, the newer one.
-  const newer = POSTS[i - 1], older = POSTS[i + 1];
-  const link = (p: Post | undefined, label: string) => p ? `<a href="/blog/${p.slug}"><span>${label}</span>${esc(p.title)}</a>` : "<span></span>";
   return page(
     `${post.title} · open-docs`,
     post.summary,
     `/blog/${slug}`,
-    `<p class="eyebrow"><a href="/blog">Blog</a> · ${day(post.date)} · ${post.minutes} min read</p>
+    `<p class="eyebrow"><a href="/blog">Blog</a> · Part ${i + 1} of ${POSTS.length} · ${day(post.date)} · ${post.minutes} min read</p>
 <h1>${esc(post.title)}</h1>
 <p class="lede">${esc(post.summary)}</p>
 <article class="post">${html}</article>
-<div class="next">${link(older, "Previous")}${link(newer, "Next")}</div>`,
+${postFooter(i)}`,
   );
 }

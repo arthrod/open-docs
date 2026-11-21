@@ -49,5 +49,3 @@ If you build a product on one of these editors, the tables tell you what your us
 If you build one of these editors, the tests are a free regression suite. Tell us when a number is unfair. We would rather fix the test than publish a wrong figure.
 
 We are not affiliated with any editor or viewer on this site, and nobody pays to be here.
-
-Next: [what each number in the tables means](/blog/what-the-numbers-mean).

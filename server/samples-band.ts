@@ -61,7 +61,12 @@ const mb = (v: number | null | undefined) => {
   return n == null ? "n/a" : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${Math.round(n / 1048576)} MB`;
 };
 
+/** The rich sample is the document every engine's Menu offers first; it is measured in the same pass and heads the band. */
+const RICH = { file: "showcase.docx", label: "rich", note: "tables, lists, an image, styles; 3 pages in Microsoft Word" };
+
 const INTRO: Record<string, string> = {
+  "showcase.docx":
+    "The everyday case: a short document with the constructs most files have. <b>Loaded</b> and <b>Settled</b> are close here for most engines; the two harder samples below pull them apart.",
   "redline.docx":
     "The rich sample after two reviewers. What matters here is the last column: whether the reader can see what changed.",
   "lorem-500.docx":
@@ -80,9 +85,23 @@ const LOAD = "; machine load (1-minute average) ";
 /** The environment without the host load of the step that wrote it: steps of one pass differ in nothing else. */
 const machine = (env?: string | null) => (env ?? "").split(LOAD)[0];
 
+/**
+ * What to say of a row measured elsewhere than its table: an environment reads "<browser and
+ * method>; <the machine>; <its load>", and when only the machine differs, the machine is the news.
+ */
+function placeOf(mine?: string | null, table?: string | null): string {
+  const a = machine(mine).split("; "), b = machine(table).split("; ");
+  if (!(a.length > 1 && a[0] === b[0])) return mine ?? "";
+  // Its load goes with it: the table's host-load line speaks only of the table's own machine.
+  const load = (mine ?? "").split(LOAD)[1];
+  return a.slice(1).join("; ") + (load ? `, load ${load}` : "");
+}
+
 /** One sentence with the host load of a table's runs, from its rows' environments. */
-function hostLoad(envs: (string | null | undefined)[]): string {
-  const said = [...new Set(envs.filter((e): e is string => !!e && e.includes(LOAD)).map((e) => e.split(LOAD)[1]))];
+function hostLoad(envs: (string | null | undefined)[], table?: string | null): string {
+  // Only the table's own machine: a row measured elsewhere says where beside its name.
+  const here = machine(table);
+  const said = [...new Set(envs.filter((e): e is string => !!e && e.includes(LOAD) && machine(e) === here).map((e) => e.split(LOAD)[1]))];
   return said.length ? ` Host load during these runs (1-minute average): ${esc(said.join("; "))}.` : "";
 }
 
@@ -92,7 +111,7 @@ export function samplesBand(
   // The caveats are about the published file: another data set (a test's) has none unless it brings its own.
   caveats: Caveats = data === (LATEST as unknown) ? (CAVEATS as Caveats) : {},
 ): string {
-  const tables = FIXTURES.map((f) => {
+  const tables = [RICH, ...FIXTURES].map((f) => {
     const id = f.file.replace(/\.docx$/, "");
     const rows = data.samples?.[id];
     if (!rows || !Object.keys(rows).length) return "";
@@ -104,7 +123,7 @@ export function samplesBand(
       // Said only where it differs from the heading: a row re-measured on another day or machine.
       const otherBase = !!r.base && !!data.base && r.base !== data.base;
       const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && machine(r.environment) !== machine(data.environment)) || otherBase
-        ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
+        ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(placeOf(r.environment, data.environment))}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
       const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(String(r.incomplete).split("\n")[0].slice(0, 120))}</small>` : "";
       // A median over fewer runs than were made says how many loaded, and why the others did not.
@@ -137,7 +156,7 @@ export function samplesBand(
     </tr>`;
     };
     return `<h3 class="smp-h" id="sample-${id}">The ${esc(f.label)} sample <small>${esc(f.file)} · ${esc(f.note)} · <a href="/api/${f.file}">download ↓</a></small></h3>
-  <p class="sec-copy">${INTRO[f.file] ?? ""}${hostLoad(Object.values(rows).map((r) => r.environment ?? data.environment))}</p>
+  <p class="sec-copy">${INTRO[f.file] ?? ""}${hostLoad(Object.values(rows).map((r) => r.environment ?? data.environment), data.environment)}</p>
   <div class="table-wrap"><table class="tbl"><thead><tr>
     <th>Engine</th><th class="n">Loaded</th><th class="n">Settled</th><th class="n">JS heap</th><th class="n">Renderer memory</th>
     ${redline ? `<th class="hide-sm">Tracked changes</th>` : `<th class="n hide-sm">Pages shown</th>`}
@@ -146,7 +165,7 @@ export function samplesBand(
   if (!tables.trim()) return "";
   return `<section class="band" id="samples"><div class="wrap">
   <h2 class="sec-label"><span class="sq" aria-hidden="true"></span> / Samples</h2>
-  <p class="sec-copy">Every engine opening the two harder samples from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(machine(data.environment))}.
+  <p class="sec-copy">Every engine opening the rich sample and the two harder ones from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(machine(data.environment))}.
   <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for two seconds and the page count has stopped changing (work in a worker or on the GPU is not seen).
   <b>JS heap</b>: JavaScript objects only, read after a forced garbage collection. <b>Renderer memory</b>: resident memory of Chrome's renderer processes, which also counts WebAssembly memory, canvases and the DOM; in brackets, how much it grew when the sample was opened, run by run (a view-only engine already shows the rich sample, so its bracket is what replacing that one cost).
   Microsoft's and Google's viewers render on their own servers, so only their frame's load is timed.

@@ -1,0 +1,95 @@
+{
+ "measuredAt": "2026-11-21",
+ "environment": "Google Chrome 158.0.8127.36 (installed, headed) via Playwright, fresh profile per run (cold cache), 3 runs, median; a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card); machine load (1-minute average) median 30.5, highest 40.0, on 12 cores",
+ "base": "https://editors.benchmarks.law",
+ "samples": {
+  "lorem-500": {
+   "docen": {
+    "startupMs": 1508,
+    "loadMs": 2296,
+    "settledMs": null,
+    "heapBytes": 133910568,
+    "heapBytesBeforeGc": 135194912,
+    "rendererRssReady": 454246400,
+    "rendererRss": 1867202560,
+    "gpuRss": 90996736,
+    "domNodes": 267175,
+    "pages": null,
+    "pagesSettledMs": null,
+    "bytes": 1977584,
+    "requests": 540,
+    "rendererGrowth": 1408286720,
+    "settleTimedOut": 3,
+    "settledByPages": 0,
+    "pagesStillChanging": 0,
+    "heapNotCollected": 0,
+    "runs": [
+     2296,
+     2391,
+     2138
+    ],
+    "failed": null,
+    "incomplete": null
+   }
+  }
+ },
+ "raw": [
+  {
+   "engine": "docen",
+   "sample": "lorem-500",
+   "load1": 13.65,
+   "cores": 12,
+   "startupMs": 1686,
+   "chrome": "Chrome/158.0.8127.36",
+   "rendererRssReady": 442630144,
+   "loadMs": 2296,
+   "settleTimedOut": true,
+   "rendererRss": 1639825408,
+   "renderers": 3,
+   "gpuRss": 90996736,
+   "domNodes": 267178,
+   "heapBytesBeforeGc": 135194912,
+   "heapBytes": 133906184,
+   "bytes": 1977584,
+   "requests": 540
+  },
+  {
+   "engine": "docen",
+   "sample": "lorem-500",
+   "load1": 30.49,
+   "cores": 12,
+   "startupMs": 1417,
+   "chrome": "Chrome/158.0.8127.36",
+   "rendererRssReady": 458915840,
+   "loadMs": 2391,
+   "settleTimedOut": true,
+   "rendererRss": 1867202560,
+   "renderers": 3,
+   "gpuRss": 82149376,
+   "domNodes": 267175,
+   "heapBytesBeforeGc": 135664644,
+   "heapBytes": 133947752,
+   "bytes": 1977825,
+   "requests": 540
+  },
+  {
+   "engine": "docen",
+   "sample": "lorem-500",
+   "load1": 39.97,
+   "cores": 12,
+   "startupMs": 1508,
+   "chrome": "Chrome/158.0.8127.36",
+   "rendererRssReady": 454246400,
+   "loadMs": 2138,
+   "settleTimedOut": true,
+   "rendererRss": 2100822016,
+   "renderers": 3,
+   "gpuRss": 92078080,
+   "domNodes": 267175,
+   "heapBytesBeforeGc": 134393372,
+   "heapBytes": 133910568,
+   "bytes": 1977139,
+   "requests": 540
+  }
+ ]
+}

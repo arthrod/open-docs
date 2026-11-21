@@ -1,0 +1,101 @@
+# Reports checklist: editors.benchmarks.law (open-docs)
+
+Every report this repository publishes, with its parts. Tick a part only when
+it has been updated **and** seen on the live site. The same file exists in the
+other three repositories:
+
+- `open-docs-viewer/CHECKLIST.md` (viewers.benchmarks.law, the readers)
+- `editors-arena/CHECKLIST.md` (arena.benchmarks.law, the writers side by side)
+- `editors_trial/CHECKLIST.md` (benchmarks.law/editors-trial, the dense reports)
+
+Legend: `[x]` done and checked live · `[~]` in progress · `[ ]` not done ·
+`[!]` blocked, with the reason beside it.
+
+## The engines this site covers
+
+Thirteen editors: canvas-editor, Docxodus, SuperDoc, Plate, docen,
+docx-editor.dev (eigenpal), folio, WordCraft, react-docx, Univer, OpenDoc,
+BetterOffice, OnlyOffice (CryptPad build). Four view-only commercial
+renderers: Word Online viewer, Google viewer, Apryse WebViewer, Nutrient.
+
+A part that lists engines is complete only when all seventeen are in it, or
+the part says why one is missing.
+
+cite-check has a page (`/e/cite-check`) and a Lighthouse row, which makes
+eighteen rows there: it is our application on canvas-editor, not an engine of
+its own, and the other tables leave it out for that reason.
+
+## 1. Home page and README
+
+- [x] 1.1 The editors table (13 rows: package, renderer, .docx in and out, assistant write path, assistant read path). Audited 2026-11-21: 13 rows in the README, 13 editor cards and cite-check on the home page
+- [x] 1.2 Proprietary viewers table (4 rows). Audited 2026-11-21: 4 rows, 4 cards
+- [ ] 1.3 Using it (routes, query parameters, zoom)
+- [ ] 1.4 Samples: the three files and where they live
+- [x] 1.5 Tracked changes: what each engine draws (17 rows). Audited 2026-11-21: 17 rows; the two embed viewers are named "Google Docs viewer" and "Microsoft Word viewer" there, not as in the other tables (see 4.1)
+- [x] 1.6 The samples, measured: showcase table (17 rows, host-load line). The home page had no rich-sample table while the README had one; added 2026-11-21
+- [x] 1.7 The samples, measured: redline table (17 rows, host-load line). Audited 2026-11-21: README and home page
+- [x] 1.8 The samples, measured: 500 pages table (17 rows, host-load line). Audited 2026-11-21: README and home page
+  - [x] docen row: it opens the file (500 pages, Word's count); the pass gave up too early. Row re-measured on a Mac with a 30-minute deadline, notes, distrust table and blog corrected, live 2026-11-21
+  - [ ] docen at phone size: one emulated run showed an empty document after a 3.5-minute freeze; repeat before saying anything about it
+  - [x] OnlyOffice (CryptPad build): the dash was in the live Measurements table, which had two visits and neither a fresh Chromium tab. The page now says what a dash means; a Chrome visit recorded 129 MB
+- [ ] 1.9 What to know when reading them (notes under the tables)
+- [ ] 1.10 Figures to distrust (table)
+- [x] 1.11 Lighthouse, PageSpeed table (17 engines and cite-check; blank document and 500 pages). Audited 2026-11-21: 18 rows in each table, README and home page
+- [x] 1.12 Lighthouse on our computer: all 18 pages, blank and 500 pages, live 2026-11-21 (seen in Chrome). An analysis whose page could not be reached (Chrome could not resolve the name, on this computer) is made again after a wait
+  - [x] WordCraft: Lighthouse measures it directly on a machine with a graphics card (checked by hand, the page draws)
+  - [x] docen on the 500 pages: no score on this computer either (Lighthouse stopped while waiting for the page, 3 of 3, both form factors); the table says so
+  - [!] README.md is over Val Town's file size limit (81 KB): the copy inside the val is stale; GitHub's is current. The site does not read it
+- [ ] 1.13 The assistant: what it does, per engine
+- [ ] 1.14 How fairness to each vendor is decided (table)
+- [ ] 1.15 Assessment: harness or editor? (per-engine table, 10-of-10 table)
+- [ ] 1.16 Measurements (live medians)
+- [ ] 1.17 How it fits together
+- [ ] 1.18 What it took to make each editor run from a CDN (one entry per engine)
+- [ ] 1.19 Not in the bench, and why
+- [ ] 1.20 Known limitations
+- [ ] 1.21 Tests, Development, Licenses
+
+## 2. Per-engine pages (`/e/<id>`)
+
+One box per engine: its page answers on the three samples (HTTP 200 with the
+site's menu, checked 2026-11-21), the measuring pass of 2026-11-21 loaded all
+three in it (`docs/samples/latest.json`), and its load times in the README are
+the pass's. The figures are on the home page and in the README; an engine page
+has no figures of its own.
+
+- [x] canvas-editor · [x] Docxodus · [x] SuperDoc · [x] Plate · [x] docen
+- [x] docx-editor.dev · [x] folio · [x] WordCraft · [x] react-docx · [x] Univer
+- [x] OpenDoc · [x] BetterOffice · [x] OnlyOffice
+- [x] Word Online viewer · [x] Google viewer · [x] Apryse WebViewer · [x] Nutrient
+- [ ] cite-check (our application on canvas-editor): its page answers; it is not in the measuring pass
+
+## 3. Blog (`/blog`)
+
+- [x] 3.1 Index lists the five posts in reading order, numbered
+- [ ] 3.2 Why we test
+- [ ] 3.3 What the numbers mean
+- [ ] 3.4 Test an editor yourself
+- [ ] 3.5 What went wrong
+- [ ] 3.6 What the new numbers say, and how to choose an editor
+- [x] 3.7 Navigation: the same burger menu as the other pages of the site (checked live at phone width)
+- [x] 3.8 Footers: Previous and Next follow the reading order on every post; the two stray "Next:" lines are gone
+- [ ] 3.9 Every figure a post quotes matches the current tables (not audited)
+
+## 4. Cross-site consistency
+
+- [ ] 4.1 Same engine names on the three sites and in the trial
+- [ ] 4.2 Same menu on every page of the three sites
+- [~] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes` (live 2026-11-21 for the engines whose section is published; the six new tools get their link when benchmarks.law has their sections: empty `VENDOR_NOTE_PENDING` in `server/registry.ts` then)
+- [ ] 4.4 The checklist files in the four repositories agree with each other
+
+## Log
+
+| Date | Part | What changed |
+| --- | --- | --- |
+| 2026-11-21 | all | Checklist created |
+| 2026-11-21 | 3.1, 3.7, 3.8 | Blog uses the site's header, menu and footer; posts in reading order |
+| 2026-11-21 | 1.8, 1.10 | docen opens the 500 pages: row, notes and blog corrected |
+| 2026-11-21 | 1.16 | What a dash in JS heap means |
+| 2026-11-21 | 4.3 | Each engine links to its vendor note |
+| 2026-11-21 | 1.12 | Lighthouse on our computer published for every page |
+| 2026-11-21 | 1.1, 1.2, 1.5 to 1.8, 1.11, 2 | Audited against the live site and the measuring pass; rich-sample table added to the home page |

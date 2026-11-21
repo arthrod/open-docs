@@ -66,8 +66,11 @@ def machine(env: str | None) -> str:
 
 
 def host_load(rows: dict, head: dict) -> str:
-    """One line with the host load of a table's runs, from its rows (or the heading when they carry none)."""
-    said = list(dict.fromkeys(e.split(LOAD)[1] for e in [r.get("environment") or head.get("environment") or "" for r in rows.values()] if LOAD in e))
+    """One line with the host load of a table's runs on its own machine, from its rows (or the heading when they carry none)."""
+    # Only the table's own machine: a row measured elsewhere says where beside its name, and its load is in its file.
+    here = machine(head.get("environment"))
+    envs = [r.get("environment") or head.get("environment") or "" for r in rows.values()]
+    said = list(dict.fromkeys(e.split(LOAD)[1] for e in envs if LOAD in e and machine(e) == here))
     return f"Host load during these runs (1-minute average): {'; '.join(said)}." if said else ""
 
 
@@ -77,7 +80,16 @@ def elsewhere(row: dict, head: dict) -> str:
     # Another address than its table's (the site under another name) is another measurement too.
     on = f" on {row['base']}" if row.get("base") and head.get("base") and row["base"] != head["base"] else ""
     if machine(where) != machine(head.get("environment")):
-        return f" (measured {when}{on}: {cell(where)})"
+        # "<browser and method>; <the machine>; <its load>": when only the machine differs, name the machine.
+        mine, theirs = machine(where).split("; "), machine(head.get("environment")).split("; ")
+        same = mine[0] == theirs[0]
+        told = "; ".join(mine[1:]) if same else where
+        # Its load goes with it: the table's host-load line speaks only of the table's own machine.
+        if same and LOAD in (where or ""):
+            told = ", ".join(x for x in (told, "load " + where.split(LOAD)[1]) if x)
+        if same and not told:
+            return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
+        return f" (measured {when}{on}: {cell(told)})"
     return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
 
 
@@ -123,12 +135,12 @@ LH_HEAD = [
 ]
 
 
-def lighthouse_line(label: str, r: dict, head: dict) -> str:
-    """One page's row: desktop · mobile in each cell."""
+def lighthouse_line(label: str, r: dict, head: dict, who: str = "PageSpeed") -> str:
+    """One page's row: desktop · mobile in each cell. `who` made the analyses."""
     d, m = r["desktop"], r["mobile"]
     label += elsewhere(r, head)
     if d.get("performance") is None and m.get("performance") is None:
-        return f"| {label} | **no result**: {cell(d.get('error') or m.get('error') or 'PageSpeed gave no score')} | | | | | | | | | |"
+        return f"| {label} | **no result**: {cell(d.get('error') or m.get('error') or f'{who} gave no score')} | | | | | | | | | |"
     two = lambda k, f=str: f"{'n/a' if d.get(k) is None else f(d[k])} · {'n/a' if m.get(k) is None else f(m[k])}"
     runs = lambda x: "/".join("fail" if v is None else str(v) for v in x.get("performanceRuns") or [])
     one = lambda k: d[k] if d.get(k) is not None else "n/a"
@@ -138,20 +150,29 @@ def lighthouse_line(label: str, r: dict, head: dict) -> str:
     )
 
 
-def lighthouse_block(data: dict) -> str:
+def lighthouse_block(data: dict, who: str = "PageSpeed") -> str:
     """The Lighthouse tables: the blank page, then the same pages opening the 500-page sample."""
     said = lambda h: f"Measured {h['measuredAt']}: {h['environment']}. Cells read desktop · mobile; accessibility, best practices and SEO are the desktop scores."
     label = lambda k: NAMES.get(k[2:], k)
-    out = ["**Blank document (the page as it opens)**", "", said(data), "", *LH_HEAD]
-    out += [lighthouse_line(label(k), r, data) for k, r in data["pages"].items()]
+    out = []
+    if data.get("pages"):
+        out = ["**Blank document (the page as it opens)**", "", said(data), "", *LH_HEAD]
+        out += [lighthouse_line(label(k), r, data, who) for k, r in data["pages"].items()]
     big = data.get("docs", {}).get("lorem-500")
     if big:
         head = {"base": data.get("base"), **(data.get("docsMeta", {}).get("lorem-500") or data)}
-        out += ["", "**Opening the 500 pages sample (`?open=lorem-500.docx`)**", ""]
-        if (head.get("measuredAt"), head.get("environment")) != (data.get("measuredAt"), data.get("environment")):
+        out += [*([""] if out else []), "**Opening the 500 pages sample (`?open=lorem-500.docx`)**", ""]
+        # Its own heading when it differs from the blank document's, or when there is no blank document to head it.
+        if not data.get("pages") or (head.get("measuredAt"), head.get("environment")) != (data.get("measuredAt"), data.get("environment")):
             out += [said(head), ""]
-        out += [*LH_HEAD, *[lighthouse_line(label(k), r, head) for k, r in big.items()]]
+        out += [*LH_HEAD, *[lighthouse_line(label(k), r, head, who) for k, r in big.items()]]
     return "\n".join(out)
+
+
+def local_block(data: dict) -> str:
+    """The same tables from Lighthouse run on our computer (docs/lighthouse/local.json)."""
+    # Either population by itself is a result: the 500 pages may be measured before the blank document.
+    return lighthouse_block(data, "Lighthouse") if data.get("pages") or any((data.get("docs") or {}).values()) else "Not measured yet."
 
 
 def put(text: str, name: str, body: str) -> str:
@@ -162,18 +183,19 @@ def put(text: str, name: str, body: str) -> str:
     return re.sub(re.escape(start) + r".*?" + re.escape(end), lambda _: f"{start}\n{body}\n{end}", text, flags=re.S)
 
 
-def render(readme: str, samples: dict, lighthouse: dict) -> str:
-    """README.md with both blocks written from the data."""
-    return put(put(readme, "samples", samples_block(samples)), "lighthouse", lighthouse_block(lighthouse))
+def render(readme: str, samples: dict, lighthouse: dict, local: dict | None = None) -> str:
+    """README.md with its blocks written from the data."""
+    out = put(put(readme, "samples", samples_block(samples)), "lighthouse", lighthouse_block(lighthouse))
+    return out if local is None else put(out, "lighthouse-local", local_block(local))
 
 
 def main(argv: list[str]) -> int:
     path = f"{ROOT}/README.md"
     before = open(path).read()
-    after = render(before, json.load(open(f"{ROOT}/docs/samples/latest.json")), json.load(open(f"{ROOT}/docs/lighthouse/latest.json")))
+    after = render(before, json.load(open(f"{ROOT}/docs/samples/latest.json")), json.load(open(f"{ROOT}/docs/lighthouse/latest.json")), json.load(open(f"{ROOT}/docs/lighthouse/local.json")))
     if "--check" in argv:
         if after != before:
-            print("README.md tables do not match docs/samples/latest.json and docs/lighthouse/latest.json: run scripts/readme_tables.py", file=sys.stderr)
+            print("README.md tables do not match docs/samples/latest.json, docs/lighthouse/latest.json and docs/lighthouse/local.json: run scripts/readme_tables.py", file=sys.stderr)
             return 1
         return 0
     if after != before:

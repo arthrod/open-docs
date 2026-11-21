@@ -141,3 +141,35 @@ Deno.test("rows of one pass that differ only in host load carry no note; each ta
   assertEquals(html.includes("Host load during these runs (1-minute average): median 25.0, highest 32.0, on 64 cores."), true);
   assertEquals(html.includes("Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores."), true);
 });
+
+Deno.test("a row measured on another machine names that machine, not the whole environment line", () => {
+  const method = "Chrome 158 via Playwright, fresh profile per run (cold cache), 3 runs, median";
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21",
+    environment: `${method}; a rented machine (no GPU: Chrome draws in software; the load is the shared host's), under Xvfb; machine load (1-minute average) median 56.6`,
+    samples: { "lorem-500": { folio: row(), docen: row({ measuredAt: "2026-11-21", environment: `${method}; a MacBook Pro (with its graphics card); machine load (1-minute average) median 30.5` }) } },
+  };
+  const html = samplesBand(editors, data);
+  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro (with its graphics card), load median 30.5</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+});
+
+Deno.test("a row measured on another machine keeps the load it was measured under, beside the machine", () => {
+  const method = "Chrome 158 via Playwright, 3 runs, median";
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21",
+    environment: `${method}; a rented machine; machine load (1-minute average) median 56.6, highest 75.7, on 64 cores`,
+    samples: { "lorem-500": { folio: row(), docen: row({ measuredAt: "2026-11-21", environment: `${method}; a MacBook Pro; machine load (1-minute average) median 30.5, highest 40.0, on 12 cores` }) } },
+  };
+  const html = samplesBand(editors, data);
+  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro, load median 30.5, highest 40.0, on 12 cores</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+  // The table's own line still speaks of its own machine only.
+  assert(!/Host load during these runs[^<]*30\.5/.test(html));
+});
+
+Deno.test("the band heads with the rich sample when the pass measured it, as the README does", () => {
+  const row = { loadMs: 427, settledMs: 427, heapBytes: 6 << 20, rendererRss: 463 << 20, pages: 3, runs: [427, 430, 420] };
+  const html = samplesBand(editors, { measuredAt: "2026-11-21", environment: "t", samples: { showcase: { "canvas-editor": row }, redline: { "canvas-editor": row } } } as never);
+  const rich = html.indexOf('id="sample-showcase"'), red = html.indexOf('id="sample-redline"');
+  assertEquals(rich > 0 && rich < red, true);
+  assertEquals(html.includes('href="/api/showcase.docx"'), true);
+});
