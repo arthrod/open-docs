@@ -18,7 +18,7 @@ Its blind spot: we only see work in chunks of 50 milliseconds or more, and only 
 
 ## Pages shown: "does it break pages where Word does?"
 
-Word counts 500 pages in our long file. An editor that shows 500 breaks pages the way Word does, or close to it. An editor that shows 661 is laying the text out differently, and every page reference in that document is now off.
+Word counts 500 pages in our long file. An editor that shows 500 has Word's page count. That is a good sign and not a proof: the count does not say that every break falls where Word puts it. An editor that shows 661 is laying the text out differently, and every page reference in that document is now off.
 
 The file is built so that small font differences do not change the count: each chapter starts on a new page and fills nine and a half pages. To land on another total, an editor has to be off by a lot.
 

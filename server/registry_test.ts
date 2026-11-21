@@ -29,4 +29,6 @@ Deno.test("every engine with a section in the trial's vendor notes links to it; 
   assertEquals(vendorNote("plate"), "https://benchmarks.law/editors-trial/vendor-notes#platejs");
   assertEquals(vendorNote("onlyoffice"), "https://benchmarks.law/editors-trial/vendor-notes#onlyoffice-cryptpad-build");
   assertEquals(vendorNote("nope"), null);
+  assertEquals(vendorNote("constructor"), null);
+  assertEquals(vendorNote("toString"), null);
 });

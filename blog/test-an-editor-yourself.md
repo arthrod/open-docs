@@ -77,7 +77,7 @@ And **close your other tabs and programs first**. A busy machine makes every edi
 
 ## Let the script do it
 
-Everything above is what our script does, without the human. This part is for people who are at ease with a terminal (the window where you type commands). You need [Google Chrome](https://www.google.com/chrome/) and [uv](https://docs.astral.sh/uv/), a free tool that runs Python programs.
+Steps 4, 5 and 7 are what our script does, without the human: it opens each file, times it and reads the memory, three times. It also saves a picture of each page it opened, but it does not compare the pictures with Word, and it does not export a file and reopen it. Steps 3 and 6 stay yours. This part is for people who are at ease with a terminal (the window where you type commands). You need [Google Chrome](https://www.google.com/chrome/) and [uv](https://docs.astral.sh/uv/), a free tool that runs Python programs.
 
 ```sh
 git clone https://github.com/arthrod/open-docs

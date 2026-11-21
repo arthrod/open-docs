@@ -15,7 +15,8 @@ def index(read, total):
     if i < 0:
         raise ValueError("no end of central directory record: not a zip, or cut short")
     n, cdsize, cdoff = struct.unpack("<HII", tail[i + 10 : i + 20])
-    cd = read(cdoff, cdoff + cdsize - 1)
+    # An empty archive has an empty directory: there is no byte range to ask for.
+    cd = read(cdoff, cdoff + cdsize - 1) if cdsize else b""
     out, p = {}, 0
     for _ in range(n):
         if cd[p : p + 4] != b"PK\x01\x02":
