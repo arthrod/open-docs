@@ -20,6 +20,11 @@ export const editorMounts: string[] = [
   "opendoc",
   "betteroffice",
   "onlyoffice",
+  // Through the editors trial's demo builds (lib/demo-frame.ts).
+  "genoffice",
+  "office-open",
+  "fidus-writer",
+  "docs-plus",
   // Proprietary, view-only viewers (server/registry.ts kind: "viewer").
   "word-online",
   "google-viewer",

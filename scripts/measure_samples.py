@@ -58,7 +58,7 @@ TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
 # The page count is final when it has not changed for this long; the wait gives up after PAGES_WAIT_S.
 PAGES_QUIET_S = 5
 PAGES_WAIT_S = 180
-EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft", "react-docx", "univer", "opendoc", "betteroffice", "onlyoffice"]
+EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft", "react-docx", "univer", "opendoc", "betteroffice", "onlyoffice", "genoffice", "office-open", "fidus-writer", "docs-plus"]
 VIEWERS = ["word-online", "google-viewer", "apryse", "nutrient"]
 ALL = EDITORS + VIEWERS
 # sample name → the Menu button that loads it
@@ -84,6 +84,9 @@ PAGES = """() => {
     'betteroffice': window.__betteroffice?.()?.getTotalPages?.() ?? null,
     'opendoc': last(document.querySelector('#opendoc-root iframe')?.contentDocument?.getElementById('statPages')?.textContent),
     'onlyoffice': document.querySelector('#oo-root iframe')?.contentWindow?.editor?.getCountPages?.() ?? null,
+    // GenOffice's status bar says "Page 1 of 3" inside its frame. office-open, Fidus Writer and docs.plus
+    // have no pages: one is an outline of what a parser read, the other two flow the text in one column.
+    'genoffice': last((document.querySelector('#genoffice-root iframe')?.contentDocument?.getElementById('root')?.textContent.match(/Page \\d+ of \\d+/) || [])[0]),
     // docen paints every page on one canvas surface; its own status bar says "Page 1 of 500"
     // (two shadow roots down: <docen-document> → <docen-status-bar> → span.pages).
     'docen': last(document.querySelector('docen-document')?.shadowRoot?.querySelector('docen-status-bar')?.shadowRoot?.querySelector('.pages')?.textContent),

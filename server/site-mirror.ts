@@ -27,6 +27,24 @@ export const MIRRORS: Record<string, { origin: string; snapshot: string; page?: 
         .replace(/"\.\/pkg\/([^"]*)"(?!\s*:)/g, (_m, rest) => JSON.stringify(`${here}/vendor/opendoc/2026-11-05/pkg/${rest}`)),
   },
 };
+
+/**
+ * The editors trial's own demo builds (arthrod/editors_trial, demos/<name>), as published with
+ * its bundle at benchmarks.law/demo-apps/<name>/. Each is the project's own code built from the
+ * commit the trial measured, with a small host page that opens ./document.docx and offers a
+ * Download button. Here the host page is told to ask the page framing it for the document:
+ * a line added to its <head> answers its request for document.docx from `parent.__odDemoDoc`.
+ */
+export const TRIAL_DEMOS = ["genoffice", "office-open", "fidus-writer", "docs-plus"] as const;
+const DEMO_SNAPSHOT = "et-v0.11.1";
+const DEMO_HOOK = `<script>(()=>{const real=window.fetch;const mine=(u)=>{try{return String(u&&u.url||u).split(/[?#]/)[0].endsWith("document.docx")&&parent!==window&&typeof parent.__odDemoDoc==="function"}catch{return false}};window.fetch=function(u,o){return mine(u)?Promise.resolve(parent.__odDemoDoc()).then((b)=>new Response(b,{headers:{"content-type":"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}})):real.call(this,u,o)}})()</script>`;
+for (const name of TRIAL_DEMOS) {
+  MIRRORS[name] = {
+    origin: `https://benchmarks.law/demo-apps/${name}`,
+    snapshot: DEMO_SNAPSHOT,
+    page: (file, html) => file !== "index.html" ? html : html.replace(/<head[^>]*>/i, (head) => `${head}${DEMO_HOOK}`),
+  };
+}
 const OPENDOC_SOURCE = "https://cdn.jsdelivr.net/gh/CasualOffice/opendoc@5ac261ceadbb0fa0bcbe729ce3c2e20721756949/webapp/";
 
 export const mirrorBase = (site: string) => `/vendor/${site}/${MIRRORS[site].snapshot}/`;
@@ -48,6 +66,7 @@ const TYPES: Record<string, string> = {
   html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", mjs: "text/javascript; charset=utf-8",
   css: "text/css; charset=utf-8", json: "application/json; charset=utf-8", wasm: "application/wasm",
   svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", webp: "image/webp", ico: "image/x-icon",
+  gz: "application/gzip", map: "application/json; charset=utf-8",
   woff2: "font/woff2", woff: "font/woff", ttf: "font/ttf", otf: "font/otf", txt: "text/plain; charset=utf-8",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
