@@ -36,7 +36,7 @@ def test_rows_that_failed_frames_and_other_dates_are_said():
     }}}
     out = rt.samples_block(data)
     assert "| docen | **did not open it**: not loaded within 240s \\| of navigation | | | | | 0 of 2 |" in out
-    assert "| Word Online viewer (measured 2026-11-10) | 600 ms | n/a | n/a | 700 MB | n/a | 1 of 1 |" in out
+    assert "| Microsoft Word viewer (measured 2026-11-10) | 600 ms | n/a | n/a | 700 MB | n/a | 1 of 1 |" in out
     assert "| Plate | 22.0 s | still busy after 180 s | 82 MB | 469 MB | n/a | 1 of 2 |" in out
 
 

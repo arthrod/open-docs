@@ -213,8 +213,8 @@ Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64
 | docx-editor.dev | 1.38 s | 1.38 s | 22 MB | 538 MB (+84 MB) | n/a | 3 of 3 |
 | folio | 589 ms | 751 ms | 16 MB | 476 MB (+57 MB) | 3 | 3 of 3 |
 | WordCraft | 646 ms | still busy after 180 s | 4 MB | 551 MB (−190 MB) | n/a | 3 of 3 |
-| Word Online viewer | 599 ms | n/a | n/a | 885 MB (−86 MB) | n/a | 2 of 3 |
-| Google viewer | 595 ms | n/a | n/a | 623 MB (+21 MB) | n/a | 3 of 3 |
+| Microsoft Word viewer | 599 ms | n/a | n/a | 885 MB (−86 MB) | n/a | 2 of 3 |
+| Google Docs viewer | 595 ms | n/a | n/a | 623 MB (+21 MB) | n/a | 3 of 3 |
 | Apryse WebViewer | 300 ms | 300 ms | 18 MB | 716 MB (+41 MB) | n/a | 3 of 3 |
 | Nutrient | 4.79 s | 4.79 s | 20 MB | 787 MB (+185 MB) | n/a | 2 of 3 |
 | react-docx | 1.10 s | 1.10 s | 11 MB | 523 MB (+39 MB) | 3 | 3 of 3 |
@@ -237,8 +237,8 @@ Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64
 | docx-editor.dev | 1.37 s | 1.37 s | 23 MB | 537 MB (+79 MB) | n/a | 3 of 3 |
 | folio | 452 ms | 614 ms | 17 MB | 474 MB (+58 MB) | 3 | 3 of 3 |
 | WordCraft | 519 ms | 2.93 s | 3 MB | 534 MB (−148 MB) | n/a | 3 of 3 |
-| Word Online viewer | 313 ms | n/a | n/a | 877 MB (−36 MB) | n/a | 3 of 3 |
-| Google viewer | 558 ms | n/a | n/a | 622 MB (+16 MB) | n/a | 3 of 3 |
+| Microsoft Word viewer | 313 ms | n/a | n/a | 877 MB (−36 MB) | n/a | 3 of 3 |
+| Google Docs viewer | 558 ms | n/a | n/a | 622 MB (+16 MB) | n/a | 3 of 3 |
 | Apryse WebViewer | 300 ms | 300 ms | 18 MB | 715 MB (+52 MB) | n/a | 3 of 3 |
 | Nutrient | 3.96 s | 3.96 s | 20 MB | 786 MB (+188 MB) | n/a | 3 of 3 |
 | react-docx | 988 ms | 1.03 s | 13 MB | 513 MB (+27 MB) | 3 | 3 of 3 |
@@ -261,8 +261,8 @@ Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64
 | docx-editor.dev | 5.20 s | 5.20 s | 121 MB | 702 MB (+243 MB) | n/a | 3 of 3 |
 | folio | 14.0 s | 14.0 s | 44 MB | 2389 MB (+1970 MB) | 500 | 3 of 3 |
 | WordCraft | 3.81 s | still busy after 180 s | 4 MB | 710 MB (−42 MB) | n/a | 3 of 3 |
-| Word Online viewer | 787 ms | n/a | n/a | 874 MB (−65 MB) | n/a | 3 of 3 |
-| Google viewer | 703 ms | n/a | n/a | 641 MB (+36 MB) | n/a | 3 of 3 |
+| Microsoft Word viewer | 787 ms | n/a | n/a | 874 MB (−65 MB) | n/a | 3 of 3 |
+| Google Docs viewer | 703 ms | n/a | n/a | 641 MB (+36 MB) | n/a | 3 of 3 |
 | Apryse WebViewer | 911 ms | 7.11 s | 39 MB | 1522 MB (+856 MB) | n/a | 2 of 3 |
 | Nutrient | 20.8 s | 20.8 s | 21 MB | 778 MB (+166 MB) | n/a | 2 of 3 |
 | react-docx | 8.70 s | 8.70 s | 98 MB | 920 MB (+433 MB) | 500 | 3 of 3 |
@@ -307,7 +307,7 @@ What to know when reading them:
 - **Renderer memory growth** can be negative: the "before" reading is taken one
   second after startup, when the engine's start-up garbage is still resident.
 - 7 of the 153 runs in these tables did not load. docen once on the
-  redline, when a module of its package did not download; the Word Online viewer and Nutrient
+  redline, when a module of its package did not download; the Microsoft Word viewer and Nutrient
   were once each not ready within 600 s on the rich sample; BetterOffice's page once did not
   start; and on the 500 pages the site once closed the connection (OnlyOffice) and twice
   answered an error status (Apryse, Nutrient). The three docen runs on the 500 pages that the
@@ -333,12 +333,12 @@ again. Each row says what was wrong and what the new pass shows.
 | **Settled, for every engine** | **Blind to sliced work** | It counts tasks of 50 ms or more (the Long Tasks API). An engine that works in shorter slices, in a Worker or on the GPU reads as settled while it is still working. The page count now catches it for the engines that show pages; for one that shows none (Docxodus, Plate, docx-editor.dev, Nutrient, Univer) nothing does. |
 | **WordCraft, Settled: "still busy after 180 s"** on the rich sample and the 500 pages, 2.93 s on the redline | **This machine, not the engine** | Its Loaded is 0.5 to 3.8 s. With no GPU its canvas is drawn in software on the main thread, and those repaints are the long tasks: the three redline runs read 1.35 s, 2.93 s and 19.8 s. On the Mac runner of 2026-11-17 it settled on the 500 pages in 2.8 to 4.0 s. |
 | **Renderer memory, canvas engines** (canvas-editor 4,816 MB, Univer 2,394 MB, folio 2,389 MB) | **This machine, not the engine** | With no GPU every canvas is kept in the renderer's memory; with one, most of it is in the GPU process, which the tables do not show (`gpuRss` is in the dated file). Compare these only with each other. |
-| **Renderer memory, small documents** (455 to 898 MB; growth of −190 MB, −148 MB) | **Mostly Chrome** | Three or more renderer processes are resident before any document opens. The growth is the engine's part, and for a small document it is smaller than the noise: it comes out negative for WordCraft and the Word Online viewer on all three samples. |
+| **Renderer memory, small documents** (455 to 898 MB; growth of −190 MB, −148 MB) | **Mostly Chrome** | Three or more renderer processes are resident before any document opens. The growth is the engine's part, and for a small document it is smaller than the noise: it comes out negative for WordCraft and the Microsoft Word viewer on all three samples. |
 | **Univer, 500 pages: 1,772 MB of heap** (2026-11-18) | **Half of it was garbage; corrected. Not a .docx figure** | Read after a forced collection it is 880 MB in each of the three new runs (1,760 to 1,773 MB before it). It stayed at 1,888 MiB for a minute by hand, so Chrome does not collect it by itself soon. And Univer never reads the file: it holds the text this site's reader gave it (`lib/univer-doc.ts`), with no tables, pictures or page set-up. |
 | **canvas-editor, every figure on the editors site** | **Confirmed** | 500 pages by hand: 17.7 s and 21.9 s to load, 637 and 650 pages, heap 700 to 730 MiB and steady for 20 s. The new pass: 18.4 s, 661 pages and 678 MB, the heap the same before and after the collection. What is misleading is its renderer memory (above). |
 | **Apryse, Loaded 300 ms to 911 ms** | **Partly blind** | Its adapter waits for the SDK's `documentLoaded`, and the office engine runs in a Worker: neither Loaded nor Settled sees the pages being drawn. Its two runs on the 500 pages settled at 1.14 s and 13.1 s. |
 | **docen, 500 pages: "did not open it"** (2026-11-20) | **Wrong: the test gave up too early. Corrected** | It opens the file and counts 500 pages. The page then keeps its main thread busy for minutes, longer than the 600 s that pass allowed from navigation. Seen by hand on 2026-11-21 and measured again with a 30-minute deadline on a Mac; the row is that measurement. |
-| **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Seven rows stand on two runs: the Word Online viewer and Nutrient on the rich sample, docen and BetterOffice on the redline, Apryse, Nutrient and OnlyOffice on the 500 pages. |
+| **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Seven rows stand on two runs: the Microsoft Word viewer and Nutrient on the rich sample, docen and BetterOffice on the redline, Apryse, Nutrient and OnlyOffice on the 500 pages. |
 | **Sizes** | **Mislabelled** | Every "MB" in these tables is a mebibyte (1,048,576 bytes): the 680 MB of canvas-editor's heap is 713 million bytes. |
 
 The two faults of the measuring are corrected in
@@ -423,8 +423,8 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | docx-editor.dev | 97 · 67 | 449 ms · 19.4 s | 57 ms · 51 ms | 0 · 0.018 | 449 ms · 1.66 s | 1.69 s · 7.09 s | 97 | 100 | 90 | 96/97/98/94/100 · 92/93/59/67/66 |
 | folio | 89 · 61 | 445 ms · 1.66 s | 256 ms · 379 ms | 0 · 0.037 | 445 ms · 1.66 s | 1.63 s · 5.92 s | 81 | 96 | 90 | 91/81/89/78/89 · 50/40/63/61/99 |
 | WordCraft | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://edit | | | | | | | | | |
-| Word Online viewer | 96 · 97 | 212 ms · 1.60 s | 0 ms · 0 ms | 0.074 · 0 | 212 ms · 1.42 s | 1.80 s · 4.30 s | 100 | 73 | 90 | 96/96/95/97/96 · 92/100/97/90/99 |
-| Google viewer | 98 · 96 | 212 ms · 1.22 s | 100 ms · 56 ms | 0.001 · 0 | 212 ms · 1.22 s | 1.37 s · 3.90 s | 100 | 54 | 90 | 99/100/88/98/89 · 99/100/61/89/96 |
+| Microsoft Word viewer | 96 · 97 | 212 ms · 1.60 s | 0 ms · 0 ms | 0.074 · 0 | 212 ms · 1.42 s | 1.80 s · 4.30 s | 100 | 73 | 90 | 96/96/95/97/96 · 92/100/97/90/99 |
+| Google Docs viewer | 98 · 96 | 212 ms · 1.22 s | 100 ms · 56 ms | 0.001 · 0 | 212 ms · 1.22 s | 1.37 s · 3.90 s | 100 | 54 | 90 | 99/100/88/98/89 · 99/100/61/89/96 |
 | Apryse WebViewer | 68 · 73 | 224 ms · 769 ms | 858 ms · 848 ms | 0 · 0.003 | 224 ms · 769 ms | 2.08 s · 6.50 s | 100 | 96 | 90 | 70/68/68/72/66 · 77/74/69/72/73 |
 | Nutrient | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.co | | | | | | | | | |
 | react-docx (measured 2026-11-20) | 99 · 96 | 212 ms · 769 ms | 32 ms · 52 ms | 0 · 0.018 | 212 ms · 764 ms | 1.35 s · 4.25 s | 100 | 100 | 90 | 99/95/98/99/99 · 81/75/96/100/99 |
@@ -446,8 +446,8 @@ Measured 2026-11-16: PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 o
 | docx-editor.dev | 60 · 35 | 452 ms · 23.0 s | 1.02 s · 2.05 s | 0.04 · 0.018 | 452 ms · 1.81 s | 4.47 s · 19.7 s | 97 | 100 | 90 | 58/59/63/60/60 · 35/34/63/35/39 |
 | folio | 61 · 36 | 446 ms · 9.48 s | 15.1 s · 14.0 s | 0.001 · 0.308 | 446 ms · 1.66 s | 4.67 s · 14.8 s | 84 | 96 | 91 | 61/61/61/60/61 · fail/fail/36/37/fail |
 | WordCraft | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] WordCraft failed to start TypeError: Failed to fetch at Module.__wbg_init (https://edit | | | | | | | | | |
-| Word Online viewer | 96 · 97 | 222 ms · 762 ms | 0 ms · 0 ms | 0.075 · 0.006 | 222 ms · 762 ms | 1.84 s · 4.44 s | 100 | 73 | 90 | 97/95/95/96/97 · 97/96/98/100/97 |
-| Google viewer | 97 · 94 | 231 ms · 774 ms | 125 ms · 222 ms | 0.001 · 0.004 | 231 ms · 774 ms | 1.51 s · 4.05 s | 100 | 54 | 90 | 83/97/97/97/89 · 94/84/94/100/56 |
+| Microsoft Word viewer | 96 · 97 | 222 ms · 762 ms | 0 ms · 0 ms | 0.075 · 0.006 | 222 ms · 762 ms | 1.84 s · 4.44 s | 100 | 73 | 90 | 97/95/95/96/97 · 97/96/98/100/97 |
+| Google Docs viewer | 97 · 94 | 231 ms · 774 ms | 125 ms · 222 ms | 0.001 · 0.004 | 231 ms · 774 ms | 1.51 s · 4.05 s | 100 | 54 | 90 | 83/97/97/97/89 · 94/84/94/100/56 |
 | Apryse WebViewer | 68 · 67 | 222 ms · 790 ms | 848 ms · 1.41 s | 0 · 0 | 222 ms · 790 ms | 2.00 s · 7.16 s | 100 | 96 | 90 | 68/68/77/68/77 · 67/70/77/64/63 |
 | Nutrient | **no result**: the engine failed on Google's machine, so there is no score: [open-docs] Nutrient Web SDK failed to start PSPDFKitError: download 'https://cdn.cloud.pspdfkit.co | | | | | | | | | |
 | react-docx (measured 2026-11-20) | 37 · 34 | 6.89 s · 42.0 s | 1.36 s · 1.89 s | 0.011 · 0.018 | 214 ms · 2.20 s | 3.93 s · 14.6 s | 96 | 100 | 90 | 85/37/37/36/fail · 30/39/36/32/fail |
@@ -512,8 +512,8 @@ Measured 2026-11-21: Lighthouse 13.6.0 run on a MacBook Pro (Apple M4 Pro, 12 co
 | docx-editor.dev (measured 2026-11-21: Lighthouse's CPU benchmark index median 4287, lowest 4196, load median 2.4, highest 3.5, on 12 cores) | 97 · 94 | 645 ms · 1.82 s | 0 ms · 39 ms | 0 · 0.018 | 645 ms · 1.82 s | 1.66 s · 5.46 s | 97 | 100 | 90 | 97/97/98 · 94/94/94 |
 | folio (measured 2026-11-21: Lighthouse's CPU benchmark index median 4287, lowest 4196, load median 2.4, highest 3.5, on 12 cores) | 99 · 71 | 616 ms · 1.80 s | 14 ms · 200 ms | 0 · 0.598 | 616 ms · 1.80 s | 1.25 s · 4.17 s | 81 | 100 | 90 | 99/99/99 · 71/70/99 |
 | WordCraft (measured 2026-11-21: Lighthouse's CPU benchmark index median 4287, lowest 4196, load median 2.4, highest 3.5, on 12 cores) | 89 · 72 | 360 ms · 903 ms | 108 ms · 762 ms | 0.001 · 0.018 | 360 ms · 903 ms | 6.93 s · 26.2 s | 94 | 96 | 90 | 89/89/89 · 71/72/72 |
-| Word Online viewer | 100 · 100 | 333 ms · 907 ms | 0 ms · 6 ms | 0.001 · 0 | 333 ms · 907 ms | 977 ms · 2.72 s | 100 | 73 | 90 | 100/100/98 · 100/100/100 |
-| Google viewer | 83 · 81 | 338 ms · 923 ms | 0 ms · 0 ms | 0.333 · 0.396 | 338 ms · 923 ms | 756 ms · 2.37 s | 100 | 73 | 90 | 83/83/84 · 81/81/81 |
+| Microsoft Word viewer | 100 · 100 | 333 ms · 907 ms | 0 ms · 6 ms | 0.001 · 0 | 333 ms · 907 ms | 977 ms · 2.72 s | 100 | 73 | 90 | 100/100/98 · 100/100/100 |
+| Google Docs viewer | 83 · 81 | 338 ms · 923 ms | 0 ms · 0 ms | 0.333 · 0.396 | 338 ms · 923 ms | 756 ms · 2.37 s | 100 | 73 | 90 | 83/83/84 · 81/81/81 |
 | Apryse WebViewer | 94 · 72 | 346 ms · 876 ms | 49 ms · 751 ms | 0 · 0.076 | 346 ms · 876 ms | 2.40 s · 8.74 s | 100 | 96 | 90 | 95/93/94 · 72/75/71 |
 | Nutrient | 83 · 57 | 2.26 s · 12.0 s | 64 ms · 441 ms | 0.002 · 0 | 318 ms · 867 ms | 2.17 s · 7.46 s | 100 | 100 | 91 | 66/84/83 · 58/57/55 |
 | react-docx | 100 · 97 | 342 ms · 925 ms | 0 ms · 203 ms | 0 · 0.018 | 342 ms · 925 ms | 1.06 s · 2.43 s | 100 | 100 | 90 | 100/99/100 · 97/97/95 |
@@ -537,8 +537,8 @@ Measured 2026-11-21: Lighthouse 13.6.0 run on a MacBook Pro (Apple M4 Pro, 12 co
 | docx-editor.dev | 96 · 67 | 599 ms · 1.80 s | 64 ms · 1.26 s | 0 · 0.018 | 599 ms · 1.80 s | 1.94 s · 7.64 s | 97 | 100 | 90 | 96/93/97 · 67/66/68 |
 | folio | 62 · 59 | 610 ms · 1.85 s | 2.60 s · 10.8 s | 0 · 0.054 | 610 ms · 1.85 s | 3.09 s · 10.1 s | 84 | 100 | 91 | 62/62/63 · 58/59/59 |
 | WordCraft | 58 · 60 | 352 ms · 901 ms | 1.32 s · 5.80 s | 0.105 · 0.018 | 352 ms · 901 ms | 9.48 s · 37.9 s | 94 | 96 | 90 | 57/58/58 · 60/60/60 |
-| Word Online viewer | 98 · 100 | 368 ms · 891 ms | 0 ms · 0 ms | 0.074 · 0 | 368 ms · 891 ms | 1.08 s · 2.68 s | 100 | 73 | 90 | 98/97/100 · 98/100/100 |
-| Google viewer | 78 · 81 | 352 ms · 922 ms | 0 ms · 2 ms | 0.332 · 0.4 | 352 ms · 922 ms | 2.55 s · 2.16 s | 100 | 73 | 90 | 78/100/75 · 81/81/81 |
+| Microsoft Word viewer | 98 · 100 | 368 ms · 891 ms | 0 ms · 0 ms | 0.074 · 0 | 368 ms · 891 ms | 1.08 s · 2.68 s | 100 | 73 | 90 | 98/97/100 · 98/100/100 |
+| Google Docs viewer | 78 · 81 | 352 ms · 922 ms | 0 ms · 2 ms | 0.332 · 0.4 | 352 ms · 922 ms | 2.55 s · 2.16 s | 100 | 73 | 90 | 78/100/75 · 81/81/81 |
 | Apryse WebViewer | 94 · 71 | 363 ms · 892 ms | 51 ms · 788 ms | 0 · 0.076 | 363 ms · 892 ms | 2.54 s · 9.40 s | 100 | 96 | 90 | 94/93/94 · 70/78/71 |
 | Nutrient | 99 · 86 | 308 ms · 860 ms | 66 ms · 409 ms | 0.001 · 0.007 | 308 ms · 860 ms | 1.33 s · 4.83 s | 100 | 100 | 90 | 99/99/99 · 86/86/87 |
 | react-docx | 41 · 36 | 6.92 s · 42.1 s | 873 ms · 4.20 s | 0 · 0.018 | 324 ms · 910 ms | 2.79 s · 9.53 s | 96 | 100 | 90 | 41/41/41 · 36/36/37 |
@@ -829,6 +829,14 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   streams them with `content-encoding: gzip` (22 MB on the wire for a 60 MB
   wasm) and immutable caching. See [`editors/wordcraft/assets.ts`](editors/wordcraft/assets.ts).
 
+- **Docxodus**: its .NET runtime sits beside the bundle (`dist/wasm/_framework/`) and is found
+  through `import.meta.url`. esm.sh repackages the JavaScript and not that folder, so the
+  self-contained `dist/embed.bundle.js` and the runtime both load from jsDelivr's npm tree.
+  See [`editors/docxodus/assets.ts`](editors/docxodus/assets.ts).
+- **The four view-only renderers** took nothing of this kind. Apryse WebViewer loads from
+  jsDelivr's copy of its npm package and Nutrient from its own CDN, both with no license key
+  (demo and trial mode: pages carry a watermark). The Microsoft Word viewer and the Google Docs
+  viewer are frames on their owners' servers, given the public address of the sample.
 - **react-docx, BetterOffice**: each starts a Worker with
   `new Worker(new URL("./x.js", import.meta.url))`, which a browser refuses from another
   origin, so their files cannot come from a CDN. [`server/npm-vendor.ts`](server/npm-vendor.ts)
