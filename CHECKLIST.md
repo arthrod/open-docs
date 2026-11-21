@@ -81,7 +81,7 @@ pages, and the figures band matches the README row.
 
 - [ ] 4.1 Same engine names on the three sites and in the trial
 - [ ] 4.2 Same menu on every page of the three sites
-- [x] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes` (live 2026-11-21; the sections of the six new tools appear on benchmarks.law with its next deploy)
+- [~] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes` (live 2026-11-21 for the engines whose section is published; the six new tools get their link when benchmarks.law has their sections: empty `VENDOR_NOTE_PENDING` in `server/registry.ts` then)
 - [ ] 4.4 The checklist files in the four repositories agree with each other
 
 ## Log

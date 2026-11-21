@@ -358,8 +358,14 @@ const VENDOR_NOTE_ANCHOR: Record<string, string> = {
   apryse: "apryse",
   nutrient: "nutrient",
 };
-/** The vendor note of an engine, or null when the trial has no section for it. */
+/**
+ * Sections written in the trial's vendor notes and not yet on benchmarks.law (they arrive with its
+ * next release and deploy). Until then these engines get no link: one would land at the top of the
+ * page, not on a note. Empty this set when the page has the sections (CHECKLIST 4.3).
+ */
+export const VENDOR_NOTE_PENDING: ReadonlySet<string> = new Set(["react-docx", "univer", "opendoc", "betteroffice", "onlyoffice", "nutrient"]);
+/** The vendor note of an engine, or null when benchmarks.law has no section for it. */
 export const vendorNote = (slug: string): string | null =>
-  VENDOR_NOTE_ANCHOR[slug] ? `${VENDOR_NOTES}#${VENDOR_NOTE_ANCHOR[slug]}` : null;
+  VENDOR_NOTE_ANCHOR[slug] && !VENDOR_NOTE_PENDING.has(slug) ? `${VENDOR_NOTES}#${VENDOR_NOTE_ANCHOR[slug]}` : null;
 
 export const isViewer = (e?: EditorMeta) => e?.kind === "viewer";
