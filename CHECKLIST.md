@@ -18,8 +18,14 @@ docx-editor.dev (eigenpal), folio, WordCraft, react-docx, Univer, OpenDoc,
 BetterOffice, OnlyOffice (CryptPad build). Four view-only commercial
 renderers: Microsoft Word viewer, Google Docs viewer, Apryse WebViewer, Nutrient.
 
-A part that lists engines is complete only when all seventeen are in it, or
-the part says why one is missing.
+Four tools of the editors trial, added 2026-11-21 through the trial's demo
+builds of them: GenOffice, office-open (a library with no editor), Fidus Writer
+(its exporter fails here, so it has no assistant) and docs.plus.
+
+A part that lists engines is complete only when all twenty-one are in it, or
+the part says why one is missing. The row counts below (13, 17, 18) are those
+of the pass of 2026-11-20; the four added tools are extra rows, measured on a
+Mac, and section 5 tracks them.
 
 cite-check has a page (`/e/cite-check`) and a Lighthouse row, which makes
 eighteen rows there: it is our application on canvas-editor, not an engine of
@@ -88,6 +94,19 @@ has no figures of its own.
 - [x] 4.3 Each engine links to its vendor note at `benchmarks.law/editors-trial/vendor-notes`, the six new tools included since benchmarks.law published their sections (et-v0.10.6, 2026-11-21)
 - [x] 4.4 The checklist files in the four repositories agree with each other. Read side by side 2026-11-21 after the trial's et-v0.11.0: the same legend, the same six added tools under the same names, and the same account of them (react-docx, OpenDoc and BetterOffice measured by the trial; OnlyOffice run with no output; Univer with no .docx path; Nutrient a viewer). The trial's checklist marks two speed reports as blocked for the new tools (not timed) and five parts as partial (their code was not read); the three site checklists have nothing open
 
+## 5. The four tools added from the editors trial (2026-11-21)
+
+- [x] 5.1 A page each: `/e/genoffice`, `/e/office-open`, `/e/fidus-writer`, `/e/docs-plus`. Seen in Chrome on the live site 2026-11-21: each opens the blank document and the rich sample
+- [x] 5.2 Export: GenOffice, office-open and docs.plus hand back a .docx. Fidus Writer's exporter fails on the blank, rich and redline samples; the README and its page say so
+- [x] 5.3 Tracked changes: what each draws, observed on the redline sample and written in `lib/revision-notes.ts`
+- [x] 5.4 Samples measured (rich, redline, 500 pages; three runs) on a Mac. Each row names the Mac; the table's heading is still the rented machine's
+- [x] 5.5 Lighthouse on our computer: blank and 500 pages
+- [x] 5.6 PageSpeed on Google's servers: blank for all four, 500 pages for three. PageSpeed refused GenOffice's 500-page address ("Oops! Something went wrong") in every analysis; its row says so
+- [x] 5.7 README: the editors table, the tracked-changes table, the assistant table and a section on what differs
+- [!] 5.8 Timed on the rented machine like the other rows: not done. It is billed, and the owner chose not to spend (2026-11-21)
+- [!] 5.9 The probes of 2026-11-20 (the "Measured with" table): not run for the four
+- [ ] 5.10 A read-only view on viewers.benchmarks.law: not built
+
 ## Log
 
 | Date | Part | What changed |
@@ -103,3 +122,4 @@ has no figures of its own.
 | 2026-11-21 | 1.3, 1.4, 1.9, 1.10, 1.13 to 1.21, 3.2 to 3.6, 3.9, 4.1, 4.2 | Audited; CDN entries added for Docxodus and the renderers; one name for each embed viewer |
 | 2026-11-21 | 4.4 | The four checklists read side by side after the trial's et-v0.11.0 |
 | 2026-11-21 | 1.8 | The docen row of the 500-page table says on the page that it opens the file |
+| 2026-11-21 | 5 | GenOffice, office-open, Fidus Writer and docs.plus added through the trial's demo builds; measured on a Mac |

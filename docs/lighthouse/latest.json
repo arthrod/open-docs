@@ -776,6 +776,178 @@
    "measuredAt": "2026-11-20",
    "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
    "base": "https://editors.benchmarks.law"
+  },
+  "e/genoffice": {
+   "desktop": {
+    "performance": 83,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 213,
+    "lcpMs": 225,
+    "tbtMs": 338,
+    "cls": 0.054,
+    "speedIndexMs": 1639,
+    "performanceRuns": [
+     75,
+     83,
+     92,
+     82,
+     94
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 83,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 764,
+    "lcpMs": 764,
+    "tbtMs": 306,
+    "cls": 0.115,
+    "speedIndexMs": 7100,
+    "performanceRuns": [
+     82,
+     83,
+     86,
+     85,
+     83
+    ],
+    "error": null
+   },
+   "measuredAt": "2026-11-21",
+   "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+   "base": "https://editors.benchmarks.law"
+  },
+  "e/office-open": {
+   "desktop": {
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 0,
+    "cls": 0.0,
+    "speedIndexMs": 879,
+    "performanceRuns": [
+     100,
+     100,
+     100,
+     100,
+     100
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 92,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 778,
+    "lcpMs": 778,
+    "tbtMs": 0,
+    "cls": 0.17,
+    "speedIndexMs": 2477,
+    "performanceRuns": [
+     87,
+     93,
+     92,
+     92,
+     92
+    ],
+    "error": null
+   },
+   "measuredAt": "2026-11-21",
+   "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+   "base": "https://editors.benchmarks.law"
+  },
+  "e/fidus-writer": {
+   "desktop": {
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 224,
+    "lcpMs": 224,
+    "tbtMs": 68,
+    "cls": 0.0,
+    "speedIndexMs": 1048,
+    "performanceRuns": [
+     99,
+     100,
+     100,
+     100,
+     95
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 775,
+    "lcpMs": 775,
+    "tbtMs": 59,
+    "cls": 0.027,
+    "speedIndexMs": 3181,
+    "performanceRuns": [
+     81,
+     100,
+     98,
+     99,
+     99
+    ],
+    "error": null
+   },
+   "measuredAt": "2026-11-21",
+   "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+   "base": "https://editors.benchmarks.law"
+  },
+  "e/docs-plus": {
+   "desktop": {
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 213,
+    "lcpMs": 213,
+    "tbtMs": 37,
+    "cls": 0.001,
+    "speedIndexMs": 1198,
+    "performanceRuns": [
+     97,
+     100,
+     93,
+     100,
+     99
+    ],
+    "error": null
+   },
+   "mobile": {
+    "performance": 96,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 905,
+    "lcpMs": 905,
+    "tbtMs": 84,
+    "cls": 0.018,
+    "speedIndexMs": 4183,
+    "performanceRuns": [
+     94,
+     96,
+     98,
+     95,
+     98
+    ],
+    "error": null
+   },
+   "measuredAt": "2026-11-21",
+   "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+   "base": "https://editors.benchmarks.law"
   }
  },
  "docs": {
@@ -1551,6 +1723,178 @@
      "error": null
     },
     "measuredAt": "2026-11-20",
+    "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+    "base": "https://editors.benchmarks.law"
+   },
+   "e/genoffice": {
+    "desktop": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "error": "PageSpeed refused the address: Oops! Something went wrong."
+    },
+    "mobile": {
+     "performance": null,
+     "accessibility": null,
+     "bestPractices": null,
+     "seo": null,
+     "fcpMs": null,
+     "lcpMs": null,
+     "tbtMs": null,
+     "cls": null,
+     "speedIndexMs": null,
+     "performanceRuns": [
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "error": "PageSpeed refused the address: Oops! Something went wrong."
+    },
+    "measuredAt": "2026-11-21",
+    "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+    "base": "https://editors.benchmarks.law"
+   },
+   "e/office-open": {
+    "desktop": {
+     "performance": 67,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 90,
+     "fcpMs": 214,
+     "lcpMs": 214,
+     "tbtMs": 1594,
+     "cls": 0.0,
+     "speedIndexMs": 2014,
+     "performanceRuns": [
+      67,
+      64,
+      64,
+      68,
+      68
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 51,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 91,
+     "fcpMs": 919,
+     "lcpMs": 919,
+     "tbtMs": 1469,
+     "cls": 0.326,
+     "speedIndexMs": 4947,
+     "performanceRuns": [
+      25,
+      56,
+      45,
+      58,
+      51
+     ],
+     "error": null
+    },
+    "measuredAt": "2026-11-21",
+    "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+    "base": "https://editors.benchmarks.law"
+   },
+   "e/fidus-writer": {
+    "desktop": {
+     "performance": 75,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 90,
+     "fcpMs": 213,
+     "lcpMs": 213,
+     "tbtMs": 625,
+     "cls": 0.008,
+     "speedIndexMs": 1217,
+     "performanceRuns": [
+      72,
+      75,
+      73,
+      94,
+      93
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 90,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 91,
+     "fcpMs": 905,
+     "lcpMs": 905,
+     "tbtMs": 382,
+     "cls": 0.027,
+     "speedIndexMs": 3941,
+     "performanceRuns": [
+      51,
+      91,
+      72,
+      92,
+      90
+     ],
+     "error": null
+    },
+    "measuredAt": "2026-11-21",
+    "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+    "base": "https://editors.benchmarks.law"
+   },
+   "e/docs-plus": {
+    "desktop": {
+     "performance": 66,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 90,
+     "fcpMs": 216,
+     "lcpMs": 216,
+     "tbtMs": 2077,
+     "cls": 0.001,
+     "speedIndexMs": 2024,
+     "performanceRuns": [
+      65,
+      68,
+      66,
+      66,
+      66
+     ],
+     "error": null
+    },
+    "mobile": {
+     "performance": 69,
+     "accessibility": 100,
+     "bestPractices": 100,
+     "seo": 91,
+     "fcpMs": 762,
+     "lcpMs": 762,
+     "tbtMs": 1486,
+     "cls": 0.018,
+     "speedIndexMs": 6172,
+     "performanceRuns": [
+      63,
+      71,
+      38,
+      69,
+      71
+     ],
+     "error": null
+    },
+    "measuredAt": "2026-11-21",
     "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
     "base": "https://editors.benchmarks.law"
    }
