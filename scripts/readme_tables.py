@@ -57,25 +57,40 @@ def cell(text) -> str:
     return str(text).splitlines()[0].replace("|", "\\|")[:160] if str(text) else ""
 
 
+LOAD = "; machine load (1-minute average) "
+
+
+def machine(env: str | None) -> str:
+    """The environment without the host load of the step that wrote it: steps of one pass differ in nothing else."""
+    return (env or "").split(LOAD)[0]
+
+
+def host_load(rows: dict, head: dict) -> str:
+    """One line with the host load of a table's runs, from its rows (or the heading when they carry none)."""
+    said = list(dict.fromkeys(e.split(LOAD)[1] for e in [r.get("environment") or head.get("environment") or "" for r in rows.values()] if LOAD in e))
+    return f"Host load during these runs (1-minute average): {'; '.join(said)}." if said else ""
+
+
 def elsewhere(row: dict, head: dict) -> str:
     """" (measured DATE)" for a row from another day than its table, with the environment when that differs."""
     when, where = row.get("measuredAt") or head.get("measuredAt"), row.get("environment") or head.get("environment")
     # Another address than its table's (the site under another name) is another measurement too.
     on = f" on {row['base']}" if row.get("base") and head.get("base") and row["base"] != head["base"] else ""
-    if where != head.get("environment"):
+    if machine(where) != machine(head.get("environment")):
         return f" (measured {when}{on}: {cell(where)})"
     return f" (measured {when}{on})" if on or when != head.get("measuredAt") else ""
 
 
 def samples_block(data: dict) -> str:
     """The samples tables: one per sample, a row per engine, from docs/samples/latest.json."""
-    out = [f"Measured {data['measuredAt']}: {data['environment']}.", ""]
+    out = [f"Measured {data['measuredAt']}: {machine(data['environment'])}.", ""]
     for sample, title in SAMPLE_TITLES:
         rows = data["samples"].get(sample)
         if not rows:
             continue
+        load = host_load(rows, data)
         out += [
-            f"**{title}**", "",
+            f"**{title}**", "", *([load, ""] if load else []),
             "| Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |",
             "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]

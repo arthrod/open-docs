@@ -75,6 +75,17 @@ const INTRO: Record<string, string> = {
  */
 export type Caveats = Record<string, Record<string, string> | string>;
 
+const LOAD = "; machine load (1-minute average) ";
+
+/** The environment without the host load of the step that wrote it: steps of one pass differ in nothing else. */
+const machine = (env?: string | null) => (env ?? "").split(LOAD)[0];
+
+/** One sentence with the host load of a table's runs, from its rows' environments. */
+function hostLoad(envs: (string | null | undefined)[]): string {
+  const said = [...new Set(envs.filter((e): e is string => !!e && e.includes(LOAD)).map((e) => e.split(LOAD)[1]))];
+  return said.length ? ` Host load during these runs (1-minute average): ${esc(said.join("; "))}.` : "";
+}
+
 export function samplesBand(
   all: EditorMeta[],
   data: SampleMeasurements = LATEST as SampleMeasurements,
@@ -92,7 +103,7 @@ export function samplesBand(
       const frame = e.opensFiles === false;
       // Said only where it differs from the heading: a row re-measured on another day or machine.
       const otherBase = !!r.base && !!data.base && r.base !== data.base;
-      const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && r.environment !== data.environment) || otherBase
+      const elsewhere = (r.measuredAt && r.measuredAt !== data.measuredAt) || (r.environment && machine(r.environment) !== machine(data.environment)) || otherBase
         ? ` <small class="prov">measured ${esc(r.measuredAt ?? "")}: ${esc(r.environment ?? "")}${otherBase ? ` · ${esc(r.base!)}` : ""}</small>`
         : "";
       const incomplete = r.incomplete ? ` <small class="prov-warn">incomplete: ${esc(String(r.incomplete).split("\n")[0].slice(0, 120))}</small>` : "";
@@ -126,7 +137,7 @@ export function samplesBand(
     </tr>`;
     };
     return `<h3 class="smp-h" id="sample-${id}">The ${esc(f.label)} sample <small>${esc(f.file)} · ${esc(f.note)} · <a href="/api/${f.file}">download ↓</a></small></h3>
-  <p class="sec-copy">${INTRO[f.file] ?? ""}</p>
+  <p class="sec-copy">${INTRO[f.file] ?? ""}${hostLoad(Object.values(rows).map((r) => r.environment ?? data.environment))}</p>
   <div class="table-wrap"><table class="tbl"><thead><tr>
     <th>Engine</th><th class="n">Loaded</th><th class="n">Settled</th><th class="n">JS heap</th><th class="n">Renderer memory</th>
     ${redline ? `<th class="hide-sm">Tracked changes</th>` : `<th class="n hide-sm">Pages shown</th>`}
@@ -135,9 +146,9 @@ export function samplesBand(
   if (!tables.trim()) return "";
   return `<section class="band" id="samples"><div class="wrap">
   <h2 class="sec-label"><span class="sq" aria-hidden="true"></span> / Samples</h2>
-  <p class="sec-copy">Every engine opening the two harder samples from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(data.environment ?? "")}.
-  <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for two seconds (work in a worker or on the GPU is not seen).
-  <b>JS heap</b>: JavaScript objects only. <b>Renderer memory</b>: resident memory of Chrome's renderer processes, which also counts WebAssembly memory, canvases and the DOM; in brackets, how much it grew when the sample was opened, run by run (a view-only engine already shows the rich sample, so its bracket is what replacing that one cost).
+  <p class="sec-copy">Every engine opening the two harder samples from its own Menu, measured ${esc(data.measuredAt ?? "")}: ${esc(machine(data.environment))}.
+  <b>Loaded</b>: Menu click until the engine's own loader returns. <b>Settled</b>: Menu click until the page's main thread has been quiet for two seconds and the page count has stopped changing (work in a worker or on the GPU is not seen).
+  <b>JS heap</b>: JavaScript objects only, read after a forced garbage collection. <b>Renderer memory</b>: resident memory of Chrome's renderer processes, which also counts WebAssembly memory, canvases and the DOM; in brackets, how much it grew when the sample was opened, run by run (a view-only engine already shows the rich sample, so its bracket is what replacing that one cost).
   Microsoft's and Google's viewers render on their own servers, so only their frame's load is timed.
   A row marked <b>read with care</b> has a figure that was checked again${typeof caveats.checked === "string" ? ` on ${esc(caveats.checked)}` : ""} and found wrong, unreliable or about this machine rather than the engine: the <a href="https://github.com/arthrod/open-docs#figures-to-distrust">README</a> says what was seen.</p>
   ${tables}

@@ -1,17 +1,13 @@
 {
   "checked": "2026-11-20",
   "lorem-500": {
-    "onlyoffice": "pages and Settled are wrong: read while it was still paginating. It reaches 500 pages, after its Settled",
-    "eigenpal": "Loaded times only the call (its loader returns at once); Settled ranged from 0.6 s to 5.5 s between runs",
-    "wordcraft": "Settled is software drawing on a machine with no GPU: 7 s, 21 s and 147 s in three runs",
+    "wordcraft": "Settled is software drawing on a machine with no GPU: on a Mac it settled in 3 to 4 s",
     "canvas-editor": "renderer memory is this machine's: with no GPU its 661 page canvases are kept in the renderer (0.5 to 1.8 GB on a Mac)",
-    "docen": "renderer memory is this machine's: with no GPU its canvases are kept in the renderer",
     "univer": "text only: Univer was handed this site's reading of the file, not the .docx",
     "apryse": "its office engine runs in a Worker, which neither Loaded nor Settled sees"
   },
   "redline": {
-    "eigenpal": "Loaded times only the call (its loader returns at once)",
-    "wordcraft": "Settled is software drawing on a machine with no GPU",
+    "wordcraft": "Settled is software drawing on a machine with no GPU: 1.35 s, 2.93 s and 19.8 s in three runs",
     "univer": "text only: Univer was handed this site's reading of the file, not the .docx",
     "apryse": "its office engine runs in a Worker, which neither Loaded nor Settled sees"
   }
