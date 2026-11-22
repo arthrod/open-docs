@@ -40,7 +40,7 @@ Deno.test("site mirror: the docs.plus demo's script keeps a picture it does not 
   if (docsPlusKeepPictures("let a=1;") !== "let a=1;") throw new Error("changed other code");
   // The rewritten script has an address of its own; the other demos' pages keep theirs.
   const page = '<head></head><script type="module" src="./assets/index-abc.js"></script>';
-  if (!MIRRORS["docs-plus"].page!("index.html", page, "").includes('src="./assets/index-abc.js?pictures=1"')) throw new Error("no new address");
+  if (!MIRRORS["docs-plus"].page!("index.html", page, "").includes('src="./assets/index-abc.js?pictures=2"')) throw new Error("no new address");
   if (!MIRRORS["genoffice"].page!("index.html", page, "").includes('src="./assets/index-abc.js"')) throw new Error("another demo's address changed");
   if (MIRRORS["genoffice"].script) throw new Error("another demo's script is rewritten");
 });
