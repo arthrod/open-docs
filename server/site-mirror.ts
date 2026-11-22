@@ -56,7 +56,7 @@ for (const name of TRIAL_DEMOS) {
       file !== "index.html" ? html : html.replace(/<head[^>]*>/i, (head) => `${head}${DEMO_HOOK}`)
         // The rewritten script gets an address of its own: the first one is kept by browsers and
         // by this platform's edge for a year.
-        .replace(/(src="\.\/assets\/[^"?]+\.js)"/, (m, src) => name === "docs-plus" ? `${src}?pictures=1"` : m),
+        .replace(/(src="\.\/assets\/[^"?]+\.js)"/, (m, src) => name === "docs-plus" ? `${src}?pictures=2"` : m),
     ...(name === "docs-plus" ? { script: (_file: string, js: string) => docsPlusKeepPictures(js) } : {}),
   };
 }
@@ -108,7 +108,11 @@ export async function serveMirror(path: string, here: string): Promise<Response>
   // unrewritten copy for a year under "immutable" (2026-11-18). Other files never change.
   const headers = {
     "content-type": type,
-    "cache-control": type.startsWith("text/html") ? "public, max-age=300" : "public, max-age=31536000, immutable",
+    // A script this site rewrites is kept briefly too: a copy asked for before a deploy was held
+    // for a year under its new address (2026-11-22).
+    "cache-control": type.startsWith("text/html") || (MIRRORS[t.site].script && type.startsWith("text/javascript"))
+      ? "public, max-age=300"
+      : "public, max-age=31536000, immutable",
   };
   const stored = await blob.get(key).catch(() => undefined);
   const page = MIRRORS[t.site].page;
