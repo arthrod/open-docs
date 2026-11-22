@@ -99,11 +99,11 @@ has no figures of its own.
 - [x] 5.1 A page each: `/e/genoffice`, `/e/office-open`, `/e/fidus-writer`, `/e/docs-plus`. Seen in Chrome on the live site 2026-11-21: each opens the blank document and the rich sample
 - [x] 5.2 Export: GenOffice, office-open and docs.plus hand back a .docx. Fidus Writer's exporter fails on the blank, rich and redline samples; the README and its page say so
 - [x] 5.3 Tracked changes: what each draws, observed on the redline sample and written in `lib/revision-notes.ts`
-- [x] 5.4 Samples measured (rich, redline, 500 pages; three runs) on a Mac. Each row names the Mac; the table's heading is still the rented machine's
+- [x] 5.4 Samples measured (rich, redline, 500 pages; three runs) on a Mac on 2026-11-21, then on the rented machine on 2026-11-22 (5.8); the Mac rows are replaced
 - [x] 5.5 Lighthouse on our computer: blank and 500 pages
 - [x] 5.6 PageSpeed on Google's servers: blank for all four, 500 pages for three. PageSpeed refused GenOffice's 500-page address ("Oops! Something went wrong") in every analysis; its row says so
 - [x] 5.7 README: the editors table, the tracked-changes table, the assistant table and a section on what differs
-- [x] 5.8 Decided, not measured: the four are not timed on the rented machine. It is billed, and the owner chose three times not to spend (2026-11-21 twice, 2026-11-22). On the field page (benchmarks.law/editors-trial/vendors) their cards show the Mac's figures with "Not scored: it was timed on another machine", since a score from a faster machine would flatter them; this site's own cards show visitors' medians and carry no score
+- [x] 5.8 Timed on the rented machine like the other rows: 2026-11-22, cpu-xl, Chrome 158.0.8127.36, three runs (the owner approved the cost; about 10 minutes of machine time). Redline has two runs of three for office-open, Fidus Writer and docs.plus (HTTP 429 on the third). The field page now scores their speed and memory
 - [x] 5.9 The assistant probes (the "Measured with" table), run on the live site in Chrome 2026-11-22: GenOffice and office-open pass all; docs.plus loses inline code and quotes; Fidus Writer cannot be probed (its export fails). In the README table
 - [x] 5.10 On viewers.benchmarks.law: all four have a browser page there (it reads this registry), and office-open, Fidus Writer and docs.plus a server route built 2026-11-21; GenOffice needs a browser. This line first said "not built", written before the routes were
 - [x] 5.11 The docs.plus demo dropped pictures that are not in the trial's test file (found by an outside review). Fixed 2026-11-22: the mirror replaces the demo's refusing statement, and the rich sample's picture shows and is in the export
@@ -127,3 +127,4 @@ has no figures of its own.
 | 2026-11-22 | 5.9, 5.10, 5.11 | Probes run for the three tools that export; the viewers-site line corrected; the docs.plus demo's picture limit recorded |
 | 2026-11-22 | 5.11 | The docs.plus page keeps pictures |
 | 2026-11-22 | 5.8 | Closed by the owner's decision: the four stay unscored for speed and memory |
+| 2026-11-22 | 5.8 | Measured on the rented machine; replaces the owner's earlier decision to leave them unscored |

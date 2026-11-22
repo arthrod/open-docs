@@ -215,7 +215,7 @@ Measured 2026-11-21: Google Chrome 158.0.8127.36 (installed, headed) via Playwri
 
 **Rich sample (`showcase.docx`, 3 pages)**
 
-Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores.
+Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores; median 56.6, highest 75.7, on 64 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -236,14 +236,14 @@ Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64
 | BetterOffice | 1.39 s | 1.58 s | 12 MB | 648 MB (+64 MB) | 3 | 3 of 3 |
 | OnlyOffice (CryptPad build) | 3.06 s | 3.06 s | 50 MB | 892 MB (+225 MB) | 3 | 3 of 3 |
 | OpenDoc | 720 ms | 840 ms | 12 MB | 676 MB (+63 MB) | 3 | 3 of 3 |
-| GenOffice (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 391 ms | 391 ms | 17 MB | 566 MB (+134 MB) | 3 | 3 of 3 |
-| office-open (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 297 ms | 297 ms | 7 MB | 505 MB (+179 MB) | n/a | 3 of 3 |
-| Fidus Writer (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 185 ms | 185 ms | 5 MB | 379 MB (+42 MB) | n/a | 3 of 3 |
-| docs.plus (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.0, highest 5.8, on 12 cores) | 190 ms | 190 ms | 10 MB | 423 MB (+58 MB) | n/a | 3 of 3 |
+| GenOffice | 921 ms | 921 ms | 17 MB | 543 MB (+90 MB) | 3 | 3 of 3 |
+| office-open | 668 ms | 668 ms | 7 MB | 543 MB (+157 MB) | n/a | 3 of 3 |
+| Fidus Writer | 228 ms | 228 ms | 5 MB | 435 MB (+42 MB) | n/a | 3 of 3 |
+| docs.plus | 254 ms | 254 ms | 10 MB | 446 MB (+41 MB) | n/a | 3 of 3 |
 
 **Redline (`redline.docx`, 3 pages)**
 
-Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64 cores.
+Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64 cores; median 56.6, highest 75.7, on 64 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -264,10 +264,10 @@ Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64
 | BetterOffice | 1.28 s | 1.28 s | 14 MB | 696 MB (+116 MB) | 3 | 2 of 3 |
 | OnlyOffice (CryptPad build) | 2.55 s | 2.55 s | 50 MB | 898 MB (+230 MB) | 3 | 3 of 3 |
 | OpenDoc | 813 ms | 1.04 s | 13 MB | 728 MB (+111 MB) | 3 | 3 of 3 |
-| GenOffice (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 592 ms | 592 ms | 18 MB | 590 MB (+161 MB) | 3 | 3 of 3 |
-| office-open (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 292 ms | 292 ms | 7 MB | 517 MB (+190 MB) | n/a | 3 of 3 |
-| Fidus Writer (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 183 ms | 183 ms | 5 MB | 379 MB (+45 MB) | n/a | 3 of 3 |
-| docs.plus (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 5.1, highest 6.3, on 12 cores) | 190 ms | 190 ms | 10 MB | 426 MB (+60 MB) | n/a | 3 of 3 |
+| GenOffice | 998 ms | 998 ms | 18 MB | 562 MB (+106 MB) | 3 | 3 of 3 |
+| office-open | 682 ms | 682 ms | 7 MB | 552 MB (+166 MB) | n/a | 2 of 3 |
+| Fidus Writer | 233 ms | 233 ms | 5 MB | 430 MB (+39 MB) | n/a | 2 of 3 |
+| docs.plus | 269 ms | 269 ms | 10 MB | 447 MB (+41 MB) | n/a | 2 of 3 |
 
 **500 pages (`lorem-500.docx`)**
 
@@ -292,10 +292,10 @@ Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64
 | BetterOffice | 8.05 s | 8.90 s | 23 MB | 1296 MB (+717 MB) | 500 | 3 of 3 |
 | OnlyOffice (CryptPad build) | 12.8 s | 12.8 s | 134 MB | 949 MB (+278 MB) | 500 | 2 of 3 |
 | OpenDoc | 3.54 s | 7.01 s | 12 MB | 910 MB (+291 MB) | 500 | 3 of 3 |
-| GenOffice (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 531 ms | 5.50 s | 38 MB | 1072 MB (+641 MB) | 500 | 3 of 3 |
-| office-open (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 533 ms | 533 ms | 7 MB | 692 MB (+364 MB) | n/a | 3 of 3 |
-| Fidus Writer (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 292 ms | 292 ms | 7 MB | 458 MB (+122 MB) | n/a | 3 of 3 |
-| docs.plus (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 4.1, highest 4.8, on 12 cores) | 582 ms | 582 ms | 13 MB | 576 MB (+210 MB) | n/a | 3 of 3 |
+| GenOffice | 1.62 s | 22.2 s | 39 MB | 1121 MB (+669 MB) | 500 | 3 of 3 |
+| office-open | 1.53 s | 1.53 s | 7 MB | 715 MB (+330 MB) | n/a | 3 of 3 |
+| Fidus Writer | 553 ms | 553 ms | 7 MB | 504 MB (+115 MB) | n/a | 3 of 3 |
+| docs.plus | 1.21 s | 1.21 s | 13 MB | 598 MB (+192 MB) | n/a | 3 of 3 |
 <!-- samples:end -->
 
 What to know when reading them:
@@ -676,9 +676,13 @@ same-origin frame mirrored from `benchmarks.law/demo-apps/`). Opening a file
 loads that frame again with the document; export presses the demo's own
 Download ([`lib/demo-frame.ts`](lib/demo-frame.ts)).
 
-- **They were measured on a Mac, not on the rented machine of the other rows**
-  (2026-11-21, three runs each). Their rows say so, and their times and memory
-  are not comparable with the others'. Their download sizes are.
+- **They were measured on the rented machine of the other rows on 2026-11-22**
+  (the same cpu-xl type and Chrome 158.0.8127.36, three runs each; files in the
+  dataset under `2026-11-22-xl1-new4`, and here as `docs/samples/2026-11-22-*-retake.json`).
+  Their first rows, from a Mac on 2026-11-21, are replaced. On the tracked-changes
+  sample three of them (office-open, Fidus Writer, docs.plus) have two runs of
+  three: the third was refused by this site's request limit (HTTP 429). GenOffice
+  on the 500 pages loads in 1.62 s and settles in 22.2 s there (5.5 s on the Mac).
 - **office-open is a library with no editor.** Its page shows what the parser
   read. docen is the editor built on it.
 - **Fidus Writer's exporter failed on every sample here**: "File not found" on
