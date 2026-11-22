@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Measure both sites on a Hugging Face Jobs machine (Linux, no GPU). Billed by the minute.
 #
-#   SITE=smoke|editors|viewer|both|probe|retake  (retake: RETAKE_FROM=<date> V_ENGINES=… E_ENGINES=…)
+#   SITE=smoke|editors|viewer|both|probe|retake  (retake: RETAKE_FROM=<date> V_ENGINES=… [V_SERVER_ENGINES=…] E_ENGINES=…)
 #    RUNS=<n> (not for smoke and probe)  PROBE_URLS="<url> …" (probe only)  HF_TOKEN=<token with write access>
 #
 # Run as the job's command, in the python:3.12 image, as root, on the flavor the published figures
@@ -180,6 +180,15 @@ PY
     step - 12 $PW scripts/measure.py "$V_ENGINES" "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase-retake.json" >/dev/null 2>/tmp/r1.log; tail -3 /tmp/r1.log | cut -c1-400
     step - 12 $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline-retake.json" >/dev/null 2>/tmp/r2.log; tail -3 /tmp/r2.log | cut -c1-400
     step - 15 $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500-retake.json" >/dev/null 2>/tmp/r3.log; tail -3 /tmp/r3.log | cut -c1-400
+    # The server lanes of those engines that have a /r/ route (V_SERVER_ENGINES): the curl timings
+    # of the tracked-changes and 500-page samples, then what the browser pays for each render.
+    if [ -n "${V_SERVER_ENGINES:-}" ]; then
+      export MEASURE_WHERE="from $HW_CURL"
+      step - 5 python3 -I scripts/measure_server.py "$V_SERVER_ENGINES" "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-server-redline-retake.json" >/dev/null
+      step - 8 python3 -I scripts/measure_server.py "$V_SERVER_ENGINES" "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-server-lorem-500-retake.json" >/dev/null
+      export MEASURE_WHERE="from $HW"
+      step - 20 $PW scripts/measure_server_client.py "$V_SERVER_ENGINES" showcase,redline,lorem-500 "$RUNS" --out results/server-client.json --raw "results/raw/$D-server-client-retake.json" >/dev/null 2>/tmp/r4.log; tail -3 /tmp/r4.log | cut -c1-400
+    fi
     mkdir -p results/logs; cp /tmp/r?.log results/logs/; up results "$P/viewer/results"
   fi
   if [ -n "${E_ENGINES:-}" ]; then
