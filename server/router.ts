@@ -85,10 +85,8 @@ function madeBySection(makers: Maker[]): string {
         ${items}`;
 }
 
-function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string, makers: Maker[] = [], note: string | null = null): string {
-  const allEditors = embed
-    ? `<a role="menuitem" href="/" target="_blank" rel="noopener">All editors &amp; measurements</a>`
-    : `<a role="menuitem" href="/">All editors &amp; measurements</a>`;
+function menuPanel(embed: boolean, viewer: boolean, opensFiles: boolean, repo: string, makers: Maker[] = []): string {
+  const allEditors = `<a role="menuitem" href="/"${embed ? ' target="_blank" rel="noopener"' : ""}>All editors &amp; measurements</a>`;
   const arena = embed
     ? ""
     : `\n        <a role="menuitem" href="https://arena.benchmarks.law" target="_blank" rel="noopener">Editors arena →</a>`;
