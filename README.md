@@ -677,7 +677,8 @@ Download ([`lib/demo-frame.ts`](lib/demo-frame.ts)).
   you open, is missing on that page. That is the demo build's limit, not
   docs.plus's: its server route on viewers.benchmarks.law runs the same import
   and keeps the pictures.
-- They were not run through the probes of 2026-11-20 below.
+- The probes below were run for GenOffice, office-open and docs.plus on 2026-11-22; Fidus Writer cannot
+  be probed, since its export fails.
 
 ### Assessment (2026-11-09): harness or editor?
 
@@ -752,6 +753,10 @@ Run on the live site on 2026-11-20, in Chrome on a Mac, once per engine:
 | WordCraft | 10 of 10 | all but the quote: its paste makes a quote an indented Normal paragraph, which nothing tells from an indented paragraph | all but the quote; and the first paragraph kept the Heading 1 of the document it replaced (the mapping probe ran before it on the same page): **not looked into** |
 | canvas-editor | 2 of 10 (the two headings): its `plugin-docx` writes no bold, italic, code, link, list or quote this probe recognises | headings and lists only | table only |
 | Univer | not applicable: no .docx export | not applicable | fails seven of eight: it is handed text, so code, quotes, tables and links do not exist in it |
+| GenOffice (run 2026-11-22) | 10 of 10 | all | all |
+| office-open (run 2026-11-22) | 10 of 10 | all | all |
+| docs.plus (run 2026-11-22) | 8 of 10: its import drops inline code and the quote (the words stay, as plain text) | all but code and the quote | all but four: a quote, inline code alone in a paragraph, a code block and backticks in code all arrive as plain text; and a first paragraph becomes the title heading, since a docs.plus document must start with one |
+| Fidus Writer | not applicable: its export fails, so there is nothing to read back | not applicable | not applicable |
 
 **The run of 2026-11-09 said all eight editors passed everything, and on
 2026-11-20 that was no longer true of any engine that takes the assistant's
