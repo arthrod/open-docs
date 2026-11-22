@@ -2,6 +2,7 @@
   "imports": {
     "https://esm.town/v/std/blob/main.ts": "./std_shim.ts",
     "https://esm.town/v/std/utils/index.ts": "./std_shim.ts",
+    "https://esm.town/v/std/utils/serve-file.ts": "./std_shim.ts",
     "https://esm.town/v/std/sqlite/main.ts": "./std_shim.ts",
     "https://esm.town/v/std/openai": "./std_shim.ts"
   }

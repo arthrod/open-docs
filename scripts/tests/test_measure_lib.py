@@ -331,3 +331,339 @@ def test_a_stopped_run_writes_beside_the_days_file_not_over_it():
     now = datetime.datetime(2026, 11, 17, 5, 6, 7, tzinfo=datetime.timezone.utc)
     assert lib.stopped_path("results/raw/2026-11-17-browser-showcase.json", now) == "results/raw/2026-11-17-browser-showcase-stopped-050607Z.json"
     assert lib.stopped_path(None) is None
+
+
+def test_chrome_memory_counts_renderers_below_the_zygote_on_linux_and_direct_children_on_macos():
+    """The same process tree is read on both systems: renderers below the zygote (Linux) or the browser (macOS)."""
+    linux = [
+        (10, 1, 500, "/opt/google/chrome/chrome --user-data-dir=/tmp/p --no-sandbox"),
+        (11, 10, 50, "/opt/google/chrome/chrome --type=zygote --user-data-dir=/tmp/p"),
+        (12, 11, 70, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/p"),
+        (13, 11, 30, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/p"),
+        (14, 10, 20, "/opt/google/chrome/chrome --type=gpu-process --user-data-dir=/tmp/p"),
+        (20, 1, 500, "/opt/google/chrome/chrome --user-data-dir=/tmp/other"),
+        (21, 20, 999, "/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/other"),
+    ]
+    assert lib.chrome_memory_of(linux, "/tmp/p") == {"rendererRss": 100, "renderers": 2, "gpuRss": 20}
+    mac = [
+        (10, 1, 500, "Google Chrome --user-data-dir=/tmp/p"),
+        (12, 10, 70, "Google Chrome Helper (Renderer) --type=renderer --user-data-dir=/tmp/p"),
+        (14, 10, 20, "Google Chrome Helper (GPU) --type=gpu-process --user-data-dir=/tmp/p"),
+    ]
+    assert lib.chrome_memory_of(mac, "/tmp/p") == {"rendererRss": 70, "renderers": 1, "gpuRss": 20}
+    assert lib.chrome_memory_of(linux, "/tmp/none") == {"rendererRss": 0, "renderers": 0, "gpuRss": 0}
+
+
+def test_chrome_args_come_from_the_environment_and_default_to_none():
+    """An explicit mapping makes the result independent of the process environment."""
+    assert lib.chrome_args({}) == []
+    assert lib.chrome_args({"OD_CHROME_ARGS": "--no-sandbox  --disable-dev-shm-usage"}) == ["--no-sandbox", "--disable-dev-shm-usage"]
+
+
+def test_chrome_args_keep_a_quoted_value_whole_and_read_the_process_environment(monkeypatch):
+    """Shell quoting applies, and a call without a mapping reads os.environ (what the launchers do)."""
+    assert lib.chrome_args({"OD_CHROME_ARGS": '--user-agent="Benchmark Browser" --no-sandbox'}) == ["--user-agent=Benchmark Browser", "--no-sandbox"]
+    monkeypatch.setenv("OD_CHROME_ARGS", "--no-sandbox")
+    assert lib.chrome_args() == ["--no-sandbox"]
+    monkeypatch.delenv("OD_CHROME_ARGS")
+    assert lib.chrome_args() == []
+
+
+def test_where_note_names_the_chrome_flags_the_description_left_out():
+    """A published environment line always shows the start-up flags, said by the operator or not."""
+    assert lib.where_note("Linux x86_64", {}) == "Linux x86_64"
+    assert lib.where_note("Linux x86_64", {"MEASURE_WHERE": "a laptop"}) == "a laptop"
+    assert lib.where_note("Linux x86_64", {"OD_CHROME_ARGS": "--no-sandbox"}) == "Linux x86_64; Chrome started with --no-sandbox"
+    both = {"MEASURE_WHERE": "a job, Chrome with --no-sandbox", "OD_CHROME_ARGS": "--no-sandbox --disable-gpu"}
+    assert lib.where_note("x", both) == "a job, Chrome with --no-sandbox; Chrome started with --disable-gpu"
+
+
+def test_chrome_memory_does_not_take_a_chrome_whose_profile_path_only_starts_the_same():
+    """/tmp/p and /tmp/pq are two browsers: each one's renderers count for itself only."""
+    rows = [
+        (10, 1, 500, "chrome --user-data-dir=/tmp/p --no-first-run"),
+        (11, 10, 40, "chrome --type=renderer --user-data-dir=/tmp/p"),
+        (20, 1, 500, "chrome --user-data-dir=/tmp/pq --no-first-run"),
+        (21, 20, 900, "chrome --type=renderer --user-data-dir=/tmp/pq"),
+    ]
+    assert lib.chrome_memory_of(rows, "/tmp/p") == {"rendererRss": 40, "renderers": 1, "gpuRss": 0}
+    assert lib.chrome_memory_of(rows, "/tmp/pq") == {"rendererRss": 900, "renderers": 1, "gpuRss": 0}
+
+
+def test_an_analysis_pagespeed_served_from_its_cache_is_not_counted_twice():
+    """Five requests in three minutes came back as three analyses (2026-11-20): a copy has the first one's time."""
+    seen: dict = {}
+    first = {"page": "e/univer", "desktop": {"performance": 93, "fetchTime": "2026-11-20T05:53:01Z"}, "mobile": {"performance": 91, "fetchTime": "2026-11-20T05:53:02Z"}}
+    assert lib.repeated_analysis(first, seen) == []
+    copy = {"page": "e/univer", "desktop": {"performance": 93, "fetchTime": "2026-11-20T05:53:01Z"}, "mobile": {"performance": 88, "fetchTime": "2026-11-20T05:54:40Z"}}
+    again = lib.repeated_analysis(copy, seen)
+    assert again == ["desktop"]
+    kept = lib.without_repeats(copy, again)
+    assert "desktop" not in kept and kept["mobile"]["performance"] == 88 and kept["error"] == lib.PSI_REPEAT and kept["repeated"] == ["desktop"]
+    # The same time on another page is another analysis, and a report without a time is never called a copy.
+    assert lib.repeated_analysis({"page": "e/plate", "desktop": {"performance": 93, "fetchTime": "2026-11-20T05:53:01Z"}}, seen) == []
+    assert lib.repeated_analysis({"page": "e/univer", "desktop": {"performance": 93}}, seen) == []
+    assert lib.summarize({"lighthouseVersion": "13", "fetchTime": "2026-11-20T05:53:01Z", "categories": {}, "audits": {}})["fetchTime"] == "2026-11-20T05:53:01Z"
+    e = lib.page_entry([first, kept], limit_s=240)
+    assert e["desktop"]["performanceRuns"] == [93, None] and e["mobile"]["performanceRuns"] == [91, 88]
+
+
+# --- review of pull requests 71 and 72 (2026-11-20) ---
+
+
+def _psi(page, d=None, m=None):
+    x = {"page": page}
+    if d:
+        x["desktop"] = {"performance": 90, "fetchTime": d}
+    if m:
+        x["mobile"] = {"performance": 80, "fetchTime": m}
+    return x
+
+
+def test_a_fresh_form_factor_is_kept_while_the_other_is_asked_again():
+    """D0 and M0 are counted. An attempt returns D0 (a copy) with a fresh M1; the next returns a
+    fresh D1 with M1, which is now a copy of the attempt before. Both fresh analyses are published."""
+    seen: dict = {}
+    assert lib.repeated_analysis(_psi("e/plate", "D0", "M0"), seen) == []
+    kept: dict = {}
+    first = _psi("e/plate", "D0", "M1")
+    assert lib.still_repeated(kept, first, lib.repeated_analysis(first, seen)) == ["desktop"]
+    second = _psi("e/plate", "D1", "M1")
+    missing = lib.still_repeated(kept, second, lib.repeated_analysis(second, seen))
+    assert missing == []
+    out = lib.with_kept(second, kept, missing)
+    assert out["desktop"]["fetchTime"] == "D1" and out["mobile"]["fetchTime"] == "M1" and "error" not in out
+
+
+def test_a_fresh_form_factor_survives_a_retry_that_fails():
+    seen: dict = {}
+    lib.repeated_analysis(_psi("e/plate", "D0", "M0"), seen)
+    kept: dict = {}
+    first = _psi("e/plate", "D0", "M1")
+    lib.still_repeated(kept, first, lib.repeated_analysis(first, seen))
+    failed = {"page": "e/plate", "error": "PageSpeed gave no result within 240 s"}
+    missing = lib.still_repeated(kept, failed, lib.repeated_analysis(failed, seen))
+    out = lib.with_kept(failed, kept, missing)
+    assert out["mobile"]["fetchTime"] == "M1" and "desktop" not in out and out["error"].startswith("PageSpeed gave no result")
+
+
+def test_a_form_factor_that_stays_a_copy_is_left_out_and_said_so():
+    seen: dict = {}
+    lib.repeated_analysis(_psi("e/plate", "D0", "M0"), seen)
+    kept: dict = {}
+    x = _psi("e/plate", "D0", "M1")
+    missing = lib.still_repeated(kept, x, lib.repeated_analysis(x, seen))
+    out = lib.with_kept(x, kept, missing)
+    assert "desktop" not in out and out["repeated"] == ["desktop"] and out["mobile"]["fetchTime"] == "M1"
+
+
+def _count(readings, quiet_s=1.0, wait_s=3.0):
+    """stable_count over a scripted list of readings (an Exception is a read that failed), on a fake clock."""
+    t = [0.0]
+    it = iter(readings)
+
+    async def read():
+        v = next(it, readings[-1])
+        if isinstance(v, Exception):
+            raise v
+        return v
+
+    async def sleep(s):
+        t[0] += s
+
+    return lib.asyncio.run(lib.stable_count(read, quiet_s, wait_s, now=lambda: t[0], sleep=sleep))
+
+
+def test_a_page_count_kept_when_the_reads_then_fail_is_flagged():
+    pages, _, _, still = _count([100, TimeoutError()])
+    assert pages == 100 and still is True
+
+
+def test_a_page_count_of_zero_is_waited_on_and_no_counter_is_not():
+    pages, changes, _, still = _count([0, 0, 12, 12, 12, 12])
+    assert pages == 12 and changes == 1 and still is False
+    assert _count([None])[0] is None
+
+
+def test_a_page_count_that_went_quiet_is_not_flagged_and_one_that_never_did_is():
+    assert _count([52, 103, 500])[::3] == (500, False)
+    assert _count(list(range(1, 40)))[3] is True
+
+
+def test_settled_takes_the_page_count_only_when_the_count_stopped():
+    out = {"settledMs": 1700}
+    lib.settle_by_pages(out, 4300, still_changing=False)
+    assert out == {"settledMs": 4300, "settledMsLongTasks": 1700, "settledBy": "pages", "pagesSettledMs": 4300}
+    out = {"settledMs": 5000}
+    lib.settle_by_pages(out, 4300, still_changing=False)
+    assert out == {"settledMs": 5000, "pagesSettledMs": 4300}
+    # Still paginating when the wait gave up: there is no settled time, and no page-count time.
+    out = {"settledMs": 1700}
+    lib.settle_by_pages(out, 4300, still_changing=True)
+    assert out == {"settledMsLongTasks": 1700, "settleTimedOut": True, "pagesStillChanging": True}
+
+
+def test_sample_row_says_how_settled_was_reached_and_leaves_an_uncollected_heap_out():
+    row = lib.sample_row([
+        {"loadMs": 1, "settledMs": 10, "settledBy": "pages", "heapBytes": 100},
+        {"loadMs": 1, "settledMs": 12, "heapBytes": 900, "heapNotCollected": "TimeoutError"},
+        {"loadMs": 1, "settledMs": 14, "heapBytes": 300},
+    ])
+    assert row["settledByPages"] == 1 and row["heapNotCollected"] == 1 and row["heapBytes"] == 200
+    # Every run uncollected: the figure is shown, with its flag, not withheld.
+    assert lib.sample_row([{"loadMs": 1, "heapBytes": 900, "heapNotCollected": "x"}])["heapBytes"] == 900
+
+
+def _quiet(loads, env):
+    """quiet_host over a scripted list of load readings (the last one repeats), on a fake clock."""
+    t, it = [0.0], iter(loads)
+    last = [loads[-1]]
+
+    def load():
+        last[0] = next(it, last[0])
+        return last[0]
+
+    async def sleep(s):
+        t[0] += s
+
+    return lib.asyncio.run(lib.quiet_host(env, load=load, sleep=sleep, now=lambda: t[0])), t[0]
+
+
+def test_a_run_waits_for_a_quiet_host_and_gives_up_with_the_reason():
+    assert _quiet([200], {}) == (None, 0.0)  # no limit given: one's own machine, no wait
+    assert _quiet([30], {"OD_MAX_LOAD": "48"}) == (None, 0.0)
+    why, waited = _quiet([90, 90, 70, 40], {"OD_MAX_LOAD": "48"})
+    assert why is None and waited == 30.0
+    why, waited = _quiet([90], {"OD_MAX_LOAD": "48", "OD_LOAD_WAIT_S": "60"})
+    assert "busy" in why and "48" in why and waited == 60.0
+
+
+# --- second review round (CodeRabbit, CodeAnt, Gitar; 2026-11-20) ---
+
+
+def test_a_retry_that_fails_keeps_the_form_factor_owed_and_says_it_was_a_copy():
+    seen: dict = {}
+    lib.remember_analyses(_psi("e/plate", "D0", "M0"), seen)
+    kept: dict = {}
+    first = _psi("e/plate", "D0", "M1")
+    missing = lib.still_repeated(kept, first, lib.repeated_analysis(first, seen, remember=False))
+    failed = {"page": "e/plate", "error": "PageSpeed gave no result within 240 s"}
+    missing = lib.still_repeated(kept, failed, lib.repeated_analysis(failed, seen, remember=False), missing)
+    assert missing == ["desktop"]  # still owed: the loop asks again
+    out = lib.with_kept(failed, kept, missing)
+    assert out["repeated"] == ["desktop"] and out["mobile"]["fetchTime"] == "M1"
+
+
+def test_only_published_analyses_are_remembered():
+    """D0/M0 are counted. A job gets D1 with M0 (a copy), then D2 with M1: D1 and M1 are published.
+    D2 was never published, so the next job may count it; D1 may not be counted twice."""
+    seen: dict = {}
+    lib.remember_analyses(_psi("e/plate", "D0", "M0"), seen)
+    kept: dict = {}
+    a = _psi("e/plate", "D1", "M0")
+    missing = lib.still_repeated(kept, a, lib.repeated_analysis(a, seen, remember=False))
+    b = _psi("e/plate", "D2", "M1")
+    missing = lib.still_repeated(kept, b, lib.repeated_analysis(b, seen, remember=False), missing)
+    out = lib.with_kept(b, kept, missing)
+    lib.remember_analyses(out, seen)
+    assert (out["desktop"]["fetchTime"], out["mobile"]["fetchTime"]) == ("D1", "M1")
+    assert lib.repeated_analysis(_psi("e/plate", "D2"), seen, remember=False) == []
+    assert lib.repeated_analysis(_psi("e/plate", "D1", "M1"), seen, remember=False) == ["desktop", "mobile"]
+
+
+def test_the_first_fresh_report_counts_even_with_an_error_and_a_report_without_a_time_is_kept():
+    kept: dict = {}
+    bad = {"page": "e/plate", "desktop": {"fetchTime": "D1", "error": "the engine failed to start"}}
+    # A fresh report with an error is a result: it is not asked for again.
+    assert lib.still_repeated(kept, bad, ["mobile"]) == ["mobile"]
+    good = _psi("e/plate", "D2", "M1")
+    assert lib.still_repeated(kept, good, [], ["mobile"]) == []
+    assert kept["desktop"] == bad["desktop"] and kept["mobile"]["fetchTime"] == "M1"
+    # A report that carries no time cannot be a copy: it is kept like any fresh one.
+    kept = {}
+    lib.still_repeated(kept, {"page": "e/plate", "desktop": {"performance": 90}}, ["mobile"])
+    assert kept == {"desktop": {"performance": 90}}
+
+
+def test_a_run_without_a_heap_reading_does_not_hide_the_uncollected_one():
+    row = lib.sample_row([{"loadMs": 1}, {"loadMs": 1, "heapBytes": 900, "heapNotCollected": "x"}])
+    assert row["heapBytes"] == 900 and row["heapNotCollected"] == 1
+    row = lib.sample_row([{"loadMs": 1}, {"loadMs": 1, "heapBytes": 900, "heapNotCollected": "x"}, {"loadMs": 1, "heapBytes": 100}])
+    assert row["heapBytes"] == 100
+
+
+def test_a_count_of_zero_followed_by_failed_reads_is_flagged_too():
+    pages, _, _, still = _count([0, TimeoutError()])
+    assert pages == 0 and still is True
+    assert _count([TimeoutError()])[3] is False  # nothing was ever read: no counter to doubt
+
+
+def test_a_page_named_twice_is_analysed_once_per_round():
+    assert lib.page_list("e/plate,e/folio,e/plate, ,e/folio") == ["e/plate", "e/folio"]
+
+
+# --- Lighthouse run on this computer (scripts/measure_lighthouse_local.py) ---
+
+
+def test_local_lighthouse_command_is_one_page_one_form_factor():
+    cmd = lib.lighthouse_local_cmd(["lighthouse"], "https://x.test/v/a?src=b", "desktop", "/o/a.json", 240)
+    assert cmd[:2] == ["lighthouse", "https://x.test/v/a?src=b"]
+    assert "--preset=desktop" in cmd and "--output-path=/o/a.json" in cmd and "--max-wait-for-load=240000" in cmd
+    assert any(a.startswith("--chrome-flags=") and "--headless=new" in a for a in cmd)
+    mobile = lib.lighthouse_local_cmd(["pnpm", "dlx", "lighthouse@13.6.0"], "https://x.test/e/a", "mobile", "/o/b.json", 240)
+    assert not any(a.startswith("--preset") for a in mobile), "mobile is Lighthouse's default: a phone on slow 4G"
+    assert mobile[:3] == ["pnpm", "dlx", "lighthouse@13.6.0"]
+
+
+def test_local_lighthouse_failure_is_blamed_on_this_computer_not_google():
+    report = {"lighthouseVersion": "13.6.0", "categories": {"performance": {"score": 1}},
+              "audits": {"errors-in-console": {"details": {"items": [{"description": "[open-docs-viewer] WordCraft failed to start"}]}}}}
+    here = lib.summarize(report, here=True)
+    assert here["error"].startswith("the engine failed on this computer"), here
+    assert "Google" not in here["error"]
+    assert lib.summarize(report)["error"].startswith("the engine failed on Google's machine")
+    # Both wordings count as the engine failing when a page's analyses are put together.
+    entry = lib.page_entry([{"page": "v/a", "desktop": here, "mobile": here}], 240, who="Lighthouse")
+    assert entry["desktop"]["performance"] is None and entry["desktop"]["error"].startswith("the engine failed on this computer")
+
+
+def test_local_lighthouse_missing_result_names_lighthouse():
+    entry = lib.page_entry([{"page": "v/a", "desktop": {"performance": 90, "version": "13.6.0"}}], 240, who="Lighthouse")
+    assert entry["mobile"]["error"] == "Lighthouse gave no mobile result within 240 s"
+    assert lib.page_entry([{"page": "v/a"}], 240)["desktop"]["error"].startswith("PageSpeed gave no desktop result")
+
+
+def test_local_lighthouse_environment_says_where_and_how_fast_the_machine_was():
+    raw = [{"load1": 80.0, "cores": 12, "desktop": {"benchmarkIndex": 700}, "mobile": {"benchmarkIndex": 900}},
+           {"load1": 40.0, "cores": 12, "desktop": {"benchmarkIndex": 1100}}]
+    env = lib.lighthouse_local_env("13.6.0", 3, raw, "Chrome/158.0.1", "a MacBook")
+    assert env.startswith("Lighthouse 13.6.0 run on a MacBook, Chrome/158.0.1, headless")
+    assert "3 analyses per page and form factor" in env
+    assert "Lighthouse's CPU benchmark index median 900, lowest 700" in env
+    assert "machine load (1-minute average) median 60.0, highest 80.0, on 12 cores" in env
+
+
+def test_a_results_file_that_cannot_be_parsed_stops_the_pass_and_a_missing_one_starts_empty(tmp_path):
+    assert lib.read_results(None) == {} and lib.read_results(str(tmp_path / "none.json")) == {}
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"pages": {"e/folio": ')
+    with pytest.raises(ValueError):
+        lib.read_results(str(bad))
+    good = tmp_path / "good.json"
+    good.write_text('{"pages": {"e/folio": {}}}')
+    assert lib.read_results(str(good)) == {"pages": {"e/folio": {}}}
+
+
+def test_the_local_heading_reports_the_load_of_every_analysis_not_the_last_of_each_page():
+    raw = [{"page": "e/folio", "load1": 10, "cores": 12, "desktop": {"benchmarkIndex": 4000, "load1": 80, "cores": 12}, "mobile": {"benchmarkIndex": 4000, "load1": 10, "cores": 12}}]
+    env = lib.lighthouse_local_env("13.6.0", 3, raw, "Chrome 158", "this computer")
+    assert "highest 80.0" in env
+
+
+def test_the_cleanup_after_a_killed_lighthouse_matches_only_the_chrome_lighthouse_started():
+    import re
+    cmd = lib.stop_lighthouse_chrome()
+    assert cmd[:3] == ["pkill", "-9", "-f"]
+    theirs = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --remote-debugging-port=51234 --user-data-dir=/var/folders/x/T/lighthouse.Ab3dE9f --headless=new"
+    someone = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/Users/me/Library/Application Support/Google/Chrome"
+    assert re.search(cmd[3], theirs) and not re.search(cmd[3], someone)

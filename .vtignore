@@ -15,3 +15,7 @@ __pycache__
 cov
 .github
 .ruff_cache
+README.md
+docs/samples/2026-11-17.json
+docs/samples/2026-11-18.json
+.local-state/blobs

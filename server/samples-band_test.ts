@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1.0.13";
+import { assert, assertEquals } from "jsr:@std/assert@1.0.13";
 import { editors } from "./registry.ts";
 import { type SampleMeasurements, samplesBand } from "./samples-band.ts";
 import { REVISION_NOTES } from "../lib/revision-notes.ts";
@@ -111,4 +111,80 @@ Deno.test("a row whose median stands on some of the runs says how many loaded an
   assertEquals(html.includes("3 of 5 runs loaded: not ready within 300s"), true);
   assertEquals(html.includes(" at y"), false);
   assertEquals((html.match(/runs loaded/g) ?? []).length, 1); // a full set says nothing extra
+});
+
+Deno.test("samples band: a figure found wrong says so under the engine's name, and only where it was told", () => {
+  const row = { startupMs: 1, loadMs: 3404, settledMs: 3562, heapBytes: 1, rendererRssReady: 1, rendererRss: 2, gpuRss: 1, pages: 409, runs: [3404], failed: null };
+  const data = { measuredAt: "2026-11-18", environment: "test", samples: { "lorem-500": { onlyoffice: row, folio: row } } };
+  const all = [{ slug: "onlyoffice", name: "OnlyOffice" }, { slug: "folio", name: "folio" }] as never;
+  const plain = samplesBand(all, data);
+  assert(!plain.includes("read with care:"), "a data set with no caveats of its own shows none");
+  const told = samplesBand(all, data, { checked: "2026-11-20", "lorem-500": { onlyoffice: "pages are <wrong>" } });
+  assertEquals(told.split("read with care:").length - 1, 1);
+  assert(told.includes("read with care: pages are &lt;wrong&gt;</small>"));
+  assert(told.includes("checked again on 2026-11-20"));
+});
+
+Deno.test("rows of one pass that differ only in host load carry no note; each table says its own load", () => {
+  const m = "Chrome, a cpu-xl machine";
+  const load = (a: string) => `${m}; machine load (1-minute average) ${a}, on 64 cores`;
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21", environment: load("median 56.6, highest 75.7"),
+    samples: {
+      redline: { folio: row({ measuredAt: "2026-11-21", environment: load("median 25.0, highest 32.0") }) },
+      "lorem-500": { folio: row({ measuredAt: "2026-11-21", environment: load("median 56.6, highest 75.7") }) },
+    },
+  };
+  const html = samplesBand(editors, data);
+  assertEquals(html.includes('class="prov">measured'), false);
+  assertEquals(html.includes(`measured 2026-11-21: ${m}.`), true);
+  assertEquals(html.includes("Host load during these runs (1-minute average): median 25.0, highest 32.0, on 64 cores."), true);
+  assertEquals(html.includes("Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores."), true);
+});
+
+Deno.test("a row measured on another machine names that machine, not the whole environment line", () => {
+  const method = "Chrome 158 via Playwright, fresh profile per run (cold cache), 3 runs, median";
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21",
+    environment: `${method}; a rented machine (no GPU: Chrome draws in software; the load is the shared host's), under Xvfb; machine load (1-minute average) median 56.6`,
+    samples: { "lorem-500": { folio: row(), docen: row({ measuredAt: "2026-11-21", environment: `${method}; a MacBook Pro (with its graphics card); machine load (1-minute average) median 30.5` }) } },
+  };
+  const html = samplesBand(editors, data);
+  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro (with its graphics card), load median 30.5</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+});
+
+Deno.test("a row measured on another machine keeps the load it was measured under, beside the machine", () => {
+  const method = "Chrome 158 via Playwright, 3 runs, median";
+  const data: SampleMeasurements = {
+    measuredAt: "2026-11-21",
+    environment: `${method}; a rented machine; machine load (1-minute average) median 56.6, highest 75.7, on 64 cores`,
+    samples: { "lorem-500": { folio: row(), docen: row({ measuredAt: "2026-11-21", environment: `${method}; a MacBook Pro; machine load (1-minute average) median 30.5, highest 40.0, on 12 cores` }) } },
+  };
+  const html = samplesBand(editors, data);
+  assert(html.includes('<small class="prov">measured 2026-11-21: a MacBook Pro, load median 30.5, highest 40.0, on 12 cores</small>'), html.match(/class="prov">[^<]*/)?.[0]);
+  // The table's own line still speaks of its own machine only.
+  assert(!/Host load during these runs[^<]*30\.5/.test(html));
+});
+
+Deno.test("the band heads with the rich sample when the pass measured it, as the README does", () => {
+  const row = { loadMs: 427, settledMs: 427, heapBytes: 6 << 20, rendererRss: 463 << 20, pages: 3, runs: [427, 430, 420] };
+  const html = samplesBand(editors, { measuredAt: "2026-11-21", environment: "t", samples: { showcase: { "canvas-editor": row }, redline: { "canvas-editor": row } } } as never);
+  const rich = html.indexOf('id="sample-showcase"'), red = html.indexOf('id="sample-redline"');
+  assertEquals(rich > 0 && rich < red, true);
+  assertEquals(html.includes('href="/api/showcase.docx"'), true);
+});
+
+Deno.test("the home page does not promise an editor, an export or an assistant a page does not have", async () => {
+  const { landingPage } = await import("./landing.ts");
+  const { editors } = await import("./registry.ts");
+  const html = landingPage(editors);
+  const card = (slug: string) => {
+    const i = html.indexOf(`href="/e/${slug}"`);
+    if (i < 0) throw new Error(`no card for ${slug}`);
+    return html.slice(i, html.indexOf("</a>", i));
+  };
+  if (card("fidus-writer").includes("AI assistant")) throw new Error("Fidus Writer's card promises an assistant");
+  if (card("fidus-writer").includes(".docx in/out")) throw new Error("Fidus Writer's card promises an export");
+  if (!card("office-open").includes("Open page")) throw new Error("office-open's card calls it an editor");
+  if (!card("genoffice").includes("AI assistant")) throw new Error("GenOffice's card lost its assistant tag");
 });

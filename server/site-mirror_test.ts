@@ -30,3 +30,17 @@ Deno.test("site mirror: a name that could collide with another file's storage ke
   if (mirrorTarget("/vendor/opendoc/2026-11-05/src__app__main.mjs") !== null) throw new Error("accepted a colliding name");
   if (mirrorTarget("/vendor/opendoc/2026-11-05/src/app/main.mjs") === null) throw new Error("refused a plain name");
 });
+
+Deno.test("site mirror: the docs.plus demo's script keeps a picture it does not know", async () => {
+  const { docsPlusKeepPictures, MIRRORS } = await import("./site-mirror.ts");
+  const built = "wue=async(e,t)=>{let n=yue[bue(q9(e))];if(!n)throw Error(`Image (${t}) is not part of the bundled media set`);return new URL(n,Q9()).href}";
+  const out = docsPlusKeepPictures(built);
+  if (out.includes("throw Error")) throw new Error("still refuses");
+  if (!out.includes('if(!n)return URL.createObjectURL(new Blob([q9(e)],{type:t||"image/png"}));return new URL(n,Q9()).href}')) throw new Error(out);
+  if (docsPlusKeepPictures("let a=1;") !== "let a=1;") throw new Error("changed other code");
+  // The rewritten script has an address of its own; the other demos' pages keep theirs.
+  const page = '<head></head><script type="module" src="./assets/index-abc.js"></script>';
+  if (!MIRRORS["docs-plus"].page!("index.html", page, "").includes('src="./assets/index-abc.js?pictures=2"')) throw new Error("no new address");
+  if (!MIRRORS["genoffice"].page!("index.html", page, "").includes('src="./assets/index-abc.js"')) throw new Error("another demo's address changed");
+  if (MIRRORS["genoffice"].script) throw new Error("another demo's script is rewritten");
+});

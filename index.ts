@@ -10,12 +10,13 @@ import { parseVal, serveFile } from "https://esm.town/v/std/utils/index.ts";
 import { editors } from "./server/registry.ts";
 import { mountShared, registerEditor } from "./server/router.ts";
 import { landingPage } from "./server/landing.ts";
+import { blogIndex, blogPost } from "./server/blog.ts";
 import { editorMounts } from "./editors/index.ts";
 import { fixtureMarkerFreeDocx, fixtureBriefDocx, fixtureSourcesText } from "./editors/cite-check/fixture.ts";
 import { ICONS_VERSION } from "./editors/docen/assets.ts";
 import { serveWordcraft, WORDCRAFT_BASE } from "./editors/wordcraft/assets.ts";
 import { serveVendored } from "./server/npm-vendor.ts";
-import { pageOrigin, serveMirror } from "./server/site-mirror.ts";
+import { pageOrigin, serveMirror, TRIAL_DEMOS } from "./server/site-mirror.ts";
 import { serveOnlyoffice } from "./server/onlyoffice.ts";
 
 const app = new Hono();
@@ -70,6 +71,7 @@ app.get("/api/svg-raw/:file", async (c) => {
 app.get("/vendor/npm/*", (c) => serveVendored(c.req.path));
 // Dated snapshots of engines published only as a website (server/site-mirror.ts).
 app.get("/vendor/opendoc/*", (c) => serveMirror(c.req.path, pageOrigin(new URL(c.req.url).origin, c.req.query("od-at"))));
+for (const demo of TRIAL_DEMOS) app.get(`/vendor/${demo}/*`, (c) => serveMirror(c.req.path, new URL(c.req.url).origin));
 app.get("/vendor/onlyoffice/*", (c) => serveOnlyoffice(c.req.path, c.req.header("accept-encoding") ?? ""));
 
 // WordCraft's wasm build, cached in blob storage (editors/wordcraft/assets.ts).
@@ -80,6 +82,13 @@ app.get("/editors/*", (c) => serveFile(c.req.path));
 app.get("/lib/*", (c) => serveFile(c.req.path));
 
 app.get("/", (c) => c.html(landingPage(editors)));
+
+app.get("/blog", (c) => c.html(blogIndex()));
+app.get("/blog/", () => new Response(null, { status: 302, headers: { Location: "/blog" } }));
+app.get("/blog/:slug", async (c) => {
+  const html = await blogPost(c.req.param("slug"));
+  return html ? c.html(html) : c.notFound();
+});
 
 app.get("/source", () =>
   new Response(null, { status: 302, headers: { Location: parseVal().links.self.val } }));

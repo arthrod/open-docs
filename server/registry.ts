@@ -259,6 +259,68 @@ export const editors: EditorMeta[] = [
       { name: "Ascensio System (ONLYOFFICE)", kind: "company", github: "https://github.com/ONLYOFFICE" },
     ],
   },
+  // ---- Through the editors trial's own demo builds (lib/demo-frame.ts) ----
+  {
+    slug: "genoffice",
+    name: "GenOffice",
+    packages: ["GenOffice Docs application (genspark-ai/genoffice at 36a509e, the editors trial's demo build)"],
+    delivery: "jsdelivr",
+    license: "Apache-2.0",
+    repo: "https://github.com/genspark-ai/genoffice",
+    blurb:
+      "Genspark's desktop office suite: its Docs application is an Electron renderer, shown here with a stand-in for the desktop it expects.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "Genspark", kind: "company", github: "https://github.com/genspark-ai" },
+    ],
+  },
+  {
+    slug: "office-open",
+    name: "office-open",
+    packages: ["@office-open/docx (DemoMacro/office-open at 567addf, the editors trial's demo build)"],
+    delivery: "jsdelivr",
+    license: "MIT",
+    repo: "https://github.com/DemoMacro/office-open",
+    blurb:
+      "A library that parses and generates Office documents, with no editor of its own (docen is the editor built on it): the page shows what its parser read, and writes it back.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "DemoMacro", kind: "person", github: "https://github.com/DemoMacro" },
+    ],
+  },
+  {
+    slug: "fidus-writer",
+    name: "Fidus Writer",
+    packages: ["@fiduswriter/document (fiduswriter/fiduswriter-document-ts at dc0981d, the editors trial's demo build)"],
+    delivery: "jsdelivr",
+    license: "AGPL-3.0",
+    repo: "https://github.com/fiduswriter/fiduswriter-document-ts",
+    blurb:
+      "The document library of the academic editor Fidus Writer: its DOCX importer, its schema in a ProseMirror view and its DOCX exporter, without the server application around it.",
+    docxRoundTrip: true,
+    // Its exporter failed on this site's samples (2026-11-21), and the assistant reads the document through an export.
+    agent: false,
+    makers: [
+      { name: "Fidus Writer", kind: "company", github: "https://github.com/fiduswriter" },
+    ],
+  },
+  {
+    slug: "docs-plus",
+    name: "docs.plus",
+    packages: ["docs.plus document conversion and editor (docs-plus/docs.plus at a9b0c69, the editors trial's demo build)"],
+    delivery: "jsdelivr",
+    license: "MIT",
+    repo: "https://github.com/docs-plus/docs.plus",
+    blurb:
+      "A collaborative Tiptap editor where every heading has its own chat: its own DOCX import (mammoth) and export around its editor, without the collaboration server. A document must start with a title there: one without a heading, such as the blank document, gets the demo's placeholder, \"Complex Fixture\". The demo build knows only the pictures of the trial's own test file; this site replaces that one statement of the demo, so a picture of any document is kept, on the page and in the export.",
+    docxRoundTrip: true,
+    agent: true,
+    makers: [
+      { name: "docs.plus", kind: "company", github: "https://github.com/docs-plus" },
+    ],
+  },
   // ---- Proprietary, view-only viewers (kind: "viewer") ----
   {
     slug: "word-online",
@@ -337,5 +399,39 @@ export const editors: EditorMeta[] = [
 export function getEditor(slug: string): EditorMeta | undefined {
   return editors.find((e) => e.slug === slug);
 }
+
+/** Where benchmarks.law describes each vendor: one page, one section per tool. */
+export const VENDOR_NOTES = "https://benchmarks.law/editors-trial/vendor-notes";
+/** Engine → its section's anchor there (the heading of reports/vendors.md in editors_trial, slugged). */
+const VENDOR_NOTE_ANCHOR: Record<string, string> = {
+  "canvas-editor": "canvas-editor",
+  docxodus: "docxodus",
+  superdoc: "superdoc",
+  plate: "platejs",
+  docen: "docen",
+  eigenpal: "eigenpal",
+  folio: "folio",
+  wordcraft: "wordcraft",
+  "react-docx": "react-docx",
+  univer: "univer",
+  opendoc: "opendoc",
+  betteroffice: "betteroffice",
+  onlyoffice: "onlyoffice-cryptpad-build",
+  genoffice: "genoffice",
+  "office-open": "office-open",
+  "fidus-writer": "fidus-writer",
+  "docs-plus": "docsplus",
+  apryse: "apryse",
+  nutrient: "nutrient",
+};
+/**
+ * Sections written in the trial's vendor notes and not yet on benchmarks.law: an engine named here
+ * gets no link, since one would land at the top of the page, not on a note. Empty since
+ * 2026-11-21 (et-v0.10.6 published the six that were held back).
+ */
+export const VENDOR_NOTE_PENDING: ReadonlySet<string> = new Set([]);
+/** The vendor note of an engine, or null when benchmarks.law has no section for it. */
+export const vendorNote = (slug: string): string | null =>
+  Object.hasOwn(VENDOR_NOTE_ANCHOR, slug) && !VENDOR_NOTE_PENDING.has(slug) ? `${VENDOR_NOTES}#${VENDOR_NOTE_ANCHOR[slug]}` : null;
 
 export const isViewer = (e?: EditorMeta) => e?.kind === "viewer";
