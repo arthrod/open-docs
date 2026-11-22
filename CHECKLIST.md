@@ -105,7 +105,8 @@ has no figures of its own.
 - [x] 5.7 README: the editors table, the tracked-changes table, the assistant table and a section on what differs
 - [!] 5.8 Timed on the rented machine like the other rows: not done. It is billed, and the owner chose not to spend (2026-11-21)
 - [!] 5.9 The probes of 2026-11-20 (the "Measured with" table): not run for the four
-- [ ] 5.10 A read-only view on viewers.benchmarks.law: not built
+- [x] 5.10 On viewers.benchmarks.law: all four have a browser page there (it reads this registry), and office-open, Fidus Writer and docs.plus a server route built 2026-11-21; GenOffice needs a browser. This line first said "not built", written before the routes were
+- [x] 5.11 The docs.plus demo drops pictures that are not in the trial's test file (found by an outside review, confirmed live): said in the README and on its entry
 
 ## Log
 
