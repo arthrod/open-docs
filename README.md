@@ -215,7 +215,7 @@ Measured 2026-11-21: Google Chrome 158.0.8127.36 (installed, headed) via Playwri
 
 **Rich sample (`showcase.docx`, 3 pages)**
 
-Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores; median 56.6, highest 75.7, on 64 cores.
+Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores; the rows measured 2026-11-22: median 31.4, highest 33.1, on 64 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -236,14 +236,14 @@ Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64
 | BetterOffice | 1.39 s | 1.58 s | 12 MB | 648 MB (+64 MB) | 3 | 3 of 3 |
 | OnlyOffice (CryptPad build) | 3.06 s | 3.06 s | 50 MB | 892 MB (+225 MB) | 3 | 3 of 3 |
 | OpenDoc | 720 ms | 840 ms | 12 MB | 676 MB (+63 MB) | 3 | 3 of 3 |
-| GenOffice | 921 ms | 921 ms | 17 MB | 543 MB (+90 MB) | 3 | 3 of 3 |
-| office-open | 668 ms | 668 ms | 7 MB | 543 MB (+157 MB) | n/a | 3 of 3 |
-| Fidus Writer | 228 ms | 228 ms | 5 MB | 435 MB (+42 MB) | n/a | 3 of 3 |
-| docs.plus | 254 ms | 254 ms | 10 MB | 446 MB (+41 MB) | n/a | 3 of 3 |
+| GenOffice (measured 2026-11-22) | 921 ms | 921 ms | 17 MB | 543 MB (+90 MB) | 3 | 3 of 3 |
+| office-open (measured 2026-11-22) | 668 ms | 668 ms | 7 MB | 543 MB (+157 MB) | n/a | 3 of 3 |
+| Fidus Writer (measured 2026-11-22) | 228 ms | 228 ms | 5 MB | 435 MB (+42 MB) | n/a | 3 of 3 |
+| docs.plus (measured 2026-11-22) | 254 ms | 254 ms | 10 MB | 446 MB (+41 MB) | n/a | 3 of 3 |
 
 **Redline (`redline.docx`, 3 pages)**
 
-Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64 cores; median 56.6, highest 75.7, on 64 cores.
+Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64 cores; the rows measured 2026-11-22: median 23.5, highest 25.3, on 64 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -264,14 +264,14 @@ Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64
 | BetterOffice | 1.28 s | 1.28 s | 14 MB | 696 MB (+116 MB) | 3 | 2 of 3 |
 | OnlyOffice (CryptPad build) | 2.55 s | 2.55 s | 50 MB | 898 MB (+230 MB) | 3 | 3 of 3 |
 | OpenDoc | 813 ms | 1.04 s | 13 MB | 728 MB (+111 MB) | 3 | 3 of 3 |
-| GenOffice | 998 ms | 998 ms | 18 MB | 562 MB (+106 MB) | 3 | 3 of 3 |
-| office-open | 682 ms | 682 ms | 7 MB | 552 MB (+166 MB) | n/a | 2 of 3 |
-| Fidus Writer | 233 ms | 233 ms | 5 MB | 430 MB (+39 MB) | n/a | 2 of 3 |
-| docs.plus | 269 ms | 269 ms | 10 MB | 447 MB (+41 MB) | n/a | 2 of 3 |
+| GenOffice (measured 2026-11-22) | 998 ms | 998 ms | 18 MB | 562 MB (+106 MB) | 3 | 3 of 3 |
+| office-open (measured 2026-11-22) | 682 ms | 682 ms | 7 MB | 552 MB (+166 MB) | n/a | 2 of 3 |
+| Fidus Writer (measured 2026-11-22) | 233 ms | 233 ms | 5 MB | 430 MB (+39 MB) | n/a | 2 of 3 |
+| docs.plus (measured 2026-11-22) | 269 ms | 269 ms | 10 MB | 447 MB (+41 MB) | n/a | 2 of 3 |
 
 **500 pages (`lorem-500.docx`)**
 
-Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores.
+Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores; the rows measured 2026-11-22: median 21.9, highest 24.2, on 64 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -292,17 +292,19 @@ Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64
 | BetterOffice | 8.05 s | 8.90 s | 23 MB | 1296 MB (+717 MB) | 500 | 3 of 3 |
 | OnlyOffice (CryptPad build) | 12.8 s | 12.8 s | 134 MB | 949 MB (+278 MB) | 500 | 2 of 3 |
 | OpenDoc | 3.54 s | 7.01 s | 12 MB | 910 MB (+291 MB) | 500 | 3 of 3 |
-| GenOffice | 1.62 s | 22.2 s | 39 MB | 1121 MB (+669 MB) | 500 | 3 of 3 |
-| office-open | 1.53 s | 1.53 s | 7 MB | 715 MB (+330 MB) | n/a | 3 of 3 |
-| Fidus Writer | 553 ms | 553 ms | 7 MB | 504 MB (+115 MB) | n/a | 3 of 3 |
-| docs.plus | 1.21 s | 1.21 s | 13 MB | 598 MB (+192 MB) | n/a | 3 of 3 |
+| GenOffice (measured 2026-11-22) | 1.62 s | 22.2 s | 39 MB | 1121 MB (+669 MB) | 500 | 3 of 3 |
+| office-open (measured 2026-11-22) | 1.53 s | 1.53 s | 7 MB | 715 MB (+330 MB) | n/a | 3 of 3 |
+| Fidus Writer (measured 2026-11-22) | 553 ms | 553 ms | 7 MB | 504 MB (+115 MB) | n/a | 3 of 3 |
+| docs.plus (measured 2026-11-22) | 1.21 s | 1.21 s | 13 MB | 598 MB (+192 MB) | n/a | 3 of 3 |
 <!-- samples:end -->
 
 What to know when reading them:
 
 - **These figures are the pass of 2026-11-20** (it ran past midnight UTC, so the heading says
   2026-11-21): one job on one host, every engine, 3 runs per engine and sample, made with the
-  corrected script (see "Figures to distrust"). The machine is a Linux one with 16 vCPU and no
+  corrected script (see "Figures to distrust"). The exception is the four rows marked "measured
+  2026-11-22" (GenOffice, office-open, Fidus Writer, docs.plus): a second job on a machine of the
+  same type with the same Chrome build, with its own host load said beside the pass's. The machine is a Linux one with 16 vCPU and no
   GPU (Chrome draws in software). The tables of 2026-11-18 came from a machine with 8 vCPU, so
   the two do not form one series; the earlier files stay in `docs/samples/`.
 - **The host was shared and busy.** A run starts only while the host's load average is under a

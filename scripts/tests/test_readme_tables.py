@@ -128,3 +128,16 @@ def test_a_row_measured_elsewhere_keeps_the_load_it_was_measured_under():
     head = {"measuredAt": "2026-11-21", "environment": f"{method}; a rented machine; machine load (1-minute average) median 56.6, highest 75.7, on 64 cores"}
     row = {"measuredAt": "2026-11-21", "environment": f"{method}; a MacBook Pro; machine load (1-minute average) median 30.5, highest 40.0, on 12 cores"}
     assert rt.elsewhere(row, head) == " (measured 2026-11-21: a MacBook Pro, load median 30.5, highest 40.0, on 12 cores)"
+
+
+def test_rows_of_another_day_on_the_same_machine_have_their_load_said_with_their_date():
+    machine = "Chrome 1 via Playwright; a rented machine"
+    head = {"measuredAt": "2026-11-21", "environment": machine + rt.LOAD + "median 44.1, highest 49.3, on 64 cores"}
+    rows = {
+        "a": {},
+        "b": {"measuredAt": "2026-11-22", "environment": machine + rt.LOAD + "median 31.4, highest 33.1, on 64 cores"},
+    }
+    assert rt.host_load(rows, head) == (
+        "Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores; "
+        "the rows measured 2026-11-22: median 31.4, highest 33.1, on 64 cores."
+    )
