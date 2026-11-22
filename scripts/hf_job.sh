@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Measure both sites on a Hugging Face Jobs machine (Linux, no GPU). Billed by the minute.
 #
-#   SITE=smoke|editors|viewer|both|probe|retake  (retake: RETAKE_FROM=<date> V_ENGINES=… E_ENGINES=…)
+#   SITE=smoke|editors|viewer|both|probe|retake  (retake: RETAKE_FROM=<date> V_ENGINES=… [V_SERVER_ENGINES=…] E_ENGINES=… [E_SAMPLES=…])
 #    RUNS=<n> (not for smoke and probe)  PROBE_URLS="<url> …" (probe only)  HF_TOKEN=<token with write access>
 #
 # Run as the job's command, in the python:3.12 image, as root, on the flavor the published figures
@@ -180,13 +180,25 @@ PY
     step - 12 $PW scripts/measure.py "$V_ENGINES" "$RUNS" --results results/browser.json --raw "results/raw/$D-browser-showcase-retake.json" >/dev/null 2>/tmp/r1.log; tail -3 /tmp/r1.log | cut -c1-400
     step - 12 $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-browser-redline-retake.json" >/dev/null 2>/tmp/r2.log; tail -3 /tmp/r2.log | cut -c1-400
     step - 15 $PW scripts/measure.py "$V_ENGINES" "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-browser-lorem-500-retake.json" >/dev/null 2>/tmp/r3.log; tail -3 /tmp/r3.log | cut -c1-400
+    # The server lanes of those engines that have a /r/ route (V_SERVER_ENGINES): the curl timings
+    # of the tracked-changes and 500-page samples, then what the browser pays for each render.
+    if [ -n "${V_SERVER_ENGINES:-}" ]; then
+      export MEASURE_WHERE="from $HW_CURL"
+      step - 5 python3 -I scripts/measure_server.py "$V_SERVER_ENGINES" "$RUNS" --doc redline --samples results/samples.json --raw "results/raw/$D-server-redline-retake.json" >/dev/null
+      step - 8 python3 -I scripts/measure_server.py "$V_SERVER_ENGINES" "$RUNS" --doc lorem-500 --samples results/samples.json --raw "results/raw/$D-server-lorem-500-retake.json" >/dev/null
+      export MEASURE_WHERE="from $HW"
+      step - 20 $PW scripts/measure_server_client.py "$V_SERVER_ENGINES" showcase,redline,lorem-500 "$RUNS" --out results/server-client.json --raw "results/raw/$D-server-client-retake.json" >/dev/null 2>/tmp/r4.log; tail -3 /tmp/r4.log | cut -c1-400
+    fi
     mkdir -p results/logs; cp /tmp/r?.log results/logs/; up results "$P/viewer/results"
   fi
   if [ -n "${E_ENGINES:-}" ]; then
     cd /w/editors; export MEASURE_WHERE="$HW"
     cp -R "/tmp/prev/$RETAKE_FROM/editors/samples/." docs/samples/
-    for S in showcase redline lorem-500; do
-      step - 15 $PW scripts/measure_samples.py "$E_ENGINES" $S "$RUNS" --out "docs/samples/$D-$S-retake.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S-retake.log
+    # E_SAMPLES: which samples (all three unless given). The 500 pages get the time the full pass
+    # gives them: three runs of an engine that uses its whole 30-minute deadline take 90 minutes.
+    for S in ${E_SAMPLES:-showcase redline lorem-500}; do
+      T=15; [[ "$S" = lorem-500 ]] && T=150
+      step - $T $PW scripts/measure_samples.py "$E_ENGINES" $S "$RUNS" --out "docs/samples/$D-$S-retake.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S-retake.log
       grep -o '"error": "[^"]*' /tmp/$S-retake.log | cut -c1-200 | sort | uniq -c | head; cp /tmp/$S-retake.log docs/samples/
     done
     up docs/samples "$P/editors/samples"; up shots "$P/editors/shots"
