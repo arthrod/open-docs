@@ -736,7 +736,9 @@ round-trips the hard cases (escaped `#`/`1.` text, inline code alone in a
 paragraph, a code block, backticks in code, a quote whose text also appears as a
 plain paragraph, a table with a cell line break and a link).
 
-Run on the live site on 2026-11-20, in Chrome on a Mac, once per engine:
+Run on the live site in Chrome on a Mac, once per engine: the original rows on
+2026-11-20; GenOffice, office-open and docs.plus on 2026-11-22. Fidus Writer
+could not be probed because its export fails.
 
 | Engine | Mapping: in the .docx | Mapping: read back | Edge cases |
 | --- | --- | --- | --- |
@@ -760,7 +762,7 @@ Run on the live site on 2026-11-20, in Chrome on a Mac, once per engine:
 
 **The run of 2026-11-09 said all eight editors passed everything, and on
 2026-11-20 that was no longer true of any engine that takes the assistant's
-Markdown as a .docx.** The same day the probes were last run, the hand-written
+Markdown as a .docx.** On 2026-11-09, the same day as that earlier probe run, the hand-written
 .docx writer was replaced by Plate's exporter (`9f3a4bb`), and nobody ran them
 again. Plate's exporter writes inline code as a grey highlight with no monospace
 face, a quote as a bordered indent with no style, a code block as one paragraph
