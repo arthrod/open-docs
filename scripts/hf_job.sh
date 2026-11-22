@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Measure both sites on a Hugging Face Jobs machine (Linux, no GPU). Billed by the minute.
 #
-#   SITE=smoke|editors|viewer|both|probe|retake  (retake: RETAKE_FROM=<date> V_ENGINES=… [V_SERVER_ENGINES=…] E_ENGINES=…)
+#   SITE=smoke|editors|viewer|both|probe|retake  (retake: RETAKE_FROM=<date> V_ENGINES=… [V_SERVER_ENGINES=…] E_ENGINES=… [E_SAMPLES=…])
 #    RUNS=<n> (not for smoke and probe)  PROBE_URLS="<url> …" (probe only)  HF_TOKEN=<token with write access>
 #
 # Run as the job's command, in the python:3.12 image, as root, on the flavor the published figures
@@ -194,8 +194,11 @@ PY
   if [ -n "${E_ENGINES:-}" ]; then
     cd /w/editors; export MEASURE_WHERE="$HW"
     cp -R "/tmp/prev/$RETAKE_FROM/editors/samples/." docs/samples/
-    for S in showcase redline lorem-500; do
-      step - 15 $PW scripts/measure_samples.py "$E_ENGINES" $S "$RUNS" --out "docs/samples/$D-$S-retake.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S-retake.log
+    # E_SAMPLES: which samples (all three unless given). The 500 pages get the time the full pass
+    # gives them: three runs of an engine that uses its whole 30-minute deadline take 90 minutes.
+    for S in ${E_SAMPLES:-showcase redline lorem-500}; do
+      T=15; [[ "$S" = lorem-500 ]] && T=150
+      step - $T $PW scripts/measure_samples.py "$E_ENGINES" $S "$RUNS" --out "docs/samples/$D-$S-retake.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S-retake.log
       grep -o '"error": "[^"]*' /tmp/$S-retake.log | cut -c1-200 | sort | uniq -c | head; cp /tmp/$S-retake.log docs/samples/
     done
     up docs/samples "$P/editors/samples"; up shots "$P/editors/shots"
