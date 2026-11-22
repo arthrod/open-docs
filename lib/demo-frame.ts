@@ -13,7 +13,7 @@ import { docxToMarkdown } from "/lib/docx-markdown.ts";
 
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-export interface DemoFrame {
+interface DemoFrame {
   /** The mirror's folder name (server/site-mirror.ts) and the id of the root element in the shell. */
   site: string;
   root: string;
