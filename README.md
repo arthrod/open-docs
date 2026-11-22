@@ -305,7 +305,7 @@ What to know when reading them:
   corrected script (see "Figures to distrust"). The exception is the four rows marked "measured
   2026-11-22" (GenOffice, office-open, Fidus Writer, docs.plus on every sample, docen on the 500
   pages): later jobs on a machine of the same type with the same Chrome build, with their own host
-  load said beside the pass's. That load was lower than the pass's (14 to 33 against 22 to 76). The machine is a Linux one with 16 vCPU and no
+  load said beside the pass's. That load was lower than the pass's (3 to 33 against 22 to 76). The machine is a Linux one with 16 vCPU and no
   GPU (Chrome draws in software). The tables of 2026-11-18 came from a machine with 8 vCPU, so
   the two do not form one series; the earlier files stay in `docs/samples/`.
 - **The host was shared and busy.** A run starts only while the host's load average is under a
@@ -322,7 +322,7 @@ What to know when reading them:
   quieter Mac: Loaded 2.30 s, and the main thread still busy at the end of the 180 s wait in all three.
   On 2026-11-22 it was timed again on the rented machine of the other rows (same type, same Chrome
   build, 30-minute deadline, three runs): Loaded 3.82 s, all 500 pages counted, the main thread still
-  busy at the end of the 180 s wait in all three runs, and 3.2 GB of renderer memory. The row above is
+  busy at the end of the 180 s wait in all three runs, and 3,211 MB of renderer memory. The row above is
   that measurement; the Mac rows are in `docs/samples/2026-11-21-lorem-500-docen-mac.json`. What docen
   does during those minutes was not looked into. The deadline is now 30 minutes (`scripts/hf_job.sh`).
 - **Page counts differ by engine** on the 500-page file. canvas-editor's 661 is its own layout:

@@ -77,7 +77,8 @@ def host_load(rows: dict, head: dict) -> str:
     for d, e in pairs:
         if LOAD in e and machine(e) == here and e.split(LOAD)[1] not in by_date.setdefault(d, []):
             by_date[d].append(e.split(LOAD)[1])
-    said = [" and ".join(v) if d == when else f"the rows measured {d}: {' and '.join(v)}" for d, v in by_date.items()]
+    order = sorted(by_date, key=lambda d: (d != when, d or ""))
+    said = [" and ".join(by_date[d]) if d == when else f"the rows measured {d}: {' and '.join(by_date[d])}" for d in order]
     return f"Host load during these runs (1-minute average): {'; '.join(said)}." if said else ""
 
 
