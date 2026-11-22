@@ -1,7 +1,8 @@
 /**
  * How each engine treats a document's tracked changes, in a few words. Seen,
- * not assumed: every line is what the engine drew for redline.docx on
- * 2026-11-15 (scripts/measure_samples.py --shots). One list, read by the
+ * not assumed: observations of redline.docx started on 2026-11-15
+ * (scripts/measure_samples.py --shots). GenOffice, office-open, Fidus Writer
+ * and docs.plus were checked on 2026-11-21. One list, read by the
  * adapters (the status line after the redline sample opens) and by the
  * landing page's samples table.
  */
