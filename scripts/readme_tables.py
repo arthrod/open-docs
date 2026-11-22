@@ -72,9 +72,12 @@ def host_load(rows: dict, head: dict) -> str:
     # Runs of another day on the same machine (rows marked "measured DATE") have their own load: said with their date.
     when = head.get("measuredAt")
     pairs = [((r.get("measuredAt") or when), r.get("environment") or head.get("environment") or "") for r in rows.values()]
-    said = list(dict.fromkeys(
-        (e.split(LOAD)[1] if d == when else f"the rows measured {d}: {e.split(LOAD)[1]}")
-        for d, e in pairs if LOAD in e and machine(e) == here))
+    # One clause per date: the table's own runs first, then each later date with all of its jobs' loads.
+    by_date: dict[str, list[str]] = {}
+    for d, e in pairs:
+        if LOAD in e and machine(e) == here and e.split(LOAD)[1] not in by_date.setdefault(d, []):
+            by_date[d].append(e.split(LOAD)[1])
+    said = [" and ".join(v) if d == when else f"the rows measured {d}: {' and '.join(v)}" for d, v in by_date.items()]
     return f"Host load during these runs (1-minute average): {'; '.join(said)}." if said else ""
 
 

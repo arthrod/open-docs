@@ -128,3 +128,4 @@ has no figures of its own.
 | 2026-11-22 | 5.11 | The docs.plus page keeps pictures |
 | 2026-11-22 | 5.8 | Closed by the owner's decision: the four stay unscored for speed and memory |
 | 2026-11-22 | 5.8 | Measured on the rented machine; replaces the owner's earlier decision to leave them unscored |
+| 2026-11-22 | 1.8 | docen's 500 pages timed on the rented machine (owner approved): loads 3.82 s, still busy after 180 s, 3.2 GB; replaces its Mac row |

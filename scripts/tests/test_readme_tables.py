@@ -141,3 +141,18 @@ def test_rows_of_another_day_on_the_same_machine_have_their_load_said_with_their
         "Host load during these runs (1-minute average): median 44.1, highest 49.3, on 64 cores; "
         "the rows measured 2026-11-22: median 31.4, highest 33.1, on 64 cores."
     )
+
+
+def test_two_jobs_of_one_later_date_share_one_clause():
+    machine = "Chrome 1 via Playwright; a rented machine"
+    head = {"measuredAt": "2026-11-21", "environment": machine + rt.LOAD + "median 56.6, highest 75.7, on 64 cores"}
+    rows = {
+        "a": {},
+        "b": {"measuredAt": "2026-11-22", "environment": machine + rt.LOAD + "median 14.3, highest 29.4, on 64 cores"},
+        "c": {"measuredAt": "2026-11-22", "environment": machine + rt.LOAD + "median 21.9, highest 24.2, on 64 cores"},
+        "d": {"measuredAt": "2026-11-22", "environment": machine + rt.LOAD + "median 21.9, highest 24.2, on 64 cores"},
+    }
+    assert rt.host_load(rows, head) == (
+        "Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores; "
+        "the rows measured 2026-11-22: median 14.3, highest 29.4, on 64 cores and median 21.9, highest 24.2, on 64 cores."
+    )
