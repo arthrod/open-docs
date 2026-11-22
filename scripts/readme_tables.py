@@ -69,8 +69,12 @@ def host_load(rows: dict, head: dict) -> str:
     """One line with the host load of a table's runs on its own machine, from its rows (or the heading when they carry none)."""
     # Only the table's own machine: a row measured elsewhere says where beside its name, and its load is in its file.
     here = machine(head.get("environment"))
-    envs = [r.get("environment") or head.get("environment") or "" for r in rows.values()]
-    said = list(dict.fromkeys(e.split(LOAD)[1] for e in envs if LOAD in e and machine(e) == here))
+    # Runs of another day on the same machine (rows marked "measured DATE") have their own load: said with their date.
+    when = head.get("measuredAt")
+    pairs = [((r.get("measuredAt") or when), r.get("environment") or head.get("environment") or "") for r in rows.values()]
+    said = list(dict.fromkeys(
+        (e.split(LOAD)[1] if d == when else f"the rows measured {d}: {e.split(LOAD)[1]}")
+        for d, e in pairs if LOAD in e and machine(e) == here))
     return f"Host load during these runs (1-minute average): {'; '.join(said)}." if said else ""
 
 
