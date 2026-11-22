@@ -854,7 +854,8 @@ lib/revisions.ts          tracked changes as formatting, for the two engines wit
 lib/revision-notes.ts     how each engine treats tracked changes (status line, landing table)
 lib/univer-doc.ts         Markdown blocks ⇄ Univer's document body (Univer has no .docx reader)
 server/npm-vendor.ts      pinned npm packages served from this origin (react-docx, BetterOffice: their Workers)
-server/site-mirror.ts     a dated snapshot of an engine's own site, served from this origin (OpenDoc)
+server/site-mirror.ts     same-origin snapshots (OpenDoc and the four editors-trial demos)
+lib/demo-frame.ts         reload a trial demo with DOCX bytes; capture its Download Blob
 server/zip-mirror.ts      single files out of a release archive, by range request (OnlyOffice's 608 MB zip)
 server/onlyoffice.ts      the OnlyOffice editor and x2t converter, read out of CryptPad's release archives
 server/fixtures.ts        the redline and 500-page samples, fetched from Hugging Face at a pinned commit
@@ -931,19 +932,20 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   HTTP range request, inflates it and keeps it in blob storage. See
   [`editors/onlyoffice/README.md`](editors/onlyoffice/README.md).
 
-## Not in the bench, and why
+- **GenOffice, office-open, Fidus Writer, docs.plus**: the trial's demo builds are
+  mirrored by `server/site-mirror.ts` under `/vendor/<slug>/et-v0.11.1/`.
+  Files are fetched on first request and retained in blob storage for that snapshot.
+  The mirror adds a fetch override for `document.docx`; `lib/demo-frame.ts` supplies
+  the open document from the parent page and captures the demo's Download Blob.
+  Opens and exports share a queue so navigation cannot replace an exporting frame.
 
-- **office-open** (`office-open@0.15.1`): a document model and generator with no
-  editing surface. Removed.
-- **docs.plus**: not Rust and not a library. It is a full collaborative app
-  (Next.js + Tiptap/Yjs, Supabase/Postgres, a Hocuspocus server, MIT) with no
-  .docx engine; it would need its own backend, which Val Town can't host.
-- **GenOffice** (genspark-ai/genoffice, Apache-2.0): mostly TypeScript with some
-  Rust, shipped as an Electron desktop app. Every package is `private: true`
-  (nothing on npm), and the Docs editor (`apps/docs`) is an Electron renderer
-  wired to its preload/IPC. Running it here would mean forking and rebuilding
-  its renderer without Electron; not deployable as published.
-- **WordCraft** *is* in the bench (above): its release ships a static web build.
+## Previously excluded tools
+
+office-open, docs.plus and GenOffice now have pages through the editors trial's
+demo builds (added 2026-11-21). office-open still has no editing surface;
+docs.plus runs without its collaboration backend; GenOffice runs with a
+stand-in for Electron. See [what differs](#four-more-through-the-editors-trials-demo-builds-2026-11-21)
+for their capabilities and the demo builds' limits.
 
 ## Known limitations
 
@@ -963,8 +965,8 @@ are in each editor's `assets.ts` / `shell.ts`, with the reasoning in comments:
   not carried through markdown: every numbered list starts at 1.
 - **Assistant writes replace the whole document.** Undo works through the
   assistant card. SuperDoc and Plate also put the change in the editor's own
-  undo stack. In react-docx, Univer, OpenDoc, BetterOffice and OnlyOffice the
-  edit opens a new document and there is no Undo for it.
+  undo stack. In react-docx, Univer, OpenDoc, BetterOffice, OnlyOffice, GenOffice,
+  office-open and docs.plus the edit opens a new document and there is no Undo for it.
 - **OpenDoc is a snapshot of a pre-release application** (2026-11-05), driven
   through its own file input and its download: a newer snapshot can break both.
 - **JS heap** is Chromium-only; other browsers show "n/a".
@@ -1002,9 +1004,9 @@ Append `?debug` to the SuperDoc page to log every worker message.
 ## Licenses
 
 Each editor keeps its own license: MIT for canvas-editor, Docxodus, Plate,
-docen and react-docx; Apache-2.0 for folio, docx-editor.dev, Univer, OpenDoc and
-BetterOffice; Apache-2.0 / MIT for WordCraft; **AGPL-3.0 for SuperDoc and for
-OnlyOffice (CryptPad build)**. AGPL is fine for this public val but is a real
+docen, react-docx, office-open and docs.plus; Apache-2.0 for folio,
+docx-editor.dev, Univer, OpenDoc, BetterOffice and GenOffice; Apache-2.0 / MIT for WordCraft; **AGPL-3.0 for SuperDoc and for
+OnlyOffice (CryptPad build), and Fidus Writer**. AGPL is fine for this public val but is a real
 constraint for a closed product. OnlyOffice's two parts are served unmodified
 out of CryptPad's release archives, and their source is those repositories at
 tag `v9.3.2+3` ([`editors/onlyoffice/README.md`](editors/onlyoffice/README.md)). The four viewers are proprietary. Microsoft's
