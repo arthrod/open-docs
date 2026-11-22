@@ -101,6 +101,11 @@ export interface KitGlobal {
   adapter?: EditorAdapter;
   /** Present only on view-only pages: see ViewerContext. */
   viewer?: ViewerContext;
+  /**
+   * Path prefix under which the embedding site passes this site's /vendor files through its
+   * own origin ("" here; the viewer site sets one). For engines whose files must be same-origin.
+   */
+  vendorRoot?: string;
   /** Called by an adapter at module top level. */
   register(adapter: EditorAdapter): void;
   /** performance.now() when the adapter registered (its module finished evaluating). */

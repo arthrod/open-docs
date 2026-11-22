@@ -15,8 +15,8 @@
  */
 import type { Hono } from "npm:hono@4";
 import { bodyLimit } from "npm:hono@4/body-limit";
-import { serveFile } from "https://esm.town/v/std/utils/index.ts";
-import { editors, type Maker } from "./registry.ts";
+import { serveFile } from "https://esm.town/v/std/utils/serve-file.ts";
+import { editors, type Maker, vendorNote } from "./registry.ts";
 import { sampleDocx, sampleText, paragraphsToText } from "./sample.docx.ts";
 import { showcaseDocx } from "./showcase.docx.ts";
 import { fixtureBytes, FIXTURES } from "./fixtures.ts";
@@ -39,19 +39,20 @@ export interface EditorShell {
   /** Extra import-map entries (bare specifiers / URL remaps) for this editor. */
   importMap?: Record<string, string>;
   /**
+   * The engine's files must come from the origin of the page showing it (it starts a Worker from
+   * them, or reaches into a frame of them). A site that embeds this shell elsewhere (the viewer
+   * site) then passes those files through its own origin instead of linking to this one.
+   */
+  sameOrigin?: boolean;
+  /**
    * Render NO assistant panel and NO toggle button (page works standalone —
    * e.g. cite-check, whose owner explicitly does not want the agent there).
    */
   noAgent?: boolean;
 }
 
-/** React, resolved once, for every adapter that loads a React package with `?external=react,react-dom`. */
-export const REACT_IMPORTS: Record<string, string> = {
-  "react": "https://esm.sh/react@18.2.0",
-  "react/": "https://esm.sh/react@18.2.0/",
-  "react-dom": "https://esm.sh/react-dom@18.2.0",
-  "react-dom/": "https://esm.sh/react-dom@18.2.0/",
-};
+export { REACT_IMPORTS } from "./react-imports.ts";
+import { REACT_IMPORTS } from "./react-imports.ts";
 
 export function registerEditor(app: Hono, opts: EditorShell) {
   app.get(`/e/${opts.slug}`, (c) => c.html(shell(opts, c.req.query("embed") === "1")));
@@ -106,7 +107,7 @@ ${FIXTURES.map((f) => `        <button role="menuitem" class="od-fixture" data-f
         <button role="menuitem" id="od-reload">Reload editor</button>${madeBySection(makers)}
         <hr />
         ${allEditors}${arena}
-        <a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
+        ${note ? `<a role="menuitem" href="${esc(note)}" target="_blank" rel="noopener">About this ${viewer ? "viewer" : "editor"}: pros, cons, every benchmark →</a>\n        ` : ""}<a role="menuitem" href="${esc(repo)}" target="_blank" rel="noopener">Library on GitHub →</a>
         <a role="menuitem" href="/source" target="_blank" rel="noopener">Source of this demo →</a>
         <a role="menuitem" class="od-contact" href="https://arthur.law/contact" target="_blank" rel="noopener">Contact →</a>
       </div>`;
@@ -138,7 +139,7 @@ function shell(o: EditorShell, embed = false): string {
     `<option value="${e.slug}"${e.slug === o.slug ? " selected" : ""}>${esc(e.name)}</option>`;
   const switcher = `<optgroup label="Open-source editors">${editors.filter((e) => e.kind !== "viewer").map(option).join("")}</optgroup>` +
     `<optgroup label="Proprietary viewers (view-only)">${editors.filter((e) => e.kind === "viewer").map(option).join("")}</optgroup>`;
-  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#", meta?.makers ?? []);
+  const panel = menuPanel(embed, viewer, opensFiles, meta?.repo ?? "#", meta?.makers ?? [], vendorNote(o.slug));
   // Leading spaces live on the template line, so a non-embed page stays byte-identical.
   const embedMenu = embed
     ? `<div class="od-menu-wrap od-embed-menu">\n${panel}\n    </div>\n`

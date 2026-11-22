@@ -14,6 +14,7 @@
  */
 import { MARKDOWN, REMARK_GFM } from "/editors/plate/deps.ts";
 import { DOCX_IO_URL } from "./plate-docx-pin.ts";
+import { forWord } from "./plate-for-word.ts";
 
 /** Plate nodes → .docx with Plate's exporter, rendered through Plate's static components. */
 export async function plateValueToDocx(value: any[]): Promise<Uint8Array> {
@@ -33,5 +34,5 @@ export async function markdownToDocx(markdown: string): Promise<Uint8Array> {
   const editor = createSlateEditor({
     plugins: [...STATIC_PLUGINS, Md.MarkdownPlugin.configure({ options: { remarkPlugins: [gfm.default ?? gfm, Md.remarkMdx] } })],
   });
-  return plateValueToDocx(editor.api.markdown.deserialize(markdown));
+  return plateValueToDocx(forWord(editor.api.markdown.deserialize(markdown)));
 }

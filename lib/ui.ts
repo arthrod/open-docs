@@ -744,7 +744,10 @@ function editCard(markdown: string, summary: string, before: string) {
     try {
       beforeOk = afterOk = true;
       beforeApply = await current.getMarkdown().catch(() => { beforeOk = false; return ""; });
-      await current.applyMarkdown(markdown);
+      // In turn with document loads: several engines apply an edit by opening a rebuilt .docx,
+      // and one that finished after a newer load would replace that load's document.
+      const editor = current;
+      await loads.run(() => editor.applyMarkdown(markdown));
       afterApply = await current.getMarkdown().catch(() => { afterOk = false; return ""; });
       undoneStack.length = 0; // a new edit invalidates the redo stack
       applied();

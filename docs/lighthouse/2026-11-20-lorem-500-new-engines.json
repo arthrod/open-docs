@@ -1,0 +1,593 @@
+{
+ "measuredAt": "2026-11-20",
+ "environment": "PageSpeed Insights (pagespeed.web.dev), Lighthouse 13.6.0 on Google's servers, 5 analyses per page and form factor, median of those that gave a result",
+ "base": "https://editors.benchmarks.law",
+ "query": "open=lorem-500.docx",
+ "raw": [
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:54.903Z",
+    "performance": 30,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 3775,
+    "lcpMs": 41952,
+    "tbtMs": 2077,
+    "cls": 0.018,
+    "speedIndexMs": 14761
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:55.384Z",
+    "performance": 85,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 232,
+    "lcpMs": 232,
+    "tbtMs": 269,
+    "cls": 0.011,
+    "speedIndexMs": 2209
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:54.630Z",
+    "performance": 94,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 906,
+    "lcpMs": 906,
+    "tbtMs": 34,
+    "cls": 0.026,
+    "speedIndexMs": 6224
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:55.371Z",
+    "performance": 89,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 245,
+    "lcpMs": 245,
+    "tbtMs": 177,
+    "cls": 0.001,
+    "speedIndexMs": 2591
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:54.624Z",
+    "performance": 59,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1511,
+    "lcpMs": 1511,
+    "tbtMs": 8313,
+    "cls": 0.044,
+    "speedIndexMs": 25490
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:08:54.642Z",
+    "performance": 59,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 5143,
+    "cls": 0.076,
+    "speedIndexMs": 5122
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:09:24.006Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 757,
+    "lcpMs": 757,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2334
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:09:24.510Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 214,
+    "lcpMs": 214,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 360
+   }
+  },
+  {
+   "page": "e/univer",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.515Z",
+    "performance": 39,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 761,
+    "lcpMs": 42062,
+    "tbtMs": 1513,
+    "cls": 0.018,
+    "speedIndexMs": 13762
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.634Z",
+    "performance": 37,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 213,
+    "lcpMs": 7009,
+    "tbtMs": 1491,
+    "cls": 0.011,
+    "speedIndexMs": 3988
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.578Z",
+    "performance": 68,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 906,
+    "lcpMs": 46048,
+    "tbtMs": 48,
+    "cls": 0.026,
+    "speedIndexMs": 6821
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.990Z",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Load the 500-page sample Error: Document was replaced at https://editors.benchmarks.law/vendor/npm/@betteroffice/docx-react@0.5.1/dist/chunk-4ZGDANB"
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:19.738Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 210,
+    "lcpMs": 210,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 553
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:20.390Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 776,
+    "lcpMs": 776,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2291
+   }
+  },
+  {
+   "page": "e/univer",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.673Z",
+    "performance": 62,
+    "accessibility": 83,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 448,
+    "lcpMs": 448,
+    "tbtMs": 10151,
+    "cls": 0.005,
+    "speedIndexMs": 3483
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.913Z",
+    "performance": 60,
+    "accessibility": 89,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1657,
+    "lcpMs": 1657,
+    "tbtMs": 10360,
+    "cls": 0.02,
+    "speedIndexMs": 11568
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.599Z",
+    "performance": 56,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 2262,
+    "lcpMs": 2262,
+    "tbtMs": 16214,
+    "cls": 0.044,
+    "speedIndexMs": 29765
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:12:56.998Z",
+    "performance": 59,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 236,
+    "lcpMs": 236,
+    "tbtMs": 10730,
+    "cls": 0.063,
+    "speedIndexMs": 5911
+   }
+  },
+  {
+   "page": "e/react-docx",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:56.662Z",
+    "performance": 37,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 6778,
+    "tbtMs": 1233,
+    "cls": 0.011,
+    "speedIndexMs": 3869
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:57.154Z",
+    "performance": 36,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 778,
+    "lcpMs": 41963,
+    "tbtMs": 3389,
+    "cls": 0.018,
+    "speedIndexMs": 17454
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:57.207Z",
+    "performance": 92,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 905,
+    "lcpMs": 905,
+    "tbtMs": 112,
+    "cls": 0.026,
+    "speedIndexMs": 7598
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:57.579Z",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Load the 500-page sample Error: Document was replaced at https://editors.benchmarks.law/vendor/npm/@betteroffice/docx-react@0.5.1/dist/chunk-4ZGDANB"
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:14:28.851Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 763,
+    "lcpMs": 763,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2510
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:14:29.108Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 215,
+    "lcpMs": 215,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 443
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:56.613Z",
+    "performance": 58,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 10667,
+    "cls": 0.089,
+    "speedIndexMs": 6256
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:13:57.383Z",
+    "error": "PAGE_HUNG: Lighthouse was unable to reliably load the URL you requested because the page stopped responding."
+   }
+  },
+  {
+   "page": "e/univer",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/react-docx",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:19:43.228Z",
+    "performance": 32,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 3625,
+    "lcpMs": 42132,
+    "tbtMs": 1712,
+    "cls": 0.018,
+    "speedIndexMs": 14428
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:19:43.421Z",
+    "performance": 36,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 215,
+    "lcpMs": 7241,
+    "tbtMs": 1652,
+    "cls": 0.011,
+    "speedIndexMs": 4263
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:19:43.222Z",
+    "performance": 96,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 246,
+    "lcpMs": 246,
+    "tbtMs": 20,
+    "cls": 0.001,
+    "speedIndexMs": 2008
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:19:43.640Z",
+    "performance": 92,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 905,
+    "lcpMs": 905,
+    "tbtMs": 92,
+    "cls": 0.026,
+    "speedIndexMs": 7218
+   }
+  },
+  {
+   "page": "e/onlyoffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:20:06.547Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 211,
+    "lcpMs": 211,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 436
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:20:07.004Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 773,
+    "lcpMs": 773,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2379
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:19:43.429Z",
+    "performance": 58,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 218,
+    "lcpMs": 218,
+    "tbtMs": 4764,
+    "cls": 0.089,
+    "speedIndexMs": 5434
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:19:43.451Z",
+    "performance": 60,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 1511,
+    "lcpMs": 1511,
+    "tbtMs": 16929,
+    "cls": 0.024,
+    "speedIndexMs": 34533
+   }
+  },
+  {
+   "page": "e/univer",
+   "error": "PageSpeed gave no result within 240 s: the page never finished loading for it"
+  },
+  {
+   "page": "e/react-docx",
+   "error": "PageSpeed refused the address: Unable to resolve https://editors.benchmarks.law/e/react-docx?open=lorem-500.docx. Try checking the URL for validity."
+  },
+  {
+   "page": "e/onlyoffice",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:56.193Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 91,
+    "fcpMs": 773,
+    "lcpMs": 773,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 2420
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:56.212Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 227,
+    "lcpMs": 227,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 397
+   }
+  },
+  {
+   "page": "e/betteroffice",
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:45.167Z",
+    "error": "the engine failed on Google's machine, so there is no score: [open-docs] Load the 500-page sample Error: Document was replaced at https://editors.benchmarks.law/vendor/npm/@betteroffice/docx-react@0.5.1/dist/chunk-4ZGDANB"
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:46.281Z",
+    "performance": 86,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 905,
+    "lcpMs": 905,
+    "tbtMs": 285,
+    "cls": 0.026,
+    "speedIndexMs": 8331
+   }
+  },
+  {
+   "page": "e/opendoc",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:45.161Z",
+    "performance": 60,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 91,
+    "fcpMs": 763,
+    "lcpMs": 763,
+    "tbtMs": 8370,
+    "cls": 0.044,
+    "speedIndexMs": 27689
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:45.401Z",
+    "performance": 60,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 212,
+    "lcpMs": 212,
+    "tbtMs": 8459,
+    "cls": 0.063,
+    "speedIndexMs": 4874
+   }
+  },
+  {
+   "page": "e/univer",
+   "mobile": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:45.330Z",
+    "error": "NO_FCP: The page did not paint any content. Please ensure you keep the browser window in the foreground during the load and try again. (NO_FCP)"
+   },
+   "desktop": {
+    "version": "13.6.0",
+    "fetchTime": "2026-11-20T06:23:45.305Z",
+    "performance": 61,
+    "accessibility": 83,
+    "bestPractices": 100,
+    "seo": 90,
+    "fcpMs": 448,
+    "lcpMs": 448,
+    "tbtMs": 10197,
+    "cls": 0.005,
+    "speedIndexMs": 4066
+   }
+  }
+ ]
+}

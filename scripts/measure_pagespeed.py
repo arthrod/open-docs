@@ -10,7 +10,10 @@ Google runs Lighthouse on its own machines, once emulating a phone (slow 4G,
 computer that asks. The keyless API has a shared daily quota that is usually
 spent, so this opens the site itself in the installed Chrome and reads the
 Lighthouse result it loads. Up to PSI_PARALLEL (default 4) analyses at a time.
-Each page is analysed RUNS times; every figure kept is the median.
+Each page is analysed RUNS times; every figure kept is the median. PageSpeed
+answers a request made soon after another for the same address with the same
+analysis: such a copy is recognised by the time Lighthouse made it, asked for
+again after a pause, and never counted twice.
 
 What Lighthouse measures is the page LOAD. A viewer page (`/v/`) loads its
 document by itself; an editor page (`/e/`) opens on a blank document.
@@ -25,12 +28,12 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import merge_pagespeed, page_entry, pagespeed_args, summarize, psi_refusal
+from measure_lib import chrome_args, merge_pagespeed, page_entry, page_list, pagespeed_args, remember_analyses, repeated_analysis, still_repeated, summarize, psi_refusal, with_kept
 
 # Parsed before any browser starts.
 ARGS = pagespeed_args(sys.argv[1:])
 BASE = ARGS.base.rstrip("/")
-PAGES = ARGS.pages.split(",")
+PAGES = page_list(ARGS.pages)
 RUNS = ARGS.runs
 OUT = ARGS.out
 # --query "src=<url>" is appended to every page; with --label NAME the medians go under docs.NAME
@@ -39,6 +42,8 @@ QUERY = ARGS.query
 LABEL = ARGS.label
 PARALLEL = int(os.environ.get("PSI_PARALLEL", "4"))
 LIMIT_S = 240
+# How long to wait before asking PageSpeed again for a page it answered from its cache.
+REPEAT_PAUSE_S = int(os.environ.get("PSI_REPEAT_PAUSE_S", "45"))
 
 
 def reports(text: str) -> list[dict]:
@@ -128,11 +133,28 @@ async def main():
     raw: list[dict] = []
     sem = asyncio.Semaphore(PARALLEL)
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(channel="chrome", headless=False)
+        browser = await pw.chromium.launch(channel="chrome", headless=False, args=chrome_args())
+
+        seen: dict = {}  # (page, form factor) → the times of the analyses already counted
 
         async def job(p):
             async with sem:
-                x = await one(browser, p)
+                # PageSpeed answers a request made soon after another with the same analysis
+                # (measure_lib.repeated_analysis). Asked again after a pause, up to three times; a
+                # form factor that came fresh in any attempt is kept (still_repeated), and one that
+                # is still a copy at the end is left out of this analysis and said so. Only what is
+                # published is remembered as counted.
+                kept: dict = {}
+                missing: list[str] = []
+                for attempt in range(4):
+                    x = await one(browser, p)
+                    missing = still_repeated(kept, x, repeated_analysis(x, seen, remember=False), missing)
+                    if not missing or attempt == 3:
+                        break
+                    print(json.dumps({"page": p, "repeat": missing, "attempt": attempt + 1}), file=sys.stderr, flush=True)
+                    await asyncio.sleep(REPEAT_PAUSE_S)
+                x = with_kept(x, kept, missing)
+                remember_analyses(x, seen)
                 raw.append(x)
                 print(json.dumps(x), file=sys.stderr, flush=True)
 

@@ -1,5 +1,5 @@
 /** Server-side shell for the docx-editor.dev (eigenpal) demo. */
-import { REACT_IMPORTS } from "../../server/router.ts";
+import { REACT_IMPORTS } from "../../server/react-imports.ts";
 
 export default {
   slug: "eigenpal",

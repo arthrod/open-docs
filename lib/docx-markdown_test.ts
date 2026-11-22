@@ -141,3 +141,143 @@ Deno.test("docx: a cell paragraph inside a content control is read, and its list
   assertEquals(md.includes("in a control"), true);
   assertEquals(md.trim().split("\n").at(-1), "3. c");
 });
+
+Deno.test("reader: text moved by a tracked move is read at its destination, once", async () => {
+  const md = await docxToMarkdown(docx(
+    `<w:p><w:r><w:t>Start.</w:t></w:r><w:moveFrom w:id="1" w:author="A" w:date="2026-01-01T00:00:00Z"><w:r><w:t>Moved text.</w:t></w:r></w:moveFrom></w:p>` +
+      `<w:p><w:moveTo w:id="2" w:author="A" w:date="2026-01-01T00:00:00Z"><w:r><w:t>Moved text.</w:t></w:r></w:moveTo><w:r><w:t> End.</w:t></w:r></w:p>`,
+  ));
+  assertEquals(md.trim(), "Start.\n\nMoved text. End.");
+});
+
+/* ------------------------------------------------------------------------ *
+ * What Plate's exporter writes for the assistant's Markdown (seen 2026-11-20):
+ * no Quote or Code style, only direct formatting. The reader has to know it,
+ * or every assistant turn strips quotes and code from the document.
+ * ------------------------------------------------------------------------ */
+const run = (text: string, rPr = "") => `<w:r><w:rPr>${rPr}</w:rPr><w:t xml:space="preserve">${text}</w:t></w:r>`;
+const MONO_SHADED = `<w:shd w:val="clear" w:fill="f5f5f5"/><w:rFonts w:ascii="Courier" w:hAnsi="Courier"/>`;
+const INLINE_CODE = `<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/><w:highlight w:val="lightGray"/>`;
+const QUOTE_PPR = `<w:pPr><w:ind w:left="284"/><w:pBdr><w:left w:val="single" w:sz="18" w:space="4" w:color="CCCCCC"/></w:pBdr></w:pPr>`;
+
+Deno.test("docx: a paragraph with a left border and an indent is a quote; either alone is not", () => {
+  const md = docxToMarkdown(docx(
+    `<w:p>${run("Same words")}</w:p><w:p>${QUOTE_PPR}${run("Same words")}</w:p>` +
+      `<w:p><w:pPr><w:ind w:left="284"/></w:pPr>${run("indented only")}</w:p>` +
+      `<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="18"/></w:pBdr></w:pPr>${run("bordered only")}</w:p>` +
+      `<w:p><w:pPr><w:ind w:left="284"/><w:pBdr><w:left w:val="none"/></w:pBdr></w:pPr>${run("no border")}</w:p>`,
+  ));
+  assertEquals(md.trim(), "Same words\n\n> Same words\n\nindented only\n\nbordered only\n\nno border");
+});
+
+Deno.test("docx: shaded monospace paragraphs are one code block, a line each; inline code alone stays a paragraph", () => {
+  const md = docxToMarkdown(docx(
+    `<w:p>${run("before")}</w:p>` +
+      `<w:p>${run("block code", MONO_SHADED)}</w:p><w:p>${run("line `two`", MONO_SHADED)}</w:p>` +
+      `<w:p>${run("onlycode", INLINE_CODE)}</w:p>` +
+      `<w:p>${run("use ")}${run("a`b", INLINE_CODE)}${run(" here")}</w:p>` +
+      `<w:p>${run("mono", MONO_SHADED)}${run(" and plain")}</w:p>`,
+  ));
+  assertEquals(md.trim(), "before\n\n```\nblock code\nline `two`\n```\n\n`onlycode`\n\nuse ``a`b`` here\n\n`mono` and plain");
+});
+
+Deno.test("docx: code paragraphs by style are joined too, and a paragraph between two blocks keeps them apart", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run(t)}</w:p>`;
+  const bytes = zipSync({
+    "word/document.xml": strToU8(`<w:document ${W}><w:body>${code("a = 1")}${code("b = 2")}<w:p>${run("then")}</w:p>${code("c = 3")}</w:body></w:document>`),
+    "word/styles.xml": strToU8(styles),
+  });
+  assertEquals(docxToMarkdown(bytes).trim(), "```\na = 1\nb = 2\n```\n\nthen\n\n```\nc = 3\n```");
+});
+
+Deno.test("docx: a style the document names and does not define is read by its id", () => {
+  const md = docxToMarkdown(docx(
+    `<w:p><w:pPr><w:pStyle w:val="Quote"/></w:pPr>${run("Same words")}</w:p>` +
+      `<w:p>${run("use ")}${run("a`b", `<w:rStyle w:val="Code"/>`)}</w:p>` +
+      `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run("block code")}</w:p>` +
+      `<w:p><w:pPr><w:pStyle w:val="Mystery"/></w:pPr>${run("plain")}</w:p>` +
+      `<w:p><w:pPr><w:pStyle w:val="QuotesContinue"/></w:pPr>${run("not a quote")}</w:p>` +
+      `<w:p>${run("label", `<w:rStyle w:val="Barcode"/>`)}</w:p>`,
+  ));
+  assertEquals(md.trim(), "> Same words\n\nuse ``a`b``\n\n```\nblock code\n```\n\nplain\n\nnot a quote\n\nlabel");
+});
+
+Deno.test("docx: blank code paragraphs at the ends of a block are padding; one inside is a line", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run(t)}</w:p>`;
+  const bytes = zipSync({
+    "word/document.xml": strToU8(`<w:document ${W}><w:body>${code("a = 1")}${code(" ")}${code("b = 2")}${code(" ")}<w:p>${run("after")}</w:p></w:body></w:document>`),
+    "word/styles.xml": strToU8(styles),
+  });
+  assertEquals(docxToMarkdown(bytes).trim(), "```\na = 1\n\nb = 2\n```\n\nafter");
+});
+
+Deno.test("docx: review of the quote and code rules: shading switched off, a bordered code style, a spacer between blocks", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string, extra = "") => `<w:p><w:pPr><w:pStyle w:val="Code"/>${extra}</w:pPr>${run(t)}</w:p>`;
+  const body =
+    // Shading that says "none" is not shading.
+    `<w:p>${run("FILE", `<w:shd w:val="nil" w:fill="EEEEEE"/><w:rFonts w:ascii="Courier New"/>`)}</w:p>` +
+    // A code style that also draws a left rule is code, not a quote.
+    code("a = 1", `<w:ind w:left="284"/><w:pBdr><w:left w:val="single" w:sz="18"/></w:pBdr>`) +
+    // An empty paragraph between two code blocks keeps them two.
+    `<w:p/>` + code("b = 2") +
+    // Numbering switched off on a bordered, indented paragraph: not a quote.
+    `<w:p><w:pPr><w:numPr><w:numId w:val="0"/></w:numPr><w:ind w:left="284"/><w:pBdr><w:left w:val="single"/></w:pBdr></w:pPr>${run("list-shaped")}</w:p>`;
+  const bytes = zipSync({ "word/document.xml": strToU8(`<w:document ${W}><w:body>${body}</w:body></w:document>`), "word/styles.xml": strToU8(styles) });
+  assertEquals(docxToMarkdown(bytes).trim(), "`FILE`\n\n```\na = 1\n```\n\n```\nb = 2\n```\n\nlist-shaped");
+});
+
+// --- review of pull request 72 (CodeRabbit, CodeAnt, SonarCloud; 2026-11-20) ---
+
+Deno.test("docx: an empty line inside shaded monospace code is a line of the block; alone it is nothing", () => {
+  const empty = `<w:p><w:r><w:rPr>${MONO_SHADED}</w:rPr><w:t></w:t></w:r></w:p>`;
+  const md = docxToMarkdown(docx(`<w:p>${run("a", MONO_SHADED)}</w:p>${empty}<w:p>${run("b", MONO_SHADED)}</w:p><w:p>${run("then")}</w:p>${empty}<w:p>${run("end")}</w:p>`));
+  assertEquals(md.trim(), "```\na\n\nb\n```\n\nthen\n\nend");
+});
+
+Deno.test("docx: a code paragraph that carries a list's counter event is not merged away", () => {
+  // Lists 2 and 3: level 0 shows no marker, level 1 counts. A code paragraph of list 3 at level 0
+  // between two level-1 items of list 3 starts their numbering again, also right after a code
+  // paragraph of list 2.
+  const outline = `<w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="none"/></w:lvl>` +
+    `<w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="decimal"/></w:lvl></w:abstractNum>` +
+    `<w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num><w:num w:numId="3"><w:abstractNumId w:val="1"/></w:num>`;
+  const code = (t: string, numId: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="${numId}"/></w:numPr></w:pPr><w:r><w:t>${t}</w:t></w:r></w:p>`;
+  const md = docxToMarkdown(docxWith(p("x", "3", 1) + code("c1", "2") + code("c2", "3") + p("y", "3", 1), outline));
+  assertEquals(md.match(/\d+\. \w/g), ["1. x", "1. y"]);
+});
+
+Deno.test("docx: a code block with many blank lines inside is trimmed at its ends in linear time", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (t: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${run(t)}</w:p>`;
+  const body = code(" ") + code("  a = 1") + code(" ").repeat(40) + code("b = 2") + code(" ");
+  const bytes = zipSync({ "word/document.xml": strToU8(`<w:document ${W}><w:body>${body}</w:body></w:document>`), "word/styles.xml": strToU8(styles) });
+  const t0 = performance.now();
+  const md = docxToMarkdown(bytes);
+  assertEquals(md.trim(), "```\n  a = 1\n" + "\n".repeat(40) + "b = 2\n```");
+  assertEquals(performance.now() - t0 < 2000, true);
+});
+
+Deno.test("docx: numbering that comes from the style keeps a bordered, indented paragraph from being a quote", () => {
+  const styles = `<w:styles ${W}>` +
+    `<w:style w:type="paragraph" w:styleId="Outline"><w:name w:val="Outline"/><w:pPr><w:numPr><w:numId w:val="2"/></w:numPr></w:pPr></w:style>` +
+    `<w:style w:type="paragraph" w:styleId="Off"><w:name w:val="Off"/><w:pPr><w:numPr><w:numId w:val="0"/></w:numPr></w:pPr></w:style></w:styles>`;
+  const numbering = `<w:numbering ${W}><w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="none"/></w:lvl></w:abstractNum><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num></w:numbering>`;
+  const bordered = (style: string, t: string) => `<w:p><w:pPr>${style ? `<w:pStyle w:val="${style}"/>` : ""}<w:ind w:left="284"/><w:pBdr><w:left w:val="single" w:sz="18"/></w:pBdr></w:pPr>${run(t)}</w:p>`;
+  const bytes = zipSync({
+    "word/document.xml": strToU8(`<w:document ${W}><w:body>${bordered("Outline", "in a list")}${bordered("Off", "numbering off")}${bordered("", "a quote")}</w:body></w:document>`),
+    "word/styles.xml": strToU8(styles),
+    "word/numbering.xml": strToU8(numbering),
+  });
+  assertEquals(docxToMarkdown(bytes).trim(), "in a list\n\nnumbering off\n\n> a quote");
+});
+
+Deno.test("docx: a code paragraph that is only line breaks keeps them as empty lines", () => {
+  const styles = `<w:styles ${W}><w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/></w:style></w:styles>`;
+  const code = (inner: string) => `<w:p><w:pPr><w:pStyle w:val="Code"/></w:pPr>${inner}</w:p>`;
+  const body = code(run("a")) + code(`<w:r><w:t xml:space="preserve"> </w:t><w:br/><w:br/></w:r>`) + code(run("b"));
+  const bytes = zipSync({ "word/document.xml": strToU8(`<w:document ${W}><w:body>${body}</w:body></w:document>`), "word/styles.xml": strToU8(styles) });
+  assertEquals(docxToMarkdown(bytes).trim(), "```\na\n\n\n\nb\n```");
+});

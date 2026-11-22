@@ -17,12 +17,18 @@ Per run:
   settledMs      Menu click → end of the last long main-thread task before two
                  quiet seconds: some loaders return before they draw, some keep
                  paginating after they return, so compare THIS on a long file
-  heapBytes      JSHeapUsedSize of the top page (Chrome DevTools Protocol), 2 s
-                 after the page reported the load (which it does after two quiet
-                 seconds, or after 180 s of a main thread that never went quiet):
-                 JavaScript objects only, no WebAssembly memory
+  heapBytes      JSHeapUsedSize of the top page (Chrome DevTools Protocol) after a forced
+                 garbage collection, once the page reported the load (which it does after
+                 two quiet seconds, or after 180 s of a main thread that never went quiet)
+                 and its page count stopped changing: JavaScript objects only, no
+                 WebAssembly memory. heapBytesBeforeGc is the reading just before the
+                 collection, which is what the files up to 2026-11-18 call heapBytes
+  pagesSettledMs Menu click → the page count last changed (read until it is the same for
+                 5 s): when an engine that paginates after "loaded" finished doing so.
+                 Absent when the count was already final at its first reading
   rendererRss    resident memory of every renderer process of this Chrome
-                 (`ps`), same moment: this one does include WebAssembly memory,
+                 (`ps`), two seconds after the page count settled and before the forced
+                 collection: this one does include WebAssembly memory,
                  canvases and the DOM, and cross-origin frames.
                  rendererRssReady is the same reading before the sample was
                  opened, one second after the editor was ready: an editor is
@@ -31,7 +37,8 @@ Per run:
                  sample, so for it the difference is what REPLACING that cost
   gpuRss         resident memory of Chrome's GPU process (WordCraft draws there)
   bytes/requests response bytes and finished requests, all frames, whole run
-  pages          how many pages the engine shows, where the DOM says (see PAGES)
+  pages          how many pages the engine shows, where the DOM says (see PAGES), once the
+                 count has stopped changing
   load1, cores   the machine's 1-minute load average when the run started, and its
                  core count: a timing taken on a busy machine is slower than the engine
 
@@ -44,11 +51,14 @@ from playwright.async_api import async_playwright
 
 # These scripts are run with `python -I`, which leaves the script's folder off the import path.
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from measure_lib import chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, stopped_path
+from measure_lib import quiet_host, chrome_args, chrome_memory_of, chrome_note, close_context, load_note, machine_load, merge_latest, runs_note, sample_row, settle_by_pages, stable_count, stopped_path, where_note
 
 BASE = os.environ.get("OD_BASE", "https://editors.benchmarks.law")
 TIMEOUT_S = int(os.environ.get("OD_TIMEOUT_S", "240"))
-EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft"]
+# The page count is final when it has not changed for this long; the wait gives up after PAGES_WAIT_S.
+PAGES_QUIET_S = 5
+PAGES_WAIT_S = 180
+EDITORS = ["canvas-editor", "docxodus", "superdoc", "plate", "docen", "eigenpal", "folio", "wordcraft", "react-docx", "univer", "opendoc", "betteroffice", "onlyoffice", "genoffice", "office-open", "fidus-writer", "docs-plus"]
 VIEWERS = ["word-online", "google-viewer", "apryse", "nutrient"]
 ALL = EDITORS + VIEWERS
 # sample name → the Menu button that loads it
@@ -57,15 +67,29 @@ SAMPLES = {
     "redline": '.od-fixture[data-file="redline.docx"]',
     "lorem-500": '.od-fixture[data-file="lorem-500.docx"]',
 }
-# What each engine's DOM offers as a page count (None: it draws to one canvas, or in a frame).
+# What each engine offers as a page count: its DOM, or its own figure (None: it has no pages to count).
 PAGES = """() => {
   const n = (s) => document.querySelectorAll(s).length;
+  // "Page 1 of 3", in whatever language the browser asks for: the last number.
+  const last = (t) => { const m = (t || '').match(/\\d+/g); return m ? Number(m[m.length - 1]) : null; };
   return {
     'canvas-editor': n('.ce-page-container canvas'),
     'superdoc': n('.superdoc-page'),
     'eigenpal': n('.layout-page'),
     'folio': n('.folio-page, .folio-page-shell, [data-page-number]'),
     'docxodus': n('.page-box'),
+    // These keep only a window of pages in the DOM (react-docx: 3 of 500, seen 2026-11-18), so the
+    // count is the engine's own.
+    'react-docx': window.__reactDocx?.()?.getController?.()?.totalPages ?? null,
+    'betteroffice': window.__betteroffice?.()?.getTotalPages?.() ?? null,
+    'opendoc': last(document.querySelector('#opendoc-root iframe')?.contentDocument?.getElementById('statPages')?.textContent),
+    'onlyoffice': document.querySelector('#oo-root iframe')?.contentWindow?.editor?.getCountPages?.() ?? null,
+    // GenOffice's status bar says "Page 1 of 3" inside its frame. office-open, Fidus Writer and docs.plus
+    // have no pages: one is an outline of what a parser read, the other two flow the text in one column.
+    'genoffice': last((document.querySelector('#genoffice-root iframe')?.contentDocument?.getElementById('root')?.textContent.match(/Page \\d+ of \\d+/) || [])[0]),
+    // docen paints every page on one canvas surface; its own status bar says "Page 1 of 500"
+    // (two shadow roots down: <docen-document> → <docen-status-bar> → span.pages).
+    'docen': last(document.querySelector('docen-document')?.shadowRoot?.querySelector('docen-status-bar')?.shadowRoot?.querySelector('.pages')?.textContent),
   };
 }"""
 
@@ -78,20 +102,14 @@ def chrome_memory(profile: str) -> dict:
         parts = line.split(None, 3)
         if len(parts) == 4:
             rows.append((int(parts[0]), int(parts[1]), int(parts[2]) * 1024, parts[3]))
-    roots = {pid for pid, _, _, cmd in rows if f"--user-data-dir={profile}" in cmd and "--type=" not in cmd}
-    kids = [(rss, cmd) for _, ppid, rss, cmd in rows if ppid in roots]
-    return {
-        "rendererRss": sum(rss for rss, cmd in kids if "--type=renderer" in cmd),
-        "renderers": sum(1 for _, cmd in kids if "--type=renderer" in cmd),
-        "gpuRss": sum(rss for rss, cmd in kids if "--type=gpu-process" in cmd),
-    }
+    return chrome_memory_of(rows, profile)
 
 
 async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
     out: dict = {"engine": slug, "sample": sample, **machine_load()}
     with tempfile.TemporaryDirectory() as profile:
         ctx = await pw.chromium.launch_persistent_context(
-            profile, channel="chrome", headless=False, viewport={"width": 1280, "height": 900}
+            profile, channel="chrome", headless=False, args=chrome_args(), viewport={"width": 1280, "height": 900}
         )
         try:
             # Keep these page loads out of the site's own metrics table.
@@ -112,8 +130,10 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
 
         ctx.on("requestfinished", lambda r: asyncio.ensure_future(finished(r)))
         try:
-            await page.goto(f"{BASE}/e/{slug}", wait_until="commit", timeout=TIMEOUT_S * 1000)
+            # One budget for the run: navigation and the waits after it share TIMEOUT_S, so a slow
+            # commit followed by a page that never gets ready costs one deadline, not two.
             deadline = time.monotonic() + TIMEOUT_S
+            await page.goto(f"{BASE}/e/{slug}", wait_until="commit", timeout=TIMEOUT_S * 1000)
 
             async def until(js: str):
                 while time.monotonic() < deadline:
@@ -150,6 +170,7 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
             await asyncio.sleep(1.0)
             out["rendererRssReady"] = chrome_memory(profile)["rendererRss"]
             # Viewers open the rich sample themselves; clicking loads it again, measured the same way.
+            clicked = time.monotonic()
             await page.evaluate("(s) => document.querySelector(s).click()", SAMPLES[sample])
             loaded = await until(
                 """() => {
@@ -169,16 +190,39 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
                 out["settledMs"] = loaded["settledMs"]
             if loaded.get("settleTimedOut"):
                 out["settleTimedOut"] = True  # still busy when the page stopped waiting: no settled time
+            # The page count, read until it has not changed for PAGES_QUIET_S: OnlyOffice reports the
+            # document ready and paginates on (52, 103 … 500 pages), and one reading two seconds
+            # after "loaded" published 409 pages for a 500-page file (2026-11-18).
+            async def read_pages():
+                return (await asyncio.wait_for(page.evaluate(PAGES), 60)).get(slug)
+
+            pages, changes, same_since, still = await stable_count(read_pages, PAGES_QUIET_S, PAGES_WAIT_S)
+            if pages:
+                out["pages"] = pages  # with pagesStillChanging: what the count had reached, not the document's
+            if still:
+                settle_by_pages(out, 0, True)
+            elif pages and changes > 0:
+                # The count moved after the page said "loaded": click → its last change is when
+                # the layout ended, which settledMs does not see when the work comes in slices
+                # shorter than a long task. Absent when the first reading was already final.
+                settle_by_pages(out, round((same_since - clicked) * 1000), False)
             await asyncio.sleep(2.0)  # trailing requests (the page already waited for two quiet seconds)
             out.update(chrome_memory(profile))
             cdp = await ctx.new_cdp_session(page)
             await cdp.send("Performance.enable")
             m = {x["name"]: x["value"] for x in (await asyncio.wait_for(cdp.send("Performance.getMetrics"), 60))["metrics"]}
-            out["heapBytes"] = int(m.get("JSHeapUsedSize", 0))
             out["domNodes"] = int(m.get("Nodes", 0))
-            pages = (await asyncio.wait_for(page.evaluate(PAGES), 60)).get(slug)
-            if pages:
-                out["pages"] = pages
+            # The heap twice: as it is, and after a forced collection. An engine that has just
+            # converted a file holds garbage: canvas-editor read 1,281 MiB two seconds after it
+            # rendered 500 pages and 702 MiB once Chrome had collected (2026-11-20).
+            out["heapBytesBeforeGc"] = int(m.get("JSHeapUsedSize", 0))
+            try:
+                await asyncio.wait_for(cdp.send("HeapProfiler.collectGarbage"), 120)
+                m = {x["name"]: x["value"] for x in (await asyncio.wait_for(cdp.send("Performance.getMetrics"), 60))["metrics"]}
+                out["heapBytes"] = int(m.get("JSHeapUsedSize", 0))
+            except Exception as e:
+                out["heapBytes"] = out["heapBytesBeforeGc"]
+                out["heapNotCollected"] = f"{type(e).__name__}: {e}"[:160]  # the figure is then the uncollected one
         except StopIteration:
             pass
         except Exception as e:
@@ -200,6 +244,9 @@ async def one(pw, slug: str, sample: str, shots: str | None) -> dict:
     return out
 
 
+STOPPED: list[str] = []  # why the run loop ended early, when it did
+
+
 async def main():
     engines = {"all": ALL, "editors": EDITORS, "viewers": VIEWERS}.get(sys.argv[1]) or sys.argv[1].split(",")
     samples = sys.argv[2].split(",")
@@ -211,6 +258,10 @@ async def main():
         for r in range(runs):
             for s in samples:
                 for e in engines:
+                    busy = await quiet_host()
+                    if busy:
+                        stopped = busy
+                        break
                     try:
                         x = await one(pw, e, s, opt("--shots") if r == 0 else None)
                     except Exception as ex:
@@ -228,6 +279,7 @@ async def main():
                 # A Chrome that would not end is still using the machine: what was measured so far is
                 # written, and nothing more is measured beside it.
                 print(f"stopping: {stopped}", file=sys.stderr, flush=True)
+                STOPPED.append(stopped)
                 break
     summary: dict = {}
     for s in samples:
@@ -235,7 +287,7 @@ async def main():
             xs = [x for x in raw if x["engine"] == e and x["sample"] == s]
             if xs:  # a run that was stopped early leaves the engines it never reached as they were
                 summary.setdefault(s, {})[e] = sample_row(xs)
-    where = os.environ.get("MEASURE_WHERE") or f"{platform.system()} {platform.machine()}"
+    where = where_note(f"{platform.system()} {platform.machine()}")
     result = {
         "measuredAt": datetime.date.today().isoformat(),
         "environment": f"{chrome_note(raw)} (installed, headed) via Playwright, fresh profile per run (cold cache), {runs_note(runs, raw)}, median; {where}; {load_note(raw)}",
@@ -263,3 +315,5 @@ async def main():
 
 
 asyncio.run(main())
+if STOPPED:
+    sys.exit(4)  # stopped before the end: what was measured is written, and the caller is told

@@ -1,5 +1,5 @@
 /** Server-side shell for the Plate demo. */
-import { REACT_IMPORTS } from "../../server/router.ts";
+import { REACT_IMPORTS } from "../../server/react-imports.ts";
 
 export default {
   slug: "plate",

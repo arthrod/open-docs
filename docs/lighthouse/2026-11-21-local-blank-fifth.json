@@ -1,0 +1,132 @@
+{
+ "measuredAt": "2026-11-21",
+ "environment": "Lighthouse 13.6.0 run on a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), Google Chrome 158.0.8127.36, headless, 3 analyses per page and form factor, median of those that gave a result; Lighthouse's CPU benchmark index median 4254, lowest 4194; machine load (1-minute average) median 2.7, highest 3.4, on 12 cores",
+ "base": "https://editors.benchmarks.law",
+ "query": "",
+ "stopped": null,
+ "raw": [
+  {
+   "page": "e/docen",
+   "run": 0,
+   "load1": 2.39,
+   "cores": 12,
+   "desktop": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4230,
+    "fetchTime": "2026-11-21T13:08:44.636Z",
+    "performance": 99,
+    "accessibility": 79,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 296,
+    "lcpMs": 296,
+    "tbtMs": 21,
+    "cls": 0.0,
+    "speedIndexMs": 1334,
+    "load1": 2.73,
+    "cores": 12
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4194,
+    "fetchTime": "2026-11-21T13:08:58.224Z",
+    "performance": 89,
+    "accessibility": 85,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 903,
+    "lcpMs": 903,
+    "tbtMs": 410,
+    "cls": 0.024,
+    "speedIndexMs": 3639,
+    "load1": 2.39,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/docen",
+   "run": 1,
+   "load1": 2.92,
+   "cores": 12,
+   "desktop": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4277,
+    "fetchTime": "2026-11-21T13:10:08.408Z",
+    "performance": 100,
+    "accessibility": 100,
+    "bestPractices": 96,
+    "seo": 90,
+    "fcpMs": 230,
+    "lcpMs": 230,
+    "tbtMs": 0,
+    "cls": 0,
+    "speedIndexMs": 646,
+    "loadTries": 2,
+    "load1": 3.35,
+    "cores": 12
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4304,
+    "fetchTime": "2026-11-21T13:11:16.637Z",
+    "performance": 87,
+    "accessibility": 85,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 931,
+    "lcpMs": 931,
+    "tbtMs": 403,
+    "cls": 0.025,
+    "speedIndexMs": 4664,
+    "loadTries": 2,
+    "netErrors": [
+     "ERR_DNS_NAME_HTTPS_ONLY"
+    ],
+    "load1": 2.92,
+    "cores": 12
+   }
+  },
+  {
+   "page": "e/docen",
+   "run": 2,
+   "load1": 2.6,
+   "cores": 12,
+   "desktop": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4304,
+    "fetchTime": "2026-11-21T13:11:30.417Z",
+    "performance": 99,
+    "accessibility": 79,
+    "bestPractices": 88,
+    "seo": 90,
+    "fcpMs": 325,
+    "lcpMs": 325,
+    "tbtMs": 24,
+    "cls": 0.0,
+    "speedIndexMs": 1425,
+    "load1": 2.47,
+    "cores": 12
+   },
+   "mobile": {
+    "version": "13.6.0",
+    "benchmarkIndex": 4200,
+    "fetchTime": "2026-11-21T13:14:17.175Z",
+    "performance": 87,
+    "accessibility": 85,
+    "bestPractices": 88,
+    "seo": 91,
+    "fcpMs": 870,
+    "lcpMs": 870,
+    "tbtMs": 431,
+    "cls": 0.024,
+    "speedIndexMs": 4187,
+    "loadTries": 3,
+    "netErrors": [
+     "ERR_DNS_NAME_HTTPS_ONLY"
+    ],
+    "load1": 2.6,
+    "cores": 12
+   }
+  }
+ ]
+}

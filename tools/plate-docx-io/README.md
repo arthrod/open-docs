@@ -3,8 +3,16 @@
 Plate's own `.docx` export and import, `@platejs/docx-io@53.5.5`, unchanged,
 as one browser module. open-docs uses it for Plate's **Export .docx** and as the
 markdown → `.docx` converter for engines that cannot import markdown themselves
-(Docxodus, docx-editor.dev, folio): markdown → Plate (`@platejs/markdown`) →
-`.docx` (this).
+through `lib/plate-docx.ts`: markdown → Plate (`@platejs/markdown`) →
+`forWord` → `.docx` (this).
+
+`lib/plate-for-word.ts` prepares the assistant’s nodes before export: inline
+code receives a monospace font, multiline code blocks become one block per
+line, and table-cell line breaks become paragraph breaks.
+`lib/docx-markdown.ts` recognizes the resulting code and quote formatting
+when reading the document back. Plate’s own Export button calls
+`plateValueToDocx` directly and does not apply this preparation; its inline
+code export still uses a grey highlight without a monospace font.
 
 Why a bundle: esm.sh cannot build `docx-io` (its `xmlbuilder2` build has no
 `create` export; `?bundle-deps` misses `entities` files), and the package
