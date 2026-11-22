@@ -104,8 +104,9 @@ has no figures of its own.
 - [x] 5.6 PageSpeed on Google's servers: blank for all four, 500 pages for three. PageSpeed refused GenOffice's 500-page address ("Oops! Something went wrong") in every analysis; its row says so
 - [x] 5.7 README: the editors table, the tracked-changes table, the assistant table and a section on what differs
 - [!] 5.8 Timed on the rented machine like the other rows: not done. It is billed, and the owner chose not to spend (2026-11-21)
-- [!] 5.9 The probes of 2026-11-20 (the "Measured with" table): not run for the four
-- [ ] 5.10 A read-only view on viewers.benchmarks.law: not built
+- [x] 5.9 The assistant probes (the "Measured with" table), run on the live site in Chrome 2026-11-22: GenOffice and office-open pass all; docs.plus loses inline code and quotes; Fidus Writer cannot be probed (its export fails). In the README table
+- [x] 5.10 On viewers.benchmarks.law: all four have a browser page there (it reads this registry), and office-open, Fidus Writer and docs.plus a server route built 2026-11-21; GenOffice needs a browser. This line first said "not built", written before the routes were
+- [x] 5.11 The docs.plus demo drops pictures that are not in the trial's test file (found by an outside review, confirmed live): said in the README and on its entry
 
 ## Log
 
@@ -123,3 +124,4 @@ has no figures of its own.
 | 2026-11-21 | 4.4 | The four checklists read side by side after the trial's et-v0.11.0 |
 | 2026-11-21 | 1.8 | The docen row of the 500-page table says on the page that it opens the file |
 | 2026-11-21 | 5 | GenOffice, office-open, Fidus Writer and docs.plus added through the trial's demo builds; measured on a Mac |
+| 2026-11-22 | 5.9, 5.10, 5.11 | Probes run for the three tools that export; the viewers-site line corrected; the docs.plus demo's picture limit recorded |
