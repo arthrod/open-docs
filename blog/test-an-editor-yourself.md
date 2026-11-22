@@ -42,7 +42,13 @@ A redline that opens as clean text is the most dangerous result on this list, be
 
 Click the **Performance** tab in the developer tools. Press the record button, open the 500-page sample, wait until the editor has clearly finished, and stop the recording.
 
-Look at the "Main" row. Blocks marked with a red corner are **long tasks**: moments where the page could not answer you. The time from your click to the last of those blocks is what we call **Settled**.
+Look at the "Main" row. Blocks marked with a red corner are **long tasks**: moments where the page could not answer you. Our script uses those blocks to measure **Settled**: it waits for two seconds
+without a long task after loading, and checks the page count until it has
+not changed for five seconds. It reports the later of the load return, the
+last long task and the last page-count change, rather than including the
+quiet observation period. A count still changing after 180 seconds has no
+Settled time. Work in a worker or on the graphics card, and short bursts of
+work without a visible page-count change, can still escape this check.
 
 No patience for the Performance tab? Use the simple version:
 

@@ -48,7 +48,7 @@ We test on a rented cloud machine, so that anyone can rent the same one and chec
 
 One day that computer was overloaded: twenty times busier than on our earlier runs. Pages took two to five times as long, and one test ran out of time after 9 of its 51 runs. Nothing in the editors had changed.
 
-**The fix:** the script now checks how busy the host is before every step. It waits if the host is busy and gives up if it stays busy. Every run also records the load it was taken under, so a slow day is visible in the data.
+**The fix:** the editor sample script now checks how busy the host is before every run. It waits if the host is busy and gives up if it stays busy. Every run also records the load it was taken under, so a slow day is visible in the data.
 
 **The lesson:** a benchmark measures the editor plus the machine plus everything else on the machine. Write down the conditions, or you cannot tell them apart later.
 
