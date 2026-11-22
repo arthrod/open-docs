@@ -271,7 +271,7 @@ Host load during these runs (1-minute average): median 25.5, highest 32.5, on 64
 
 **500 pages (`lorem-500.docx`)**
 
-Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores; the rows measured 2026-11-22: median 21.9, highest 24.2, on 64 cores.
+Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64 cores; the rows measured 2026-11-22: median 14.3, highest 29.4, on 64 cores and median 21.9, highest 24.2, on 64 cores.
 
 | Engine | Loaded | Settled | JS heap | Renderer memory (growth) | Pages shown | Runs that loaded |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -279,7 +279,7 @@ Host load during these runs (1-minute average): median 56.6, highest 75.7, on 64
 | Docxodus | 5.17 s | 5.17 s | 9 MB | 749 MB (+205 MB) | n/a | 3 of 3 |
 | SuperDoc | 13.3 s | 13.3 s | 21 MB | 1071 MB (+515 MB) | 25 | 3 of 3 |
 | Plate | 64.8 s | 64.8 s | 64 MB | 628 MB (+222 MB) | n/a | 3 of 3 |
-| docen (measured 2026-11-21: a MacBook Pro (Apple M4 Pro, 12 cores, 24 GB, with its graphics card), load median 30.5, highest 40.0, on 12 cores) | 2.30 s | still busy after 180 s | 128 MB | 1781 MB (+1343 MB) | n/a | 3 of 3 |
+| docen (measured 2026-11-22) | 3.82 s | still busy after 180 s | 127 MB | 3211 MB (+2726 MB) | 500 | 3 of 3 |
 | docx-editor.dev | 5.20 s | 5.20 s | 121 MB | 702 MB (+243 MB) | n/a | 3 of 3 |
 | folio | 14.0 s | 14.0 s | 44 MB | 2389 MB (+1970 MB) | 500 | 3 of 3 |
 | WordCraft | 3.81 s | still busy after 180 s | 4 MB | 710 MB (−42 MB) | n/a | 3 of 3 |
@@ -303,8 +303,9 @@ What to know when reading them:
 - **These figures are the pass of 2026-11-20** (it ran past midnight UTC, so the heading says
   2026-11-21): one job on one host, every engine, 3 runs per engine and sample, made with the
   corrected script (see "Figures to distrust"). The exception is the four rows marked "measured
-  2026-11-22" (GenOffice, office-open, Fidus Writer, docs.plus): a second job on a machine of the
-  same type with the same Chrome build, with its own host load said beside the pass's. The machine is a Linux one with 16 vCPU and no
+  2026-11-22" (GenOffice, office-open, Fidus Writer, docs.plus on every sample, docen on the 500
+  pages): later jobs on a machine of the same type with the same Chrome build, with their own host
+  load said beside the pass's. That load was lower than the pass's (3 to 33 against 22 to 76). The machine is a Linux one with 16 vCPU and no
   GPU (Chrome draws in software). The tables of 2026-11-18 came from a machine with 8 vCPU, so
   the two do not form one series; the earlier files stay in `docs/samples/`.
 - **The host was shared and busy.** A run starts only while the host's load average is under a
@@ -319,9 +320,11 @@ What to know when reading them:
   Word gives; its own load returned after 8 s, and the page then did not answer for about seven minutes
   (the Mac was busy with other work). Measured again there with a 30-minute deadline, three runs on a
   quieter Mac: Loaded 2.30 s, and the main thread still busy at the end of the 180 s wait in all three.
-  The row above is that measurement and says so: it is a Mac with a graphics card, not the rented
-  machine of the other rows, so do not compare its seconds with theirs. What docen does during those
-  minutes was not looked into. The deadline is now 30 minutes (`scripts/hf_job.sh`).
+  On 2026-11-22 it was timed again on the rented machine of the other rows (same type, same Chrome
+  build, 30-minute deadline, three runs): Loaded 3.82 s, all 500 pages counted, the main thread still
+  busy at the end of the 180 s wait in all three runs, and 3,211 MB of renderer memory. The row above is
+  that measurement; the Mac rows are in `docs/samples/2026-11-21-lorem-500-docen-mac.json`. What docen
+  does during those minutes was not looked into. The deadline is now 30 minutes (`scripts/hf_job.sh`).
 - **Page counts differ by engine** on the 500-page file. canvas-editor's 661 is its own layout:
   it gave 637 on a Mac with Times as the fallback and 650 with a Calibri-metric font loaded
   (2026-11-20), so the count is not a font accident. OnlyOffice shows 500.
