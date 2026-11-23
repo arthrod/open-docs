@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 JOB = Path(__file__).resolve().parents[1] / "hf_job.sh"
-WAIT_MIN = 45  # the job's default for editors, viewer, both and retake
 
 
 def deadline_lines() -> list[str]:
@@ -24,5 +23,7 @@ def test_every_sample_step_outlasts_three_timed_out_attempts_of_one_engine():
             out = subprocess.run(["bash", "-c", f'OD_TIMEOUT_S=1800; S={s}; {line}; echo "$T $OD_TIMEOUT_S"'],
                                  capture_output=True, text=True, check=True).stdout.split()
             t, per_attempt = int(out[0]), int(out[1])
-            assert 3 * per_attempt <= (t + WAIT_MIN) * 60, (line, s, t, per_attempt)
+            # WAIT_MIN is the step's budget for waiting on a busy host, spent before or between runs;
+            # when it is all spent, the three attempts have only T left (CodeRabbit on #98).
+            assert 3 * per_attempt <= t * 60, (line, s, t, per_attempt)
             assert per_attempt == (1800 if s == "lorem-500" else 600), (line, s, per_attempt)
