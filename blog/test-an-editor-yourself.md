@@ -18,7 +18,7 @@ Open a new Incognito window in Chrome (`Ctrl+Shift+N`, or `Cmd+Shift+N` on a Mac
 
 Open the developer tools (`F12`, or `Cmd+Option+I`) and click the **Network** tab. Now load the editor you want to test.
 
-When the page stops loading, read the bottom line of the Network tab. It says something like "7.1 MB transferred". **That is the download size.** Write it down.
+When the page stops loading, read the bottom line of the Network tab. It says something like "7.1 MB transferred · 18.4 MB resources". **"Transferred" is the download size**: what came over the network, compressed. **"Resources" is the same files unpacked**, and is what the home page's "Loaded" column counts. Write both down.
 
 ## Step 3: open each file and look
 
