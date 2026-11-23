@@ -510,7 +510,8 @@ LIGHTHOUSE_CHROME = r"--user-data-dir=\S*lighthouse\.[A-Za-z0-9]+"
 
 def stop_lighthouse_chrome() -> list[str]:
     """The command that ends any Chrome a killed Lighthouse left behind."""
-    return ["pkill", "-9", "-f", LIGHTHOUSE_CHROME]
+    # "--": the pattern starts with "--", and without it pkill reads it as an option and exits 2.
+    return ["pkill", "-9", "-f", "--", LIGHTHOUSE_CHROME]
 
 
 def read_results(path: str | None) -> dict:

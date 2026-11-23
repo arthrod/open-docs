@@ -666,4 +666,27 @@ def test_the_cleanup_after_a_killed_lighthouse_matches_only_the_chrome_lighthous
     assert cmd[:3] == ["pkill", "-9", "-f"]
     theirs = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --remote-debugging-port=51234 --user-data-dir=/var/folders/x/T/lighthouse.Ab3dE9f --headless=new"
     someone = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/Users/me/Library/Application Support/Google/Chrome"
-    assert re.search(cmd[3], theirs) and not re.search(cmd[3], someone)
+    assert re.search(cmd[-1], theirs) and not re.search(cmd[-1], someone)
+
+
+def test_the_cleanup_command_runs_pkill_reads_its_pattern_as_a_pattern_not_an_option():
+    # Outside review (codex, 2026-11-23): without "--" pkill reads "--user-data-dir=..." as an option and exits 2.
+    import shutil
+    import subprocess
+    cmd = lib.stop_lighthouse_chrome()
+    assert cmd[-2] == "--"
+    if shutil.which("pkill"):
+        probe = [*cmd[:-1], r"--user-data-dir=\S*lighthouse\.NOSUCHPROFILEzz9"]
+        assert subprocess.run(probe, capture_output=True).returncode == 1  # 1: nothing matched; 2: a usage error
+
+
+def test_a_local_lighthouse_analysis_carries_the_load_read_before_it_starts(monkeypatch):
+    # Outside review (codex, 2026-11-23): the dict read analyse_once() first, so the "starting" load was the one after it.
+    import importlib
+    monkeypatch.setattr(sys, "argv", ["measure_lighthouse_local.py", "https://example.com", "e/folio", "1"])
+    mll = importlib.import_module("measure_lighthouse_local")
+    seen = []
+    monkeypatch.setattr(mll, "machine_load", lambda: seen.append("load") or {"load1": 1.0})
+    monkeypatch.setattr(mll, "analyse_once", lambda *a: seen.append("analysis") or {"performance": 90})
+    got = mll.analyse("e/folio", "desktop", "/tmp")
+    assert seen == ["load", "analysis"] and got["load1"] == 1.0

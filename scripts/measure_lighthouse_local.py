@@ -77,8 +77,9 @@ def analyse(page: str, form: str, work: str) -> dict:
     """One analysis, made again (up to LOAD_TRIES times) when the page could not be reached at all."""
     seen: list[str] = []
     for attempt in range(1, LOAD_TRIES + 1):
-        # The load this attempt started under: a wait between attempts can change it.
-        got = {**analyse_once(page, form, work), **machine_load()}
+        # The load this attempt started under, read before it (an analysis can take minutes): a wait between attempts can change it.
+        load = machine_load()
+        got = {**analyse_once(page, form, work), **load}
         if not unreached(str(got.get("error", ""))):
             break
         url = f"{BASE}/{page}" + (f"?{ARGS.query}" if ARGS.query else "")
