@@ -396,7 +396,7 @@ uv run --with playwright python -I scripts/measure_samples.py all showcase,redli
 
 The published sample figures are taken on a Hugging Face Jobs machine (Linux, no GPU; the pass of
 2026-11-20 on `cpu-xl`, 16 vCPU and 124 GB; the one of 2026-11-18 on `cpu-upgrade`, 8 vCPU and
-32 GB, whose hosts were too busy all of 2026-11-20 for a run to start) by
+32 GB) by
 [`scripts/hf_job.sh`](scripts/hf_job.sh), because a timing taken on a laptop that is doing other
 work is slower than the engine, and anyone can rent the same machine. Every run records the load
 average and the Chrome version, so the dated file shows both. That load average and core count
