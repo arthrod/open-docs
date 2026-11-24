@@ -1,6 +1,6 @@
 Most legal work ends up in a Word file. A contract, a brief, a set of comments from the other side: all `.docx`. More and more products now open those files in a browser tab instead of in Word, with an editor someone else wrote. Each of those editors says it is fast and faithful. None of them says how that was measured.
 
-So we measure. This site opens the same Word files in thirteen browser editors and four proprietary viewers, on the same machine, with the same script, and publishes every run. Four more tools—GenOffice, office-open, Fidus Writer and docs.plus—were added through the editors trial’s demo builds on 2026-11-21; their sample timings were measured separately on a Mac and cannot be compared with the rented-machine timings.
+So we measure. This site opens the same Word files in thirteen browser editors and four proprietary viewers, on the same machine, with the same script, and publishes every run. Four more tools—GenOffice, office-open, Fidus Writer and docs.plus—were added through the editors trial’s demo builds on 2026-11-21; their sample timings were first taken on a Mac, then taken again on 2026-11-22 on the same rented machine as the others, so they now compare with them.
 
 ## What can go wrong when a browser opens a Word file
 

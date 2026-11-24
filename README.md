@@ -201,10 +201,6 @@ when, accept and reject, and comments.
 
 ### The samples, measured
 
-react-docx is available in `scripts/measure_samples.py`, but the dated sample
-and Lighthouse results below predate its integration and contain no react-docx
-measurements.
-
 Every engine opening each sample from its own Menu. The table on the
 [landing page](https://editors.benchmarks.law/#samples) is
 [`docs/samples/latest.json`](docs/samples/latest.json); every run is in the dated
@@ -337,13 +333,15 @@ What to know when reading them:
   the viewport (25), so its number is not a page count of the document.
 - **Renderer memory growth** can be negative: the "before" reading is taken one
   second after startup, when the engine's start-up garbage is still resident.
-- 7 of the 153 runs in these tables did not load. docen once on the
+- 10 of the 189 runs in these tables did not load. docen once on the
   redline, when a module of its package did not download; the Microsoft Word viewer and Nutrient
   were once each not ready within 600 s on the rich sample; BetterOffice's page once did not
-  start; and on the 500 pages the site once closed the connection (OnlyOffice) and twice
-  answered an error status (Apryse, Nutrient). The three docen runs on the 500 pages that the
+  start; on the 500 pages the site once closed the connection (OnlyOffice) and twice
+  answered an error status (Apryse, Nutrient); and on the redline, in the 2026-11-22 runs of the four
+  tools added on 2026-11-21, the site answered an error status once each for office-open and docs.plus,
+  and refused the sample once for Fidus Writer (HTTP 429, too many requests). The three docen runs on the 500 pages that the
   2026-11-20 pass counted as not loaded were its deadline, not docen (above), and its row is now the
-  three runs measured on the Mac. Each reason is in the dated file, and the last
+  three runs measured again on 2026-11-22 on the rented machine. Each reason is in the dated file, and the last
   column of the tables says how many runs each median stands on.
 - **Settled cannot see everything**: see the definition below. An engine that
   starts work more than two seconds after it last kept the thread busy would
@@ -368,8 +366,8 @@ again. Each row says what was wrong and what the new pass shows.
 | **Univer, 500 pages: 1,772 MB of heap** (2026-11-18) | **Half of it was garbage; corrected. Not a .docx figure** | Read after a forced collection it is 880 MB in each of the three new runs (1,760 to 1,773 MB before it). It stayed at 1,888 MiB for a minute by hand, so Chrome does not collect it by itself soon. And Univer never reads the file: it holds the text this site's reader gave it (`lib/univer-doc.ts`), with no tables, pictures or page set-up. |
 | **canvas-editor, every figure on the editors site** | **Confirmed** | 500 pages by hand: 17.7 s and 21.9 s to load, 637 and 650 pages, heap 700 to 730 MiB and steady for 20 s. The new pass: 18.4 s, 661 pages and 678 MB, the heap the same before and after the collection. What is misleading is its renderer memory (above). |
 | **Apryse, Loaded 300 ms to 911 ms** | **Partly blind** | Its adapter waits for the SDK's `documentLoaded`, and the office engine runs in a Worker: neither Loaded nor Settled sees the pages being drawn. Its two runs on the 500 pages settled at 1.14 s and 13.1 s. |
-| **docen, 500 pages: "did not open it"** (2026-11-20) | **Wrong: the test gave up too early. Corrected** | It opens the file and counts 500 pages. The page then keeps its main thread busy for minutes, longer than the 600 s that pass allowed from navigation. Seen by hand on 2026-11-21 and measured again with a 30-minute deadline on a Mac; the row is that measurement. |
-| **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Seven rows stand on two runs: the Microsoft Word viewer and Nutrient on the rich sample, docen and BetterOffice on the redline, Apryse, Nutrient and OnlyOffice on the 500 pages. |
+| **docen, 500 pages: "did not open it"** (2026-11-20) | **Wrong: the test gave up too early. Corrected** | It opens the file and counts 500 pages. The page then keeps its main thread busy for minutes, longer than the 600 s that pass allowed from navigation. Seen by hand on 2026-11-21 and measured again with a 30-minute deadline, first on a Mac, then on 2026-11-22 on the rented machine of the other rows; the row is that last measurement (the Mac's is in `docs/samples/2026-11-21-lorem-500-docen-mac.json`). |
+| **Medians of two runs** (the rows that say "2 of 3") | **Weak** | A median of two is their mean. Ten rows stand on two runs: the Microsoft Word viewer and Nutrient on the rich sample; docen, BetterOffice, office-open, Fidus Writer and docs.plus on the redline; Apryse, Nutrient and OnlyOffice on the 500 pages. |
 | **Sizes** | **Mislabelled** | Every "MB" in these tables is a mebibyte (1,048,576 bytes): the 680 MB of canvas-editor's heap is 713 million bytes. |
 
 The two faults of the measuring are corrected in

@@ -197,7 +197,9 @@ PY
     # E_SAMPLES: which samples (all three unless given). The 500 pages get the time the full pass
     # gives them: three runs of an engine that uses its whole 30-minute deadline take 90 minutes.
     for S in ${E_SAMPLES:-showcase redline lorem-500}; do
-      T=15; [[ "$S" = lorem-500 ]] && T=150
+      # The full pass's deadlines (editors(), above): 10 minutes an attempt on the short samples, in a
+      # step that outlasts three of them; the 30-minute deadline is for the 500 pages only.
+      T=55; OD_TIMEOUT_S=600; [[ "$S" = lorem-500 ]] && { T=150; OD_TIMEOUT_S=1800; }; export OD_TIMEOUT_S
       step - $T $PW scripts/measure_samples.py "$E_ENGINES" $S "$RUNS" --out "docs/samples/$D-$S-retake.json" --latest docs/samples/latest.json --shots shots 2>/tmp/$S-retake.log
       grep -o '"error": "[^"]*' /tmp/$S-retake.log | cut -c1-200 | sort | uniq -c | head; cp /tmp/$S-retake.log docs/samples/
     done

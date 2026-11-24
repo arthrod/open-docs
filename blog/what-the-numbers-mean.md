@@ -50,7 +50,7 @@ Every figure is the middle value (the median) of three runs. Each run starts a f
 
 A warning about names first: in the first table on the home page, the column for this is also called "Loaded". There it is a size in megabytes. In the sample tables, Loaded is a time.
 
-It is how many megabytes of code, fonts and data the browser downloads before the editor works. On office Wi-Fi, 20 MB is a short wait. On a phone connection it can be half a minute before anything appears.
+It is how many megabytes of code, fonts and data the editor needs before it works, counted unpacked: the size of the files once the browser has decompressed them. What travels over the network is often less, because servers send most files compressed; WordCraft's 60 MB engine arrives as 22 MB. On office Wi-Fi, 20 MB is a short wait. On a phone connection it can be half a minute before anything appears.
 
 ## The PageSpeed scores: "what would Google say?"
 
@@ -58,6 +58,6 @@ These come from Google's public PageSpeed test, which loads the page on Google's
 
 ## Three things to remember
 
-1. **The seconds belong to our machine.** We test on a rented machine with no graphics card. Your laptop will be faster. What carries over is the order: an editor that is five times slower here will be slower on your machine too.
+1. **The seconds belong to our machine.** We test on a rented machine with no graphics card. Your laptop will be faster. What usually carries over is the order between editors that are far apart: an editor that is five times slower here will be slower on your machine too. Editors that are close can swap places. On the 500-page file, office-open opened it a little faster than docs.plus on a Mac (533 ms against 582 ms) and slower on our machine (1.54 s against 1.21 s).
 2. **A missing number is not a zero.** "n/a" means we could not take that reading. The notes with each table say why.
 3. **One number never tells the story.** An editor can be the fastest to load and the worst at tracked changes. Look at the row, not the cell.
